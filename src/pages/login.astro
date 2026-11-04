@@ -1,0 +1,101 @@
+---
+import AuthLayout from '../layouts/AuthLayout.astro';
+
+const landings = [
+  { role: 'Buyer', destination: 'Shop tab', href: '/buyer/shop' },
+  { role: 'Seller', destination: 'Overview tab', href: '/seller' },
+  { role: 'Administrator', destination: 'User Management tab', href: '/admin' },
+];
+---
+
+<AuthLayout
+  title="Sign In"
+  headline="Welcome back."
+  lede="After sign-in, each role lands on its own dashboard."
+>
+  <ul class="landings" slot="hero-extra">
+    {
+      landings.map((landing) => (
+        <li>
+          <a href={landing.href}>
+            <strong>{landing.role}</strong>
+            <span>&rarr; {landing.destination}</span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+
+  <form class="signin" method="get" action="/buyer/shop">
+    <h2>Sign in</h2>
+
+    <div class="field">
+      <label class="field-label" for="username">Username</label>
+      <input class="input" id="username" name="username" value="maria_c" autocomplete="username" />
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="password">Password</label>
+      <input class="input" id="password" name="password" type="password" value="secondserve" autocomplete="current-password" />
+    </div>
+
+    <button class="btn btn-primary btn-lg btn-block" type="submit">Sign in</button>
+
+    <p class="alt">New to SecondServe? <a href="/register">Register</a></p>
+  </form>
+</AuthLayout>
+
+<style>
+  .landings {
+    margin-top: 34px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-width: 420px;
+  }
+
+  .landings a {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 13px 2px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .landings a:hover strong { color: var(--brick); }
+
+  .landings strong {
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .landings span {
+    color: var(--muted);
+    font-size: 13.5px;
+  }
+
+  .signin h2 {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: 34px;
+    margin-bottom: 22px;
+    letter-spacing: -0.01em;
+  }
+
+  .signin .btn {
+    margin-top: 24px;
+  }
+
+  .alt {
+    margin-top: 16px;
+    text-align: center;
+    font-size: 13.5px;
+    color: var(--muted);
+  }
+
+  .alt a {
+    color: var(--brick);
+    font-weight: 600;
+  }
+</style>

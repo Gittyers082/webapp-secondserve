@@ -1,0 +1,15 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import ProfilePanel from '../../components/ProfilePanel.astro';
+import { seller } from '../../data/store';
+---
+
+<AppLayout
+  role="seller"
+  username={seller.username}
+  section="My Profile"
+  heading="My Profile"
+  subtitle="Your account, your details."
+>
+  <ProfilePanel username={seller.username} role="seller" />
+</AppLayout>

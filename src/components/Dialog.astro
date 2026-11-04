@@ -1,0 +1,55 @@
+---
+interface Props {
+  /** Used by `data-dialog-open="<id>"` triggers anywhere on the page. */
+  id: string;
+  title: string;
+  message?: string;
+  /** Widens the dialog for forms such as Edit listing. */
+  wide?: boolean;
+}
+
+const { id, title, message, wide = false } = Astro.props;
+---
+
+<div class="scrim" data-dialog={id} hidden>
+  <div class="dialog" class:list={{ wide }} role="dialog" aria-modal="true" aria-label={title}>
+    <h2>{title}</h2>
+    {message && <p>{message}</p>}
+    <slot />
+  </div>
+</div>
+
+<script>
+  const closeAll = () => {
+    document.querySelectorAll<HTMLElement>('[data-dialog]').forEach((node) => {
+      node.hidden = true;
+    });
+  };
+
+  document.querySelectorAll<HTMLElement>('[data-dialog-open]').forEach((trigger) => {
+    trigger.addEventListener('click', () => {
+      const target = document.querySelector<HTMLElement>(`[data-dialog="${trigger.dataset.dialogOpen}"]`);
+      if (target) target.hidden = false;
+    });
+  });
+
+  document.querySelectorAll<HTMLElement>('[data-dialog-close]').forEach((trigger) => {
+    trigger.addEventListener('click', closeAll);
+  });
+
+  document.querySelectorAll<HTMLElement>('[data-dialog]').forEach((scrim) => {
+    scrim.addEventListener('click', (event) => {
+      if (event.target === scrim) closeAll();
+    });
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeAll();
+  });
+</script>
+
+<style>
+  .wide {
+    width: min(760px, 100%);
+  }
+</style>

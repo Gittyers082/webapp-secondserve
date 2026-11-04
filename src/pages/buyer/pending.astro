@@ -1,0 +1,116 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import { buyer, pendingOrders } from '../../data/store';
+import { peso } from '../../data/types';
+
+const readyCount = pendingOrders.filter((order) => order.status === 'ready').length;
+const readyShop = pendingOrders.find((order) => order.status === 'ready');
+---
+
+<AppLayout
+  role="buyer"
+  username={buyer.username}
+  section="My Pending Orders"
+  heading="My Pending Orders"
+  subtitle="Track what you reserved and collect it in person."
+>
+  {
+    readyCount > 0 && readyShop && (
+      <p class="notice notice-lime banner">
+        {readyCount} order{readyCount === 1 ? ' is' : 's are'} ready for pickup at {readyShop.shopName} &middot;
+        collect before {readyShop.expiryLabel.toLowerCase()}
+      </p>
+    )
+  }
+
+  <table class="table orders">
+    <thead>
+      <tr>
+        <th>Food</th>
+        <th>Qty</th>
+        <th>Price</th>
+        <th>Pickup location</th>
+        <th>Status</th>
+        <th><span class="sr-only">Actions</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      {
+        pendingOrders.map((order) => (
+          <tr data-order={order.id}>
+            <td class="food">{order.foodName}</td>
+            <td class="tnum">{order.quantity}</td>
+            <td class="tnum">{peso(order.total)}</td>
+            <td class="muted">{order.pickupLocation}</td>
+            <td>
+              {order.status === 'ready' ? (
+                <span class="chip chip-mint">Ready for pickup</span>
+              ) : (
+                <span class="chip chip-tan">Reserved</span>
+              )}
+            </td>
+            <td class="actions">
+              {order.status === 'ready' ? (
+                <button class="btn btn-sm btn-dark" type="button" data-collect={order.id}>
+                  Already picked up
+                </button>
+              ) : (
+                <span class="small muted">Waiting for the shop</span>
+              )}
+            </td>
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+
+  <p class="hint footnote">
+    Tap Already Picked Up only after you have collected your food. The order then moves to My Order History.
+  </p>
+
+  <p class="empty-note" data-empty hidden>Nothing pending. Everything you reserved has been collected.</p>
+</AppLayout>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>('[data-collect]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const row = button.closest<HTMLElement>('[data-order]');
+      if (!row) return;
+      row.hidden = true;
+
+      const remaining = document.querySelectorAll<HTMLElement>('[data-order]:not([hidden])').length;
+      if (remaining === 0) {
+        document.querySelector<HTMLElement>('.orders')?.setAttribute('hidden', '');
+        document.querySelector<HTMLElement>('.banner')?.setAttribute('hidden', '');
+        document.querySelector<HTMLElement>('.footnote')?.setAttribute('hidden', '');
+        const empty = document.querySelector<HTMLElement>('[data-empty]');
+        if (empty) empty.hidden = false;
+      }
+    });
+  });
+</script>
+
+<style>
+  .banner {
+    margin-bottom: 26px;
+  }
+
+  .food {
+    font-weight: 600;
+    font-size: 14.5px;
+  }
+
+  .actions {
+    text-align: right;
+  }
+
+  .footnote {
+    margin-top: 22px;
+  }
+
+  .empty-note {
+    padding: 70px 0;
+    text-align: center;
+    color: var(--muted);
+  }
+</style>

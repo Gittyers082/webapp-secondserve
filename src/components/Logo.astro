@@ -1,0 +1,67 @@
+---
+interface Props {
+  /** Height of the wordmark in pixels. */
+  size?: number;
+  class?: string;
+}
+
+const { size = 26, class: className } = Astro.props;
+---
+
+<span class:list={['logo', className]} style={`--logo-size:${size}px`}>
+  <span class="logo-mark" aria-hidden="true">
+    <svg viewBox="0 0 48 48" role="presentation">
+      <rect width="48" height="48" rx="11" fill="#f6eddc"></rect>
+      <path
+        d="M9 30c8.5-9 17.5-13.5 30-15-3.5 6-9 10-15.5 12.5"
+        fill="none"
+        stroke="#c13d1f"
+        stroke-width="4"
+        stroke-linecap="round"></path>
+      <path
+        d="M11 33.5c9-3 17-3.5 26-1.5-5 4.5-12 6.5-20 5.5z"
+        fill="#eda33c"></path>
+    </svg>
+  </span>
+  <span class="logo-word"><em>second</em><strong>serve</strong></span>
+  <span class="sr-only">SecondServe</span>
+</span>
+
+<style>
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-mark {
+    display: block;
+    width: calc(var(--logo-size) * 1.42);
+    height: calc(var(--logo-size) * 1.42);
+  }
+
+  .logo-mark svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .logo-word {
+    font-family: var(--display);
+    font-size: var(--logo-size);
+    line-height: 1;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+
+  .logo-word em {
+    font-style: italic;
+    font-weight: 400;
+  }
+
+  .logo-word strong {
+    font-weight: 700;
+    font-family: var(--sans);
+    font-size: 0.92em;
+    letter-spacing: -0.02em;
+  }
+</style>

@@ -1,0 +1,174 @@
+---
+import type { FoodArt } from '../data/types';
+
+interface Props {
+  art: FoodArt;
+  /** Greys the illustration out, used for expired listings. */
+  muted?: boolean;
+  class?: string;
+}
+
+const { art, muted = false, class: className } = Astro.props;
+---
+
+<figure class:list={['art', { 'is-muted': muted }, className]}>
+  <svg viewBox="0 0 240 150" role="img" aria-label={`Illustration of ${art.replace(/-/g, ' ')}`}>
+    <ellipse class="shadow" cx="120" cy="124" rx="56" ry="9"></ellipse>
+
+    {
+      art === 'pandesal-ube' && (
+        <g>
+          <ellipse cx="120" cy="52" rx="33" ry="25" fill="#ab8ed3" />
+          <ellipse cx="94" cy="86" rx="33" ry="25" fill="#b89ada" />
+          <ellipse cx="146" cy="86" rx="33" ry="25" fill="#b89ada" />
+          <circle cx="112" cy="47" r="4" fill="#efd96a" />
+          <circle cx="129" cy="50" r="4" fill="#efd96a" />
+          <circle cx="86" cy="82" r="4" fill="#efd96a" />
+          <circle cx="103" cy="88" r="4" fill="#efd96a" />
+          <circle cx="139" cy="82" r="4" fill="#efd96a" />
+          <circle cx="156" cy="88" r="4" fill="#efd96a" />
+        </g>
+      )
+    }
+
+    {
+      art === 'pandesal-plain' && (
+        <g>
+          <ellipse cx="120" cy="54" rx="32" ry="24" fill="#d8b98a" />
+          <ellipse cx="95" cy="87" rx="32" ry="24" fill="#e2c69a" />
+          <ellipse cx="145" cy="87" rx="32" ry="24" fill="#e2c69a" />
+        </g>
+      )
+    }
+
+    {
+      art === 'croissant' && (
+        <g>
+          <path
+            d="M48 104c6-40 34-66 72-66s66 26 72 66c-16-14-34-22-52-18-9 2-15 8-20 14-5-6-11-12-20-14-18-4-36 4-52 18z"
+            fill="#e9a23f"
+          />
+          <path d="M98 44c-6 18-10 38-10 58M142 44c6 18 10 38 10 58" stroke="#cf8828" stroke-width="3" fill="none" />
+        </g>
+      )
+    }
+
+    {
+      art === 'empanada' && (
+        <g>
+          <path d="M44 106a76 60 0 0 1 152 0z" fill="#e2951f" />
+          <path d="M44 106h152" stroke="#c87f14" stroke-width="3" />
+          <path
+            d="M52 106v9M66 106v9M80 106v9M94 106v9M108 106v9M122 106v9M136 106v9M150 106v9M164 106v9M178 106v9"
+            stroke="#c87f14"
+            stroke-width="3"
+            stroke-linecap="round"
+          />
+          <path d="M78 76c14-12 32-18 50-16" stroke="#f3c477" stroke-width="5" stroke-linecap="round" fill="none" />
+        </g>
+      )
+    }
+
+    {
+      art === 'strawberry-cup' && (
+        <g>
+          <path d="M78 42h84l-10 70a8 8 0 0 1-8 7H96a8 8 0 0 1-8-7z" fill="#fbf8ef" stroke="#ded3bc" stroke-width="2" />
+          <circle cx="104" cy="70" r="13" fill="#d8402f" />
+          <circle cx="134" cy="66" r="13" fill="#e04b36" />
+          <circle cx="119" cy="92" r="13" fill="#cf3729" />
+          <path d="M99 57l5 5 5-5zM129 53l5 5 5-5z" fill="#4d8a3f" />
+        </g>
+      )
+    }
+
+    {
+      art === 'cake-slice' && (
+        <g>
+          <path d="M66 62l54-16 54 16-54 18z" fill="#f0b464" />
+          <path d="M66 62v34l54 18V80z" fill="#e2951f" />
+          <path d="M174 62v34l-54 18V80z" fill="#cf8828" />
+          <path d="M66 76l54 18 54-18v12l-54 18-54-18z" fill="#fbf8ef" opacity="0.85" />
+          <circle cx="105" cy="60" r="4" fill="#8a5a28" />
+          <circle cx="135" cy="60" r="4" fill="#8a5a28" />
+        </g>
+      )
+    }
+
+    {
+      art === 'cheese-roll' && (
+        <g>
+          <rect x="58" y="52" width="124" height="58" rx="29" fill="#eeb94f" stroke="#cf8828" stroke-width="3" />
+          <path d="M92 54v54M120 54v54M148 54v54" stroke="#cf8828" stroke-width="3" />
+        </g>
+      )
+    }
+
+    {
+      art === 'monay' && (
+        <g>
+          <ellipse cx="120" cy="82" rx="62" ry="32" fill="#e2c69a" stroke="#c9a874" stroke-width="3" />
+          <path d="M120 52v60" stroke="#c9a874" stroke-width="4" />
+        </g>
+      )
+    }
+
+    {
+      art === 'ensaymada' && (
+        <g>
+          <ellipse cx="120" cy="82" rx="58" ry="32" fill="#eeb94f" />
+          <path
+            d="M74 82c10-14 26-20 46-20s36 6 46 20"
+            stroke="#cf8828"
+            stroke-width="4"
+            fill="none"
+            stroke-linecap="round"
+          />
+          <circle cx="98" cy="74" r="3" fill="#fbf8ef" />
+          <circle cx="120" cy="68" r="3" fill="#fbf8ef" />
+          <circle cx="142" cy="74" r="3" fill="#fbf8ef" />
+        </g>
+      )
+    }
+
+    {
+      art === 'mystery' && (
+        <g>
+          <rect x="70" y="48" width="100" height="62" rx="10" fill="#d9cfb6" stroke="#b9ab8c" stroke-width="3" />
+          <text
+            x="120"
+            y="92"
+            text-anchor="middle"
+            font-family="Georgia, serif"
+            font-size="44"
+            fill="#8d8268">?</text>
+        </g>
+      )
+    }
+  </svg>
+</figure>
+
+<style>
+  .art {
+    margin: 0;
+    width: 100%;
+    background: var(--tan-deep);
+    border-radius: var(--r-md);
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+  }
+
+  .art svg {
+    width: 100%;
+    height: auto;
+  }
+
+  .shadow {
+    fill: rgba(23, 21, 15, 0.12);
+  }
+
+  .is-muted svg {
+    filter: grayscale(1);
+    opacity: 0.45;
+  }
+</style>
