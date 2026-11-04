@@ -1,0 +1,110 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import { admin, pendingAccounts } from '../../data/store';
+---
+
+<AppLayout
+  role="admin"
+  username={admin.username}
+  section="Pending Approvals"
+  heading="Pending Approvals"
+  subtitle={`${pendingAccounts.length} new accounts are waiting for you.`}
+>
+  <table class="table" data-approvals>
+    <thead>
+      <tr>
+        <th>Username</th>
+        <th>Account type</th>
+        <th>Shop / business</th>
+        <th>Requested</th>
+        <th>Status</th>
+        <th><span class="sr-only">Actions</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      {
+        pendingAccounts.map((account) => (
+          <tr data-account={account.id}>
+            <td class="username">{account.username}</td>
+            <td>{account.role === 'seller' ? 'Seller' : 'Buyer'}</td>
+            <td class="muted">{account.shopName ?? '—'}</td>
+            <td class="muted">{account.requestedAt}</td>
+            <td>
+              <span class="chip chip-tan" data-decision-chip>Pending</span>
+            </td>
+            <td class="actions">
+              <div class="row">
+                <button class="btn btn-sm btn-dark" type="button" data-decide="approved">
+                  Approve
+                </button>
+                <button class="btn btn-sm btn-danger" type="button" data-decide="declined">
+                  Decline
+                </button>
+              </div>
+            </td>
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+
+  <div class="empty" data-empty hidden>
+    <h2>Nothing waiting.</h2>
+    <p>Every new account has been reviewed. Decisions are kept in Approved/Declined Users.</p>
+    <a class="btn btn-dark" href="/admin/decisions">See past decisions</a>
+  </div>
+</AppLayout>
+
+<script>
+  const rows = Array.from(document.querySelectorAll<HTMLElement>('[data-account]'));
+
+  const checkEmpty = () => {
+    const remaining = rows.filter((row) => row.dataset.decided !== 'true').length;
+    if (remaining > 0) return;
+
+    const table = document.querySelector<HTMLElement>('[data-approvals]');
+    const empty = document.querySelector<HTMLElement>('[data-empty]');
+    if (table) table.hidden = true;
+    if (empty) empty.hidden = false;
+  };
+
+  rows.forEach((row) => {
+    row.querySelectorAll<HTMLButtonElement>('[data-decide]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const decision = button.dataset.decide === 'approved' ? 'Approved' : 'Declined';
+        const chip = row.querySelector<HTMLElement>('[data-decision-chip]');
+        const actions = row.querySelector<HTMLElement>('.actions');
+
+        if (chip) {
+          chip.className = `chip ${decision === 'Approved' ? 'chip-mint' : 'chip-blush'}`;
+          chip.textContent = decision;
+        }
+
+        if (actions) {
+          const note = document.createElement('span');
+          note.className = 'small muted';
+          note.textContent = `${decision} just now`;
+          actions.replaceChildren(note);
+        }
+
+        row.dataset.decided = 'true';
+        checkEmpty();
+      });
+    });
+  });
+</script>
+
+<style>
+  .username {
+    font-size: 15px;
+  }
+
+  .actions {
+    text-align: right;
+  }
+
+  .actions .row {
+    justify-content: flex-end;
+    gap: 8px;
+  }
+</style>

@@ -1,0 +1,137 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import { handoverQueue, handoverRecord, seller } from '../../data/store';
+import { peso } from '../../data/types';
+---
+
+<AppLayout
+  role="seller"
+  username={seller.username}
+  section="Reserved / Handover"
+  heading="Reserved / Handover"
+  subtitle="Hand food to buyers, one pickup at a time."
+>
+  <p class="notice notice-info banner">
+    Mark Ready for Pickup updates the buyer&rsquo;s My Pending Orders (the chip turns green).
+  </p>
+
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Food</th>
+        <th>Buyer</th>
+        <th>Qty</th>
+        <th>Status</th>
+        <th>Pickup location</th>
+        <th><span class="sr-only">Actions</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      {
+        handoverQueue.map((order) => (
+          <tr data-order={order.id}>
+            <td class="food">{order.foodName}</td>
+            <td>{order.buyerUsername}</td>
+            <td class="tnum">{order.quantity}</td>
+            <td>
+              <span
+                class:list={['chip', order.status === 'ready' ? 'chip-mint' : 'chip-tan']}
+                data-status-chip
+              >
+                {order.status === 'ready' ? 'Ready for pickup' : 'Reserved'}
+              </span>
+            </td>
+            <td class="muted">{order.pickupLocation}</td>
+            <td class="actions">
+              {order.status === 'ready' ? (
+                <span class="small muted" data-waiting>
+                  Waiting for buyer
+                </span>
+              ) : (
+                <button class="btn btn-sm btn-dark" type="button" data-ready={order.id}>
+                  Mark ready for pickup
+                </button>
+              )}
+            </td>
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+
+  <section class="record">
+    <h2 class="section-title">Order record</h2>
+    <p class="hint">Completed orders are saved for you and the buyer.</p>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Food</th>
+          <th>Buyer</th>
+          <th>Qty</th>
+          <th>Total</th>
+          <th>Status</th>
+          <th>Completed</th>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          handoverRecord.map((order) => (
+            <tr>
+              <td class="food">{order.foodName}</td>
+              <td>{order.buyerUsername}</td>
+              <td class="tnum">{order.quantity}</td>
+              <td class="tnum">{peso(order.total)}</td>
+              <td>
+                <span class="chip chip-mint">Picked up</span>
+              </td>
+              <td class="muted">{order.pickedUpAt}</td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </section>
+</AppLayout>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>('[data-ready]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const row = button.closest<HTMLElement>('[data-order]');
+      const chip = row?.querySelector<HTMLElement>('[data-status-chip]');
+      const cell = button.parentElement;
+      if (!chip || !cell) return;
+
+      chip.className = 'chip chip-mint';
+      chip.textContent = 'Ready for pickup';
+
+      const waiting = document.createElement('span');
+      waiting.className = 'small muted';
+      waiting.textContent = 'Waiting for buyer';
+      cell.replaceChildren(waiting);
+    });
+  });
+</script>
+
+<style>
+  .banner {
+    margin-bottom: 26px;
+  }
+
+  .food {
+    font-weight: 600;
+    font-size: 14.5px;
+  }
+
+  .actions {
+    text-align: right;
+  }
+
+  .record {
+    margin-top: 54px;
+  }
+
+  .record .hint {
+    margin: 4px 0 18px;
+  }
+</style>

@@ -1,0 +1,140 @@
+---
+import Logo from './Logo.astro';
+import type { NavItem } from '../data/nav';
+import { roleLabel } from '../data/nav';
+import type { Role } from '../data/types';
+
+interface Props {
+  role: Role;
+  username: string;
+  nav: NavItem[];
+  /** Pathname of the tab that should read as current. */
+  current: string;
+  /** The administrator chrome carries a Log out button in the header. */
+  showLogout?: boolean;
+}
+
+const { role, username, nav, current, showLogout = false } = Astro.props;
+const initial = role === 'seller' ? 'B' : username.charAt(0).toUpperCase();
+---
+
+<header class="topbar">
+  <div class="topbar-row">
+    <span class="role-chip">{roleLabel[role]}</span>
+
+    <a class="brand" href={nav[0]!.href}>
+      <Logo size={25} />
+    </a>
+
+    <div class="account">
+      <span class="account-name">{username}</span>
+      <span class="avatar" aria-hidden="true">{initial}</span>
+      {showLogout && <a class="btn btn-sm" href="/login">Log out</a>}
+    </div>
+  </div>
+
+  <nav class="tabs" aria-label={`${roleLabel[role]} sections`}>
+    {
+      nav.map((item) => {
+        const active = item.href === current;
+        return (
+          <a class:list={['tab', { 'is-active': active }]} href={item.href} aria-current={active ? 'page' : undefined}>
+            {item.label}
+            {item.count ? <span class="count">{item.count}</span> : null}
+          </a>
+        );
+      })
+    }
+  </nav>
+</header>
+
+<style>
+  .topbar {
+    background: var(--paper);
+    border-bottom: 1px solid var(--line);
+    position: sticky;
+    top: 0;
+    z-index: 30;
+  }
+
+  .topbar-row {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    padding: 18px var(--gutter) 10px;
+  }
+
+  .role-chip {
+    justify-self: start;
+    display: inline-flex;
+    align-items: center;
+    height: 26px;
+    padding: 0 14px;
+    border-radius: var(--r-pill);
+    background: var(--tan-deep);
+    color: var(--ink-soft);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .brand {
+    justify-self: center;
+  }
+
+  .account {
+    justify-self: end;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .account-name {
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .avatar {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--ink);
+    color: var(--paper);
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .tabs {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    padding: 6px var(--gutter) 0;
+    flex-wrap: wrap;
+  }
+
+  .tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0 12px;
+    border-bottom: 2px solid transparent;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .tab:hover { color: var(--ink); }
+
+  .tab.is-active {
+    color: var(--ink);
+    border-bottom-color: var(--ink);
+  }
+</style>

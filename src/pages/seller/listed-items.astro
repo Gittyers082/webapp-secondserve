@@ -1,0 +1,68 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import ListingCard from '../../components/ListingCard.astro';
+import { seller, sellerListings } from '../../data/store';
+---
+
+<AppLayout
+  role="seller"
+  username={seller.username}
+  section="My Listed Items"
+  heading="My Listed Items"
+  subtitle="A read-only look at everything on the shelf."
+>
+  <div class="grid">
+    {sellerListings.map((listing) => <ListingCard listing={listing} variant="seller" />)}
+
+    <a class="add-tile panel-outline" href="/seller/add-listing">
+      <span class="plus" aria-hidden="true">+</span>
+      <span class="add-title">Add a new listing</span>
+      <span class="small muted">Open the Add Listing tab</span>
+    </a>
+  </div>
+
+  <p class="hint footnote">Read-only. To change or remove a listing, open Manage Listings.</p>
+</AppLayout>
+
+<style>
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 34px 30px;
+  }
+
+  .add-tile {
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 6px;
+    text-align: center;
+    padding: 40px 28px;
+    min-height: 260px;
+    transition: border-color 0.15s ease;
+  }
+
+  .add-tile:hover {
+    border-color: var(--ink);
+  }
+
+  .plus {
+    font-family: var(--display);
+    font-size: 40px;
+    line-height: 1;
+    color: var(--muted);
+  }
+
+  .add-title {
+    font-family: var(--display);
+    font-size: 22px;
+  }
+
+  .footnote {
+    margin-top: 32px;
+  }
+
+  @media (max-width: 1200px) {
+    .grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>

@@ -1,0 +1,102 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import Dialog from '../../components/Dialog.astro';
+import { buyer, historyTotal, orderHistory } from '../../data/store';
+import { peso } from '../../data/types';
+---
+
+<AppLayout
+  role="buyer"
+  username={buyer.username}
+  section="My Order History"
+  heading="My Order History"
+  subtitle="Every purchase you have given a second chance."
+>
+  <div class="history-head">
+    <button class="btn btn-sm btn-danger" type="button" data-dialog-open="clear-history">Clear history</button>
+  </div>
+
+  <div data-history>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Food</th>
+          <th>Qty</th>
+          <th>Price</th>
+          <th>Shop</th>
+          <th>Pickup location</th>
+          <th>Picked up</th>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          orderHistory.map((order) => (
+            <tr>
+              <td class="food">{order.foodName}</td>
+              <td class="tnum">{order.quantity}</td>
+              <td class="tnum">{peso(order.total)}</td>
+              <td>{order.shopName}</td>
+              <td class="muted">{order.pickupLocation}</td>
+              <td class="muted">{order.pickedUpAt}</td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+
+    <p class="totals">
+      {orderHistory.length} completed orders &middot; <span class="tnum">{peso(historyTotal)}</span> total
+    </p>
+  </div>
+
+  <div class="empty" data-history-empty hidden>
+    <h2>No past orders yet.</h2>
+    <p>Collected orders show up here with their pickup details.</p>
+    <a class="btn btn-dark" href="/buyer/shop">Browse the shop</a>
+  </div>
+
+  <Dialog
+    id="clear-history"
+    title="Clear order history?"
+    message={`This removes all ${orderHistory.length} past orders from your history. This cannot be undone.`}
+  >
+    <div class="dialog-actions">
+      <button class="btn" type="button" data-dialog-close>Cancel</button>
+      <button class="btn btn-primary" type="button" data-clear-history>Clear history</button>
+    </div>
+  </Dialog>
+</AppLayout>
+
+<script>
+  document.querySelector<HTMLButtonElement>('[data-clear-history]')?.addEventListener('click', () => {
+    const history = document.querySelector<HTMLElement>('[data-history]');
+    const empty = document.querySelector<HTMLElement>('[data-history-empty]');
+    const scrim = document.querySelector<HTMLElement>('[data-dialog="clear-history"]');
+    const head = document.querySelector<HTMLElement>('.history-head');
+
+    if (history) history.hidden = true;
+    if (head) head.hidden = true;
+    if (empty) empty.hidden = false;
+    if (scrim) scrim.hidden = true;
+  });
+</script>
+
+<style>
+  .history-head {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 14px;
+  }
+
+  .food {
+    font-weight: 600;
+    font-size: 14.5px;
+  }
+
+  .totals {
+    margin-top: 20px;
+    text-align: right;
+    font-size: 13px;
+    color: var(--muted);
+  }
+</style>

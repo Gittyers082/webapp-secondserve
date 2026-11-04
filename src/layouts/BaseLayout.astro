@@ -1,0 +1,71 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  /** Shown in the window chrome strip at the top of every screen. */
+  title: string;
+  description?: string;
+}
+
+const { title, description = 'Good products deserve a second chance.' } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SecondServe &mdash; {title}</title>
+    <meta name="description" content={description} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap"
+    />
+    <link rel="icon" type="image/png" href="/brand/secondserve-mark.png" />
+    <link rel="apple-touch-icon" href="/brand/secondserve-mark.png" />
+    <meta property="og:title" content={`SecondServe — ${title}`} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content="/brand/secondserve-logo.png" />
+  </head>
+  <body>
+    <div class="window-chrome">
+      <span class="lights" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span class="window-title">SecondServe &mdash; {title}</span>
+    </div>
+    <slot />
+  </body>
+</html>
+
+<style>
+  .window-chrome {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 44px;
+    padding: 0 20px;
+    background: var(--paper-soft);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .lights {
+    position: absolute;
+    left: 20px;
+    display: flex;
+    gap: 8px;
+  }
+
+  .lights i {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--line-strong);
+  }
+
+  .window-title {
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+</style>

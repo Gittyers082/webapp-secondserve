@@ -1,0 +1,248 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import ListingCard from '../../components/ListingCard.astro';
+import FoodArt from '../../components/FoodArt.astro';
+import Dialog from '../../components/Dialog.astro';
+import { seller, sellerListings } from '../../data/store';
+import { peso } from '../../data/types';
+
+const first = sellerListings[0]!;
+---
+
+<AppLayout
+  role="seller"
+  username={seller.username}
+  section="Manage Listings"
+  heading="Manage Listings"
+  subtitle="Edit what you listed or take it down."
+>
+  <div class="toolbar">
+    <button class="btn btn-sm" type="button" data-dialog-open="edit-listing" data-needs-selection>Edit selected</button>
+    <button class="btn btn-sm" type="button" data-mark-sold data-needs-selection>Mark as sold</button>
+    <button class="btn btn-sm" type="button" data-withdraw data-needs-selection>Withdraw</button>
+    <button class="btn btn-sm btn-danger" type="button" data-dialog-open="delete-listing" data-needs-selection>
+      Delete selected
+    </button>
+  </div>
+
+  <div class="grid">
+    {
+      sellerListings.map((listing, index) => (
+        <ListingCard listing={listing} variant="seller" selectable selected={index === 0} />
+      ))
+    }
+
+    <a class="add-tile panel-outline" href="/seller/add-listing">
+      <span class="plus" aria-hidden="true">+</span>
+      <span class="add-title">Add a new listing</span>
+      <span class="small muted">Open the Add Listing tab</span>
+    </a>
+  </div>
+
+  <p class="hint footnote">
+    Select a photo, then edit it, mark it sold, withdraw it from the marketplace, or delete it.
+  </p>
+
+  <!-- Edit ------------------------------------------------------------- -->
+  <Dialog id="edit-listing" title="Edit listing" wide>
+    <form class="edit" method="get" action="#">
+      <div class="edit-photo">
+        <span class="field-label">Product photo</span>
+        <div class="photo-frame"><FoodArt art={first.art} /></div>
+        <div class="photo-actions">
+          <button class="btn btn-sm btn-dark" type="button">Retake with camera</button>
+          <button class="btn btn-sm" type="button">Replace from file</button>
+        </div>
+      </div>
+
+      <div class="edit-fields">
+        <div class="field">
+          <label class="field-label" for="edit-name">Food name</label>
+          <input class="input" id="edit-name" value={first.name} />
+        </div>
+
+        <div class="field-row">
+          <div>
+            <label class="field-label" for="edit-qty">Quantity</label>
+            <input class="input" id="edit-qty" value={first.quantity} inputmode="numeric" />
+          </div>
+          <div>
+            <label class="field-label" for="edit-original">Original price</label>
+            <input class="input" id="edit-original" value={peso(first.originalPrice)} />
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div>
+            <label class="field-label" for="edit-discounted">Discounted price</label>
+            <input class="input" id="edit-discounted" value={peso(first.discountedPrice)} />
+          </div>
+          <div>
+            <label class="field-label" for="edit-date">Expiry date</label>
+            <input class="input" id="edit-date" value="Nov 5, 2026" />
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div>
+            <label class="field-label" for="edit-time">Expiry time</label>
+            <input class="input" id="edit-time" value="6:00 PM" />
+          </div>
+          <div>
+            <label class="field-label" for="edit-pickup">Pickup location</label>
+            <input class="input" id="edit-pickup" value={first.pickupLocation} />
+          </div>
+        </div>
+      </div>
+
+      <div class="dialog-actions edit-actions">
+        <button class="btn" type="button" data-dialog-close>Cancel</button>
+        <button class="btn btn-primary" type="button" data-dialog-close>Save changes</button>
+      </div>
+    </form>
+  </Dialog>
+
+  <!-- Delete ----------------------------------------------------------- -->
+  <Dialog
+    id="delete-listing"
+    title="Delete Ube Cheese Pandesal?"
+    message="This cannot be undone. The listing and its photo will no longer appear in the Shop."
+  >
+    <div class="dialog-actions">
+      <button class="btn" type="button" data-dialog-close>Cancel</button>
+      <button class="btn btn-primary" type="button" data-confirm-delete>Delete</button>
+    </div>
+  </Dialog>
+</AppLayout>
+
+<script>
+  let cards = Array.from(document.querySelectorAll<HTMLElement>('article[data-listing]'));
+  const deleteTitle = document.querySelector<HTMLElement>('[data-dialog="delete-listing"] h2');
+
+  const selected = () => cards.find((card) => card.isConnected && card.classList.contains('is-selected'));
+
+  const syncToolbar = () => {
+    const card = selected();
+
+    document.querySelectorAll<HTMLButtonElement>('[data-needs-selection]').forEach((button) => {
+      button.disabled = !card;
+    });
+
+    if (deleteTitle) {
+      // The card title is uppercased by CSS, so textContent still holds the
+      // original casing. Drop the "(box of 4)" tail for a readable question.
+      const name = card?.querySelector<HTMLElement>('h3')?.textContent?.replace(/\s*\(.*\)\s*$/, '');
+      deleteTitle.textContent = name ? `Delete ${name}?` : 'Delete this listing?';
+    }
+  };
+
+  cards.forEach((card) => {
+    card.querySelector<HTMLElement>('.thumb')?.addEventListener('click', () => {
+      cards.forEach((other) => other.classList.toggle('is-selected', other === card));
+      syncToolbar();
+    });
+  });
+
+  const setState = (label: string, tone: string) => {
+    const card = selected();
+    const chip = card?.querySelector<HTMLElement>('.foot .chip');
+    if (!chip) return;
+    chip.className = `chip ${tone}`;
+    chip.textContent = label;
+  };
+
+  document.querySelector<HTMLButtonElement>('[data-mark-sold]')?.addEventListener('click', () =>
+    setState('Sold', 'chip-tan'),
+  );
+
+  document.querySelector<HTMLButtonElement>('[data-withdraw]')?.addEventListener('click', () =>
+    setState('Withdrawn', 'chip-tan'),
+  );
+
+  document.querySelector<HTMLButtonElement>('[data-confirm-delete]')?.addEventListener('click', () => {
+    const card = selected();
+    card?.remove();
+    cards = cards.filter((other) => other !== card);
+
+    const scrim = document.querySelector<HTMLElement>('[data-dialog="delete-listing"]');
+    if (scrim) scrim.hidden = true;
+    syncToolbar();
+  });
+
+  syncToolbar();
+</script>
+
+<style>
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 26px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 34px 30px;
+  }
+
+  .add-tile {
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 6px;
+    text-align: center;
+    padding: 40px 28px;
+    min-height: 260px;
+  }
+
+  .add-tile:hover { border-color: var(--ink); }
+
+  .plus {
+    font-family: var(--display);
+    font-size: 40px;
+    line-height: 1;
+    color: var(--muted);
+  }
+
+  .add-title {
+    font-family: var(--display);
+    font-size: 22px;
+  }
+
+  .footnote {
+    margin-top: 32px;
+  }
+
+  .edit {
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr);
+    gap: 26px;
+    margin-top: 10px;
+  }
+
+  .photo-frame {
+    border-radius: var(--r-md);
+    overflow: hidden;
+    background: var(--tan-deep);
+  }
+
+  .photo-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .edit-actions {
+    grid-column: 1 / -1;
+  }
+
+  @media (max-width: 1200px) {
+    .grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (max-width: 800px) {
+    .edit { grid-template-columns: 1fr; }
+  }
+</style>

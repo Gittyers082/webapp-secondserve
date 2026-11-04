@@ -1,0 +1,83 @@
+---
+interface Props {
+  value?: number;
+  min?: number;
+  max?: number;
+  label?: string;
+  /** Hook used by page scripts to find this stepper. */
+  name?: string;
+}
+
+const { value = 1, min = 1, max = 99, label = 'Quantity', name = 'quantity' } = Astro.props;
+---
+
+<div class="stepper" data-stepper={name} data-min={min} data-max={max}>
+  <span class="field-label stepper-label">{label}</span>
+  <div class="controls">
+    <button type="button" class="step" data-step="-1" aria-label="Decrease quantity">&minus;</button>
+    <output class="value tnum" data-stepper-value>{value}</output>
+    <button type="button" class="step" data-step="1" aria-label="Increase quantity">+</button>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-stepper]').forEach((stepper) => {
+    const output = stepper.querySelector<HTMLOutputElement>('[data-stepper-value]');
+    if (!output) return;
+
+    const min = Number(stepper.dataset.min ?? 1);
+    const max = Number(stepper.dataset.max ?? 99);
+
+    stepper.querySelectorAll<HTMLButtonElement>('[data-step]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const delta = Number(button.dataset.step);
+        const next = Math.min(max, Math.max(min, Number(output.textContent) + delta));
+        output.textContent = String(next);
+        stepper.dispatchEvent(new CustomEvent('quantitychange', { detail: next, bubbles: true }));
+      });
+    });
+  });
+</script>
+
+<style>
+  .stepper {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .stepper-label {
+    margin-bottom: 0;
+  }
+
+  .controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    height: 38px;
+    padding: 0 6px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--r-pill);
+    background: var(--field);
+  }
+
+  .step {
+    width: 30px;
+    height: 30px;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    font-size: 16px;
+    line-height: 1;
+    color: var(--ink);
+  }
+
+  .step:hover { background: rgba(23, 21, 15, 0.07); }
+
+  .value {
+    min-width: 26px;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 600;
+  }
+</style>
