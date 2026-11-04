@@ -70,6 +70,9 @@ The dev server prints a local address, usually <http://localhost:4321>.
 ## How it is put together
 
 ```
+public/
+  brand/        secondserve-logo.png (full square lockup),
+                secondserve-mark.png (tray-and-hand tile, rounded)
 src/
   components/   Logo, FoodArt, TopBar, StatusBar, ListingCard,
                 QuantityStepper, Dialog, ProfilePanel
@@ -91,6 +94,10 @@ src/
   JavaScript.
 - **Illustrations are inline SVG** in `FoodArt.astro`, keyed by the `FoodArt`
   union, so there are no image assets to keep in sync.
+- **Branding** lives in `public/brand/`. `Logo.astro` takes a `variant`:
+  `lockup` (mark plus wordmark — the app chrome and the sign-in screens),
+  `mark` (the tile alone) or `full` (the square logo, wordmark included). The
+  mark also serves as the favicon and the touch icon.
 
 ## Connecting it to a backend
 
