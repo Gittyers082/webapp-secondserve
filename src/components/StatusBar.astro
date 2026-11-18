@@ -11,6 +11,7 @@ const { username } = Astro.props;
 <footer class="statusbar">
   <span class="left">
     <span class="dot" aria-hidden="true"></span>
+    <span class="sr-only">Status:</span>
     Connected &middot; {serverAddress}
   </span>
   <span class="right">Signed in as {username}</span>
@@ -24,12 +25,13 @@ const { username } = Astro.props;
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    padding: 11px var(--gutter);
+    padding: 0 var(--gutter);
     background: var(--paper-soft);
     border-top: 1px solid var(--line);
-    font-size: 10.5px;
+    height: var(--statusbar-h);
+    font-size: var(--fs-label);
     font-weight: 600;
-    letter-spacing: 0.09em;
+    letter-spacing: var(--track-caps);
     text-transform: uppercase;
     color: var(--muted);
   }
@@ -44,6 +46,6 @@ const { username } = Astro.props;
     width: 7px;
     height: 7px;
     border-radius: 50%;
-    background: #3f8f43;
+    background: var(--online);
   }
 </style>

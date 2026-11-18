@@ -48,7 +48,15 @@ const quantityLabel =
   data-name={listing.name.toLowerCase()}
   data-shop={listing.shopName.toLowerCase()}
 >
-  <div class="thumb">
+  <div
+    class="thumb"
+    data-select={selectable ? '' : undefined}
+    role={selectable ? 'button' : undefined}
+    tabindex={selectable ? 0 : undefined}
+    aria-pressed={selectable ? (selected ? 'true' : 'false') : undefined}
+    aria-label={selectable ? `Select ${listing.name}` : undefined}
+    aria-disabled={selectable && variant === 'shop' && expired ? true : undefined}
+  >
     <FoodArt art={listing.art} muted={expired} />
 
     {listing.flagged && <span class="chip chip-blush badge">Flagged</span>}
@@ -82,12 +90,12 @@ const quantityLabel =
 
   <dl class="meta">
     <div>
-      <dd class="tnum">{variant === 'shop' ? listing.quantity : quantityLabel}</dd>
       <dt>{variant === 'shop' ? 'Left' : 'Qty'}</dt>
+      <dd class="tnum">{variant === 'shop' ? listing.quantity : quantityLabel}</dd>
     </div>
     <div>
-      <dd>{listing.expiryLabel}</dd>
       <dt>Expires</dt>
+      <dd>{listing.expiryLabel}</dd>
     </div>
   </dl>
 
@@ -99,7 +107,14 @@ const quantityLabel =
             Unavailable
           </button>
         ) : (
-          <button class="btn btn-sm js-details" type="button" data-details-for={listing.id}>
+          <button
+            class="btn btn-sm"
+            type="button"
+            data-details-for={listing.id}
+            data-dialog-open="details"
+            aria-haspopup="dialog"
+            aria-label={`Details: ${listing.name}`}
+          >
             Details
           </button>
         )}
@@ -139,14 +154,33 @@ const quantityLabel =
     overflow: hidden;
   }
 
-  .is-selectable .thumb {
-    border: 2px solid transparent;
-    cursor: pointer;
-    transition: border-color 0.15s ease;
+  .thumb :global(svg) {
+    transition: transform var(--dur-slow) var(--ease-out);
   }
 
-  .is-selectable:hover .thumb { border-color: var(--line-strong); }
-  .is-selected .thumb { border-color: var(--ink); }
+  .card:hover .thumb :global(svg) {
+    transform: scale(1.035);
+  }
+
+  .is-selectable .thumb {
+    outline: 2px solid transparent;
+    outline-offset: -2px;
+    cursor: pointer;
+    transition: outline-color var(--dur-fast) var(--ease-out);
+  }
+
+  .is-selectable .thumb[aria-disabled='true'] {
+    cursor: not-allowed;
+  }
+
+  .is-selectable:hover .thumb:not([aria-disabled='true']) { outline-color: var(--line-control); }
+  .is-selected .thumb,
+  .is-selected:hover .thumb { outline-color: var(--ink); }
+
+  .is-selectable .thumb:focus-visible {
+    outline: 2px solid var(--brick);
+    outline-offset: 2px;
+  }
 
   .badge {
     position: absolute;
@@ -160,14 +194,25 @@ const quantityLabel =
     right: 10px;
     display: grid;
     place-items: center;
-    width: 24px;
-    height: 24px;
-    color: var(--ink);
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--ink);
+    color: var(--paper);
     opacity: 0;
-    transition: opacity 0.15s ease;
+    transform: scale(0.6);
+    transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur) var(--ease-out);
   }
 
-  .is-selected .tick { opacity: 1; }
+  .tick svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .is-selected .tick {
+    opacity: 1;
+    transform: none;
+  }
 
   .head {
     display: flex;
@@ -177,9 +222,9 @@ const quantityLabel =
   }
 
   .head h3 {
-    font-size: 12px;
+    font-size: var(--fs-control);
     font-weight: 600;
-    letter-spacing: 0.055em;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
     line-height: 1.35;
   }
@@ -187,7 +232,7 @@ const quantityLabel =
   .shop {
     margin-top: -4px;
     color: var(--ink-soft);
-    font-size: 13.5px;
+    font-size: var(--fs-small);
   }
 
   .meta {
@@ -196,15 +241,20 @@ const quantityLabel =
     margin: 2px 0 0;
   }
 
+  .meta div {
+    display: flex;
+    flex-direction: column-reverse;
+  }
+
   .meta dd {
     margin: 0;
-    font-size: 14px;
+    font-size: var(--fs-data);
   }
 
   .meta dt {
     margin-top: 1px;
-    font-size: 9.5px;
-    letter-spacing: 0.1em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-caps);
     text-transform: uppercase;
     color: var(--muted);
     font-weight: 600;
@@ -216,6 +266,10 @@ const quantityLabel =
 
   .is-expired .head h3,
   .is-expired .shop {
+    color: var(--muted);
+  }
+
+  .is-expired .price ins {
     color: var(--muted);
   }
 </style>

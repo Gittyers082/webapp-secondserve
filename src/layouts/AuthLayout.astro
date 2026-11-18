@@ -16,7 +16,7 @@ const [before, after] = accent ? headline.split(accent) : [headline, ''];
 
 <BaseLayout title={title}>
   <div class="auth">
-    <div class="auth-grid shell">
+    <main class="auth-grid shell" id="main" tabindex="-1">
       <section class="hero">
         <Logo size={34} />
         <h1>
@@ -31,7 +31,7 @@ const [before, after] = accent ? headline.split(accent) : [headline, ''];
       <section class="card">
         <slot />
       </section>
-    </div>
+    </main>
 
     <footer class="auth-foot">
       <span>SecondServe Desktop</span>
@@ -75,13 +75,13 @@ const [before, after] = accent ? headline.split(accent) : [headline, ''];
     margin-top: 20px;
     max-width: 44ch;
     color: var(--ink-soft);
-    font-size: 16px;
+    font-size: var(--fs-lead);
     line-height: 1.55;
   }
 
   .card {
     background: var(--tan);
-    border-radius: 22px;
+    border-radius: var(--r-xl);
     padding: 34px;
   }
 
@@ -92,17 +92,22 @@ const [before, after] = accent ? headline.split(accent) : [headline, ''];
     gap: 16px;
     padding: 13px var(--gutter);
     border-top: 1px solid var(--line);
-    font-size: 10.5px;
+    font-size: var(--fs-label);
     font-weight: 600;
-    letter-spacing: 0.1em;
+    letter-spacing: var(--track-caps);
     text-transform: uppercase;
     color: var(--muted);
   }
 
-  @media (max-width: 1000px) {
+  .auth-grid:focus {
+    outline: none;
+  }
+
+  @media (max-width: 1100px) {
     .auth-grid {
       grid-template-columns: 1fr;
       gap: 40px;
+      max-width: 720px;
     }
   }
 </style>

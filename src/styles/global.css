@@ -10,16 +10,18 @@
   --tan-deep: #e0d5bd;
   --field: #fcfaf4;
 
-  /* Ink */
+  /* Ink. Every tier that carries words holds 4.5:1 on --tan-deep, the
+     darkest surface text sits on. */
   --ink: #17150f;
   --ink-soft: #3d3831;
-  --muted: #6e675b;
-  --muted-light: #938b7c;
+  --muted: #5f584d;
+  --placeholder: #787062;
 
-  /* Accent */
-  --brick: #c13d1f;
-  --brick-dark: #a53217;
-  --price: #d6442a;
+  /* Accent. Brick holds 4.5:1 on --tan, so links and danger text stay
+     legible inside panels; white on brick is 5.9:1. */
+  --brick: #b03619;
+  --brick-dark: #922c13;
+  --price: #b0361d;
 
   /* Status */
   --lime: #e4ee4c;
@@ -27,26 +29,68 @@
   --mint: #dbe9d0;
   --mint-ink: #3f6b35;
   --blush: #f7dcdc;
+  --blush-soft: #fbe4e4;
   --blush-ink: #ad2f2f;
+  --online: #3f8f43;
 
-  /* Lines */
+  /* Lines. --line-control is for borders that mark an input or a control
+     and holds 3:1 against the surfaces it sits on (WCAG 1.4.11). */
   --line: #d9d0b9;
   --line-strong: #c3b89c;
+  --line-control: #877c66;
   --rule: #231f18;
+
+  /* Tints of ink, for hover fills and overlays */
+  --ink-hover: rgba(23, 21, 15, 0.06);
+  --ink-press: rgba(23, 21, 15, 0.1);
+  --brick-hover: rgba(176, 54, 25, 0.08);
+  --scrim: rgba(23, 21, 15, 0.42);
+  --paper-dim: rgba(242, 239, 228, 0.7);
+
+  /* Depth: only things that float get a shadow */
+  --shadow-bar: 0 10px 30px rgba(23, 21, 15, 0.08);
+  --shadow-dialog: 0 24px 64px rgba(23, 21, 15, 0.26);
 
   /* Type */
   --display: "Instrument Serif", "Iowan Old Style", Georgia, serif;
   --sans: "Hanken Grotesk", "Segoe UI", system-ui, -apple-system, sans-serif;
 
+  /* Type scale. Nothing on screen goes below --fs-label. */
+  --fs-label: 11px;     /* uppercase labels, chips, table headers */
+  --fs-control: 12px;   /* uppercase buttons, tabs, filters */
+  --fs-small: 13px;     /* hints, meta, captions */
+  --fs-data: 14.5px;    /* table cells, card data */
+  --fs-body: 15px;
+  --fs-lead: 17px;
+  --fs-title-s: 19px;   /* sans titles inside panels */
+  --fs-display-s: 23px;
+  --fs-display-m: 28px;
+  --fs-display-l: 34px;
+  --fs-display-xl: 54px;
+  --fs-stat: 52px;
+
+  --track-caps: 0.08em;
+  --track-display: -0.01em;
+
   /* Shape */
   --r-sm: 8px;
   --r-md: 12px;
   --r-lg: 18px;
+  --r-xl: 22px;
   --r-pill: 999px;
 
   /* Rhythm */
   --gutter: 44px;
   --shell: 1460px;
+  --grid-gap: 34px 30px;
+  --topbar-h: 150px;
+  --statusbar-h: 40px;
+
+  /* Motion. One ease for arrivals, a shorter one for feedback. */
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur: 180ms;
+  --dur-slow: 260ms;
 }
 
 *,
@@ -58,6 +102,10 @@
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Keep focused controls clear of the sticky top bar and the sticky
+     action and status bars at the foot of the screen. */
+  scroll-padding-top: calc(var(--topbar-h) + 16px);
+  scroll-padding-bottom: calc(var(--statusbar-h) + 110px);
 }
 
 body {
@@ -65,8 +113,15 @@ body {
   background: var(--paper);
   color: var(--ink);
   font-family: var(--sans);
-  font-size: 15px;
+  font-size: var(--fs-body);
   line-height: 1.5;
+  accent-color: var(--brick);
+  caret-color: var(--brick);
+}
+
+::selection {
+  background: var(--lime);
+  color: var(--ink);
 }
 
 h1,
@@ -114,6 +169,33 @@ table {
   border-radius: 4px;
 }
 
+[hidden] {
+  display: none !important;
+}
+
+/* --------------------------------------------------------------------------
+   Skip link
+   -------------------------------------------------------------------------- */
+
+.skip-link {
+  position: absolute;
+  left: 16px;
+  top: 8px;
+  z-index: 100;
+  padding: 10px 16px;
+  border-radius: var(--r-pill);
+  background: var(--ink);
+  color: var(--paper);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  transform: translateY(-160%);
+  transition: transform var(--dur) var(--ease-out);
+}
+
+.skip-link:focus-visible {
+  transform: none;
+}
+
 /* --------------------------------------------------------------------------
    Layout helpers
    -------------------------------------------------------------------------- */
@@ -129,6 +211,100 @@ table {
 .stack > * + *    { margin-top: 16px; }
 .stack-lg > * + * { margin-top: 28px; }
 
+/* Listing grids: three across, two below 1200px. Shared by Shop, Overview,
+   My Listed Items, Manage Listings and Item Moderation. */
+.listing-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--grid-gap);
+}
+
+/* Dashed tile that closes a listing grid (Add a new listing, the
+   "more items later" note on Overview). */
+.grid-tile {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 6px;
+  min-height: 260px;
+  padding: 40px 28px;
+  text-align: center;
+  border: 1px dashed var(--line-control);
+  border-radius: var(--r-lg);
+  background: transparent;
+  transition: border-color var(--dur) var(--ease-out), background var(--dur) var(--ease-out);
+}
+
+a.grid-tile:hover {
+  border-color: var(--ink);
+  background: var(--ink-hover);
+}
+
+.grid-tile-plus {
+  font-family: var(--display);
+  font-size: 40px;
+  line-height: 1;
+  color: var(--muted);
+  transition: transform var(--dur) var(--ease-out), color var(--dur) var(--ease-out);
+}
+
+a.grid-tile:hover .grid-tile-plus {
+  color: var(--ink);
+  transform: rotate(90deg);
+}
+
+.grid-tile-title {
+  font-family: var(--display);
+  font-size: var(--fs-display-s);
+  line-height: 1.2;
+}
+
+/* Toolbar above a grid or table */
+.toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  margin-bottom: 26px;
+}
+
+/* Sticky bar at the foot of a screen that acts on the selected card. */
+.action-bar {
+  position: sticky;
+  bottom: calc(var(--statusbar-h) + 12px);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 18px 22px;
+  flex-wrap: wrap;
+  margin-top: 42px;
+  padding: 14px 18px;
+  background: var(--tan);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-bar);
+}
+
+.action-bar-copy {
+  flex: 1;
+  min-width: 220px;
+}
+
+.action-bar-name {
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+
+/* Message shown when a filter or search leaves nothing to show. */
+.no-results {
+  padding: 64px 0;
+  text-align: center;
+  color: var(--muted);
+}
+
+.footnote {
+  margin-top: 32px;
+}
+
 /* --------------------------------------------------------------------------
    Page headings
    -------------------------------------------------------------------------- */
@@ -141,38 +317,52 @@ table {
 .page-head h1 {
   font-family: var(--display);
   font-weight: 400;
-  font-size: 54px;
+  font-size: var(--fs-display-xl);
   line-height: 1.04;
-  letter-spacing: -0.01em;
+  letter-spacing: var(--track-display);
+  text-wrap: balance;
 }
 
 .page-head p {
   margin-top: 6px;
   color: var(--ink-soft);
-  font-size: 15px;
+  font-size: var(--fs-body);
 }
 
-.page-head em {
+.page-head em,
+.accent {
   font-family: var(--display);
   font-style: italic;
   color: var(--brick);
+}
+
+.page-head em {
   font-size: 1.12em;
 }
 
 .section-title {
   font-family: var(--display);
   font-weight: 400;
-  font-size: 30px;
-  letter-spacing: -0.01em;
+  font-size: var(--fs-display-m);
+  letter-spacing: var(--track-display);
+}
+
+.display-title {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: var(--fs-display-l);
+  letter-spacing: var(--track-display);
+  line-height: 1.1;
 }
 
 /* --------------------------------------------------------------------------
    Micro-labels
    -------------------------------------------------------------------------- */
 
-.eyebrow {
-  font-size: 10.5px;
-  letter-spacing: 0.1em;
+.eyebrow,
+.field-label {
+  font-size: var(--fs-label);
+  letter-spacing: var(--track-caps);
   text-transform: uppercase;
   color: var(--muted);
   font-weight: 600;
@@ -180,17 +370,12 @@ table {
 
 .field-label {
   display: block;
-  font-size: 10.5px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--muted);
-  font-weight: 600;
   margin-bottom: 7px;
 }
 
 .hint {
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--fs-small);
   line-height: 1.55;
 }
 
@@ -208,15 +393,20 @@ table {
   border-radius: var(--r-pill);
   border: 1px solid var(--ink);
   background: transparent;
-  font-size: 11.5px;
+  font-size: var(--fs-control);
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--track-caps);
   text-transform: uppercase;
   white-space: nowrap;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
 }
 
-.btn:hover { background: rgba(23, 21, 15, 0.06); }
+.btn:hover { background: var(--ink-hover); }
+.btn:active:not(:disabled) { transform: translateY(1px); background: var(--ink-press); }
 
 .btn-primary {
   background: var(--brick);
@@ -224,7 +414,8 @@ table {
   color: #fff;
 }
 
-.btn-primary:hover { background: var(--brick-dark); border-color: var(--brick-dark); }
+.btn-primary:hover,
+.btn-primary:active:not(:disabled) { background: var(--brick-dark); border-color: var(--brick-dark); }
 
 .btn-dark {
   background: var(--ink);
@@ -232,26 +423,28 @@ table {
   color: var(--paper);
 }
 
-.btn-dark:hover { background: #000; }
+.btn-dark:hover,
+.btn-dark:active:not(:disabled) { background: #000; }
 
 .btn-danger {
   border-color: var(--brick);
   color: var(--brick);
 }
 
-.btn-danger:hover { background: rgba(193, 61, 31, 0.08); }
+.btn-danger:hover { background: var(--brick-hover); }
 
 .btn-block { width: 100%; }
 
 .btn-lg { height: 48px; padding: 0 28px; }
 
-.btn-sm { height: 32px; padding: 0 14px; font-size: 10.5px; }
+.btn-sm { height: 32px; padding: 0 14px; font-size: var(--fs-label); }
 
 .btn:disabled,
 .btn[aria-disabled="true"] {
   opacity: 0.45;
   cursor: not-allowed;
-  border-color: var(--line-strong);
+  border-color: var(--line-control);
+  background: transparent;
   color: var(--muted);
 }
 
@@ -264,17 +457,37 @@ table {
   height: 46px;
   padding: 0 16px;
   background: var(--field);
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--line-control);
   border-radius: var(--r-pill);
   font: inherit;
   color: var(--ink);
+  transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
 }
 
-.input::placeholder { color: var(--muted-light); }
+.input::placeholder { color: var(--placeholder); }
+
+.input:hover { border-color: var(--ink-soft); }
 
 .input:focus {
   outline: none;
   border-color: var(--ink);
+  box-shadow: 0 0 0 3px rgba(23, 21, 15, 0.12);
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--brick);
+  outline-offset: 2px;
+}
+
+.input[aria-invalid="true"] { border-color: var(--blush-ink); }
+
+select.input {
+  appearance: none;
+  padding-right: 40px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235f584d' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  background-size: 16px;
 }
 
 .field + .field { margin-top: 16px; }
@@ -305,28 +518,58 @@ table {
   pointer-events: none;
 }
 
+/* Two-option segmented choice (Register's account type) */
+.segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.segment {
+  height: 44px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line-control);
+  background: var(--field);
+  font-size: var(--fs-control);
+  font-weight: 600;
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.segment:hover { border-color: var(--ink); }
+
+.segment[aria-checked="true"] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+
 /* --------------------------------------------------------------------------
    Chips and badges
    -------------------------------------------------------------------------- */
 
 .chip {
   display: inline-flex;
+  flex: none;
   align-items: center;
   gap: 6px;
   height: 22px;
   padding: 0 10px;
   border-radius: var(--r-pill);
-  font-size: 9.5px;
+  font-size: var(--fs-label);
   font-weight: 700;
-  letter-spacing: 0.09em;
+  letter-spacing: var(--track-caps);
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .chip-lime  { background: var(--lime); color: var(--ink); }
 .chip-mint  { background: var(--mint); color: var(--mint-ink); }
 .chip-blush { background: var(--blush); color: var(--blush-ink); }
 .chip-tan   { background: var(--tan-deep); color: var(--ink-soft); }
-.chip-ghost { background: transparent; color: var(--muted); border: 1px solid var(--line-strong); }
+.chip-ghost { background: transparent; color: var(--muted); border: 1px solid var(--line-control); }
 
 .count {
   display: inline-flex;
@@ -338,8 +581,9 @@ table {
   border-radius: var(--r-pill);
   background: var(--lime);
   color: var(--ink);
-  font-size: 10px;
+  font-size: var(--fs-label);
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Filter pills */
@@ -353,18 +597,22 @@ table {
   height: 32px;
   padding: 0 15px;
   border-radius: var(--r-pill);
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--line-control);
   background: transparent;
-  font-size: 10.5px;
+  font-size: var(--fs-label);
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--track-caps);
   text-transform: uppercase;
   display: inline-flex;
   align-items: center;
   gap: 7px;
+  transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
 }
 
-.filter span { color: var(--muted); font-weight: 500; }
+.filter:hover { border-color: var(--ink); }
+
+.filter span { color: var(--muted); font-weight: 500; font-variant-numeric: tabular-nums; }
 
 .filter[aria-pressed="true"] {
   background: var(--ink);
@@ -372,7 +620,7 @@ table {
   color: var(--paper);
 }
 
-.filter[aria-pressed="true"] span { color: rgba(242, 239, 228, 0.6); }
+.filter[aria-pressed="true"] span { color: var(--paper-dim); }
 
 /* --------------------------------------------------------------------------
    Cards and panels
@@ -384,12 +632,6 @@ table {
   padding: 26px;
 }
 
-.panel-outline {
-  border: 1px dashed var(--line-strong);
-  border-radius: var(--r-lg);
-  background: transparent;
-}
-
 /* --------------------------------------------------------------------------
    Prices
    -------------------------------------------------------------------------- */
@@ -399,11 +641,12 @@ table {
   align-items: baseline;
   gap: 8px;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .price del {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--fs-small);
   text-decoration-thickness: 1px;
 }
 
@@ -418,14 +661,20 @@ table {
    Data tables
    -------------------------------------------------------------------------- */
 
+/* Lets a wide table scroll inside its own box instead of the page. */
+.table-wrap {
+  overflow-x: auto;
+}
+
 .table th {
   text-align: left;
-  font-size: 10px;
-  letter-spacing: 0.1em;
+  font-size: var(--fs-label);
+  letter-spacing: var(--track-caps);
   text-transform: uppercase;
   color: var(--muted);
   font-weight: 600;
   padding: 0 14px 12px;
+  white-space: nowrap;
 }
 
 .table thead tr { border-bottom: 1.5px solid var(--rule); }
@@ -434,13 +683,34 @@ table {
   padding: 16px 14px;
   border-bottom: 1px solid var(--line);
   vertical-align: middle;
+  font-size: var(--fs-data);
 }
+
+.table tbody tr { transition: background var(--dur-fast) var(--ease-out); }
+.table tbody tr:hover { background: var(--ink-hover); }
 
 .table tbody tr:last-child td { border-bottom: 0; }
 
 .table tbody tr.is-flagged { background: var(--tan); }
 
-.table .num { font-variant-numeric: tabular-nums; }
+/* Numeric columns: right-aligned, digits in step */
+.table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Identity column: the row's name */
+.table .name {
+  font-weight: 600;
+}
+
+/* Trailing action column */
+.table .actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.table .actions .row { justify-content: flex-end; gap: 8px; }
 
 /* --------------------------------------------------------------------------
    Empty state
@@ -454,7 +724,7 @@ table {
 .empty h2 {
   font-family: var(--display);
   font-weight: 400;
-  font-size: 30px;
+  font-size: var(--fs-display-m);
 }
 
 .empty p { color: var(--muted); margin-top: 6px; }
@@ -468,13 +738,13 @@ table {
 .notice {
   border-radius: var(--r-md);
   padding: 12px 16px;
-  font-size: 13.5px;
+  font-size: var(--fs-small);
   line-height: 1.5;
 }
 
 .notice strong { font-weight: 700; }
 
-.notice-error { background: #fbe4e4; color: var(--blush-ink); }
+.notice-error { background: var(--blush-soft); color: var(--blush-ink); }
 .notice-info  { background: var(--mint); color: var(--mint-ink); }
 .notice-lime  { background: var(--lime); color: var(--ink); }
 
@@ -485,37 +755,48 @@ table {
 .scrim {
   position: fixed;
   inset: 0;
-  background: rgba(23, 21, 15, 0.42);
+  background: var(--scrim);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 32px;
   z-index: 60;
+  animation: scrim-in var(--dur) var(--ease-out);
 }
-
-.scrim[hidden] { display: none; }
 
 .dialog {
   width: min(520px, 100%);
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
   background: var(--paper);
   border-radius: var(--r-lg);
   padding: 28px;
-  box-shadow: 0 24px 64px rgba(23, 21, 15, 0.26);
+  box-shadow: var(--shadow-dialog);
+  animation: dialog-in var(--dur-slow) var(--ease-out);
 }
 
 .dialog h2 {
   font-family: var(--display);
   font-weight: 400;
-  font-size: 28px;
+  font-size: var(--fs-display-m);
 }
 
-.dialog p { color: var(--ink-soft); margin-top: 8px; font-size: 14px; line-height: 1.55; }
+.dialog p { color: var(--ink-soft); margin-top: 8px; font-size: var(--fs-small); line-height: 1.55; }
 
 .dialog-actions {
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 10px;
   margin-top: 24px;
+}
+
+@keyframes scrim-in {
+  from { opacity: 0; }
+}
+
+@keyframes dialog-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
 }
 
 /* --------------------------------------------------------------------------
@@ -527,7 +808,7 @@ table {
 .wrap { flex-wrap: wrap; }
 .grow { flex: 1; }
 .muted { color: var(--muted); }
-.small { font-size: 12.5px; }
+.small { font-size: var(--fs-small); }
 .tnum { font-variant-numeric: tabular-nums; }
 .sr-only {
   position: absolute;
@@ -539,4 +820,31 @@ table {
   clip: rect(0 0 0 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Breakpoints: 1200px drops grids to two across, 1100px stacks side panels.
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 1200px) {
+  :root { --gutter: 32px; }
+  .listing-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* --------------------------------------------------------------------------
+   Reduced motion: keep every state change, drop the travel.
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-property: color, background-color, border-color, opacity !important;
+    scroll-behavior: auto !important;
+  }
+
+  .btn:active:not(:disabled) { transform: none; }
+  a.grid-tile:hover .grid-tile-plus { transform: none; }
 }
