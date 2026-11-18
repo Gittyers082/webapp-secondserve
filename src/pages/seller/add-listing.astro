@@ -19,49 +19,73 @@ const draft = sellerListings[0]!;
 >
   <div class="add">
     <!-- Listing details -------------------------------------------------- -->
-    <form class="form panel" method="post" data-demo-form data-next="/seller/listed-items">
+    <form class="form panel" method="post" data-listing-form novalidate>
       <div class="field">
         <label class="field-label" for="food-name">Food name</label>
         <input class="input" id="food-name" name="name" value={draft.name} required />
       </div>
 
+      <div class="field">
+        <label class="field-label" for="category">Category</label>
+        <select class="input" id="category" name="category" required>
+          <option value="bread" selected>Bread</option>
+          <option value="pastries">Pastries</option>
+          <option value="savory">Savory</option>
+          <option value="cakes">Cakes</option>
+          <option value="fruit-cups">Fruit cups</option>
+        </select>
+      </div>
+
       <div class="field-row">
         <div>
           <label class="field-label" for="quantity">Quantity</label>
-          <input class="input" id="quantity" name="quantity" value={draft.quantity} inputmode="numeric" required />
+          <input class="input" id="quantity" name="quantity" type="number" min="1" step="1" value={draft.quantity} required />
         </div>
         <div>
-          <label class="field-label" for="original-price">Original price</label>
-          <input class="input" id="original-price" name="originalPrice" value={peso(draft.originalPrice)} />
+          <label class="field-label" for="original-price">Original price (₱)</label>
+          <input
+            class="input"
+            id="original-price"
+            name="originalPrice"
+            type="number"
+            min="1"
+            step="0.01"
+            value={draft.originalPrice.toFixed(2)}
+            required
+          />
         </div>
       </div>
 
       <div class="field-row">
         <div>
-          <label class="field-label" for="discounted-price">Discounted price</label>
+          <label class="field-label" for="discounted-price">Discounted price (₱)</label>
           <input
             class="input"
             id="discounted-price"
             name="discountedPrice"
-            value={peso(draft.discountedPrice)}
-            aria-describedby="eligibility"
+            type="number"
+            min="0"
+            step="0.01"
+            value={draft.discountedPrice.toFixed(2)}
+            aria-describedby="price-error eligibility"
             required
           />
+          <p class="field-error" id="price-error" hidden>Make the discounted price lower than the original price.</p>
         </div>
         <div>
           <label class="field-label" for="expiry-date">Expiry date</label>
-          <input class="input" id="expiry-date" name="expiryDate" value="Nov 5, 2026" />
+          <input class="input" id="expiry-date" name="expiryDate" type="date" value="2026-11-05" required />
         </div>
       </div>
 
       <div class="field-row">
         <div>
           <label class="field-label" for="expiry-time">Expiry time</label>
-          <input class="input" id="expiry-time" name="expiryTime" value="6:00 PM" />
+          <input class="input" id="expiry-time" name="expiryTime" type="time" value="18:00" required />
         </div>
         <div>
           <label class="field-label" for="pickup">Pickup location</label>
-          <input class="input" id="pickup" name="pickup" value={draft.pickupLocation} />
+          <input class="input" id="pickup" name="pickup" value={draft.pickupLocation} required />
         </div>
       </div>
 
@@ -184,9 +208,51 @@ const draft = sellerListings[0]!;
 <script>
   import { announce } from '../../scripts/announce';
   import { closeDialog, openDialog } from '../../scripts/dialog';
-  import { initDemoForms } from '../../scripts/demo-forms';
+  import { run } from '../../scripts/request';
+  import { api } from '../../api/client';
 
-  initDemoForms();
+  // Publishing goes through the API client; the discounted price must be
+  // lower than the original, and the error sits beside that field.
+  const form = document.querySelector<HTMLFormElement>('[data-listing-form]');
+  const priceError = document.getElementById('price-error');
+  const discounted = document.getElementById('discounted-price') as HTMLInputElement | null;
+
+  const checkPrices = () => {
+    const data = form ? new FormData(form) : null;
+    const original = Number(data?.get('originalPrice'));
+    const sale = Number(data?.get('discountedPrice'));
+    const ok = !(original > 0 && sale >= original);
+    if (priceError) priceError.hidden = ok;
+    discounted?.setAttribute('aria-invalid', String(!ok));
+    return ok;
+  };
+
+  form?.addEventListener('input', checkPrices);
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!form.reportValidity()) return;
+    if (!checkPrices()) {
+      discounted?.focus();
+      return;
+    }
+    const data = new FormData(form);
+    const created = await run(form.querySelector<HTMLButtonElement>('[type="submit"]'), () =>
+      api.seller.createListing({
+        name: String(data.get('name')).trim(),
+        category: String(data.get('category')) as 'bread' | 'pastries' | 'savory' | 'cakes' | 'fruit-cups',
+        quantity: Number(data.get('quantity')),
+        originalPrice: Number(data.get('originalPrice')),
+        discountedPrice: Number(data.get('discountedPrice')),
+        expiresAt: `${data.get('expiryDate')}T${data.get('expiryTime')}`,
+        pickupLocation: String(data.get('pickup')).trim(),
+      }),
+    );
+    if (created) {
+      announce('Listing published.');
+      window.location.assign('/seller/listed-items');
+    }
+  });
 
   const added = document.querySelector<HTMLElement>('[data-photo-added]');
   const empty = document.querySelector<HTMLElement>('[data-photo-empty]');

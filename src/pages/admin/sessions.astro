@@ -51,22 +51,20 @@ import Icon from '../../components/Icon.astro';
 
 <script>
   import { announce } from '../../scripts/announce';
+  import { run } from '../../scripts/request';
+  import { api } from '../../api/client';
 
   const button = document.querySelector<HTMLButtonElement>('[data-refresh]');
 
-  button?.addEventListener('click', () => {
+  button?.addEventListener('click', async () => {
     const label = button.querySelector<HTMLElement>('[data-refresh-label]');
     if (!label) return;
     const original = label.textContent;
     label.textContent = 'Refreshing…';
-    button.disabled = true;
-
-    window.setTimeout(() => {
-      label.textContent = original;
-      button.disabled = false;
-      button.focus();
-      announce('Session list refreshed.');
-    }, 700);
+    const sessions = await run(button, () => api.admin.sessions());
+    label.textContent = original;
+    button.focus();
+    if (sessions) announce(`${sessions.length} people connected.`);
   });
 </script>
 

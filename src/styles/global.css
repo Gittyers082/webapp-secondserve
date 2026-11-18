@@ -62,6 +62,7 @@
   --danger-bg: #44291f;
   --neutral-bg: rgba(255, 244, 222, 0.12);
   --online: #7cc46a;
+  --star: #f0c35a;
 
   /* Lines. --line-control marks an input or control and holds 3:1. */
   --line: rgba(242, 239, 228, 0.08);
@@ -109,11 +110,15 @@
   --sp-12: 48px;
   --sp-16: 64px;
 
+  /* Every control a finger or pointer can hit is at least this big. */
+  --target: 44px;
+
   /* Rhythm: one gutter between sibling blocks, a wider step between sections */
   --pad: var(--sp-8);
   --gutter: var(--sp-6);
   --section-gap: var(--sp-12);
   --sidebar: 236px;
+  --app-max: 2200px;
   --sidebar-compact: 84px;
   --rail: 344px;
   --chrome-h: 40px;
@@ -155,6 +160,7 @@
   --danger-bg: #f7dcdc;
   --neutral-bg: rgba(23, 21, 15, 0.08);
   --online: #3f8f43;
+  --star: #b07d0b;
 
   --line: rgba(23, 21, 15, 0.1);
   --line-strong: rgba(23, 21, 15, 0.18);
@@ -351,6 +357,7 @@ table {
 .link-more {
   display: inline-flex;
   align-items: center;
+  min-height: var(--target);
   gap: 12px;
   flex: none;
   font-size: var(--fs-md);
@@ -430,7 +437,7 @@ table {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 42px;
+  height: var(--target);
   padding: 0 20px;
   border-radius: var(--r-pill);
   border: 0;
@@ -490,14 +497,14 @@ table {
 
 .btn-block { width: 100%; }
 .btn-lg { height: 52px; padding: 0 32px; font-size: var(--fs-lg); }
-.btn-sm { height: 34px; padding: 0 16px; font-size: var(--fs-sm); }
+.btn-sm { height: var(--target); padding: 0 16px; font-size: var(--fs-sm); }
 
 .btn-icon {
-  width: 42px;
+  width: var(--target);
   padding: 0;
 }
 
-.btn-sm.btn-icon { width: 34px; }
+.btn-sm.btn-icon { width: var(--target); }
 
 .btn:disabled,
 .btn[aria-disabled="true"] {
@@ -540,6 +547,15 @@ table {
 
 .input[aria-invalid="true"] { box-shadow: 0 0 0 2px var(--danger); }
 
+textarea.input {
+  height: auto;
+  min-height: 120px;
+  padding: 14px 18px;
+  border-radius: var(--r-lg);
+  line-height: 1.5;
+  resize: vertical;
+}
+
 select.input {
   appearance: none;
   padding-right: 48px;
@@ -550,6 +566,13 @@ select.input {
 }
 
 .field + .field { margin-top: 16px; }
+
+.field-error {
+  margin-top: 6px;
+  color: var(--danger);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
 
 .field-row {
   display: grid;
@@ -564,19 +587,19 @@ select.input {
 }
 
 .search .input {
-  height: 52px;
+  height: 56px;
   padding-right: 64px;
   background: transparent;
 }
 
 .search-button {
   position: absolute;
-  right: 5px;
-  top: 5px;
+  right: 6px;
+  top: 6px;
   display: grid;
   place-items: center;
-  width: 42px;
-  height: 42px;
+  width: var(--target);
+  height: var(--target);
   border-radius: 50%;
   background: var(--s3);
   color: var(--text);
@@ -600,7 +623,7 @@ select.input {
 }
 
 .segment {
-  height: 42px;
+  height: var(--target);
   border: 0;
   border-radius: var(--r-pill);
   background: transparent;
@@ -665,7 +688,7 @@ select.input {
 }
 
 .filter {
-  height: 36px;
+  height: var(--target);
   padding: 0 16px;
   border-radius: var(--r-pill);
   border: 0;
@@ -759,6 +782,22 @@ a.grid-tile:hover .grid-tile-icon {
   font-variant-numeric: tabular-nums;
 }
 
+/* The discount, highlighted wherever a price is shown */
+.discount {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: var(--r-pill);
+  background: var(--brick);
+  color: #fff;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .price del {
   color: var(--muted);
   font-size: var(--fs-sm);
@@ -777,6 +816,7 @@ a.grid-tile:hover .grid-tile-icon {
    -------------------------------------------------------------------------- */
 
 .table-wrap {
+  position: relative; /* keeps visually hidden labels inside the scroll box */
   overflow-x: auto;
 }
 
@@ -945,6 +985,25 @@ a.grid-tile:hover .grid-tile-icon {
   from { opacity: 0; transform: translateY(12px) scale(0.98); }
 }
 
+/* A visible message when a call to the server fails */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: var(--sp-6);
+  z-index: 90;
+  max-width: min(520px, calc(100vw - 32px));
+  padding: var(--sp-3) var(--sp-5);
+  border-radius: var(--r-pill);
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: var(--fs-md);
+  font-weight: 600;
+  box-shadow: var(--shadow-float);
+  transform: translateX(-50%);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+}
+
 /* --------------------------------------------------------------------------
    Photos
    -------------------------------------------------------------------------- */
@@ -979,6 +1038,52 @@ a.grid-tile:hover .grid-tile-icon {
   clip: rect(0 0 0 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Narrow screens (down to 320px)
+   -------------------------------------------------------------------------- */
+
+/* Data tables keep their columns and scroll sideways inside their own box
+   (WCAG 1.4.10 allows this for two-dimensional data). */
+.table {
+  min-width: 640px;
+}
+
+@media (max-width: 599px) {
+  .section {
+    margin-top: var(--sp-10);
+  }
+
+  .section-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .field-row {
+    grid-template-columns: 1fr;
+  }
+
+  .scrim {
+    padding: var(--sp-3);
+  }
+
+  .dialog {
+    padding: var(--sp-5);
+    max-height: calc(100dvh - 24px);
+  }
+
+  .dialog-actions .btn {
+    flex: 1;
+  }
+
+  .empty {
+    padding: var(--sp-12) var(--sp-4);
+  }
+
+  .notice {
+    align-items: flex-start;
+  }
 }
 
 /* --------------------------------------------------------------------------

@@ -1,0 +1,67 @@
+---
+import Icon from './Icon.astro';
+
+interface Props {
+  /** 0 to 5, decimals allowed. */
+  rating: number;
+  size?: number;
+  /** Show the number beside the stars. */
+  showValue?: boolean;
+  class?: string;
+}
+
+const { rating, size = 16, showValue = false, class: className } = Astro.props;
+const rounded = Math.round(rating * 2) / 2;
+---
+
+<span class:list={['stars', className]}>
+  <span class="sr-only">{rating} out of 5 stars</span>
+  <span class="row-stars" aria-hidden="true">
+    {
+      [1, 2, 3, 4, 5].map((step) => (
+        <span class:list={['star', { full: rounded >= step, half: rounded === step - 0.5 }]}>
+          <Icon name="star" size={size} />
+        </span>
+      ))
+    }
+  </span>
+  {showValue && <span class="value tnum" aria-hidden="true">{rating.toFixed(1)}</span>}
+</span>
+
+<style>
+  .stars {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .row-stars {
+    display: inline-flex;
+    gap: 2px;
+  }
+
+  .star {
+    display: grid;
+    color: var(--s4);
+  }
+
+  .star :global(svg) {
+    fill: currentColor;
+    stroke: none;
+  }
+
+  .star.full,
+  .star.half {
+    color: var(--star);
+  }
+
+  .star.half {
+    -webkit-mask-image: linear-gradient(90deg, #000 50%, rgba(0, 0, 0, 0.25) 50%);
+    mask-image: linear-gradient(90deg, #000 50%, rgba(0, 0, 0, 0.25) 50%);
+  }
+
+  .value {
+    font-weight: 700;
+    color: var(--text);
+  }
+</style>

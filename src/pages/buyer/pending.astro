@@ -91,7 +91,7 @@ const readyShop = pendingOrders.find((order) => order.status === 'ready');
     button.addEventListener('click', () => {
       const row = button.closest<HTMLElement>('[data-order]');
       if (!row) return;
-      const food = row.querySelector<HTMLElement>('.name')?.textContent ?? 'Order';
+      const food = row.querySelector<HTMLElement>('.name')?.textContent?.trim() ?? 'Order';
       row.hidden = true;
       announce(`${food} moved to My Order History.`);
 

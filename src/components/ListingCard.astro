@@ -1,7 +1,7 @@
 ---
 import FoodArt from './FoodArt.astro';
 import Icon from './Icon.astro';
-import { peso } from '../data/types';
+import { discountPercent, peso } from '../data/types';
 import type { Listing } from '../data/types';
 
 interface Props {
@@ -82,36 +82,56 @@ const quantityLabel =
 
     <div class="price-row">
       <span class="price">
-        {listing.originalPrice !== listing.discountedPrice && <del>{peso(listing.originalPrice)}</del>}
-        <ins>{peso(listing.discountedPrice)}</ins>
+        {
+          listing.originalPrice > listing.discountedPrice && (
+            <del>
+              <span class="sr-only">Was </span>
+              {peso(listing.originalPrice)}
+            </del>
+          )
+        }
+        <ins>
+          <span class="sr-only">Now </span>
+          {peso(listing.discountedPrice)}
+        </ins>
       </span>
-      <span class="left tnum">{variant === 'shop' ? `${listing.quantity} left` : quantityLabel}</span>
+      {
+        listing.originalPrice > listing.discountedPrice && (
+          <span class="discount">{discountPercent(listing)}% off</span>
+        )
+      }
     </div>
 
-    <p class="expires">
-      <Icon name="clock" size={15} />
-      <span><span class="sr-only">Expires </span>{listing.expiryLabel}</span>
+    <p class="meta">
+      <span class="left tnum">{variant === 'shop' ? `${listing.quantity} left` : quantityLabel}</span>
+      <span class="expires">
+        <Icon name="clock" size={15} />
+        <span><span class="sr-only">Expires </span>{listing.expiryLabel}</span>
+      </span>
     </p>
 
     {
       variant === 'shop' && (
-        <div class="foot">
+        <div class="foot foot-shop">
           {expired ? (
-            <button class="btn btn-sm btn-block" type="button" disabled>
+            <span class="btn btn-sm btn-block" aria-disabled="true">
               Unavailable
-            </button>
+            </span>
           ) : (
-            <button
-              class="btn btn-sm btn-block"
-              type="button"
-              data-details-for={listing.id}
-              data-dialog-open="details"
-              aria-haspopup="dialog"
-              aria-label={`Details: ${listing.name}`}
-            >
+            <a class="btn btn-sm btn-block" href={`/buyer/listing/${listing.id}`} aria-label={`Details: ${listing.name}`}>
               Details
-            </button>
+            </a>
           )}
+          <button
+            class="btn btn-sm btn-icon wish"
+            type="button"
+            aria-pressed="false"
+            aria-label={`Save ${listing.name} to wishlist`}
+            data-wishlist-toggle={listing.id}
+            data-wishlist-name={listing.name}
+          >
+            <Icon name="heart" size={18} />
+          </button>
         </div>
       )
     }
@@ -224,10 +244,20 @@ const quantityLabel =
 
   .price-row {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    flex-wrap: wrap;
+    gap: 8px;
     margin-top: 12px;
+  }
+
+  .meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    margin-top: 8px;
   }
 
   .left {
@@ -237,10 +267,9 @@ const quantityLabel =
   }
 
   .expires {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 8px;
-    margin-top: 8px;
     color: var(--muted);
     font-size: var(--fs-sm);
   }
@@ -254,8 +283,31 @@ const quantityLabel =
     padding-top: 16px;
   }
 
+  .foot-shop {
+    display: flex;
+    gap: 8px;
+  }
+
+  .foot-shop .wish {
+    flex: none;
+  }
+
+  .wish[aria-pressed='true'] {
+    background: var(--danger-bg);
+    color: var(--danger);
+  }
+
+  .wish[aria-pressed='true'] :global(svg) {
+    fill: currentColor;
+  }
+
   .is-expired h3,
   .is-expired .price ins {
     color: var(--muted);
+  }
+
+  .is-expired .discount {
+    background: var(--s4);
+    color: var(--text-soft);
   }
 </style>

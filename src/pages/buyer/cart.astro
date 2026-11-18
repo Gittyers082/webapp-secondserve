@@ -3,7 +3,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
 import FoodArt from '../../components/FoodArt.astro';
 import Icon from '../../components/Icon.astro';
 import { buyer, cart, cartItemCount, cartShopCount, cartTotal } from '../../data/store';
-import { peso } from '../../data/types';
+import { discountPercent, peso } from '../../data/types';
 import type { CartLine } from '../../data/types';
 
 /** The cart groups by shop, because each shop is a separate pickup. */
@@ -52,8 +52,13 @@ const isEmpty = cart.length === 0;
                   </span>
                   <div class="item-copy">
                     <p class="item-name" data-line-name>{line.foodName}</p>
-                    <p class="small muted">
-                      {peso(line.unitPrice)} each &middot; <span class="tnum" data-qty={line.quantity}>&times; {line.quantity}</span>
+                    <p class="small muted line-price">
+                      <span class="price">
+                        <del><span class="sr-only">Was </span>{peso(line.originalUnitPrice)}</del>
+                        <span><span class="sr-only">Now </span>{peso(line.unitPrice)} each</span>
+                      </span>
+                      <span class="discount">{discountPercent({ originalPrice: line.originalUnitPrice, discountedPrice: line.unitPrice })}% off</span>
+                      <span class="tnum" data-qty={line.quantity}>&times; {line.quantity}</span>
                     </p>
                   </div>
                   <div class="item-expiry">
@@ -251,6 +256,14 @@ const isEmpty = cart.length === 0;
     font-weight: 700;
   }
 
+  .line-price {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    margin-top: 4px;
+  }
+
   .item-expiry {
     display: grid;
     gap: 8px;
@@ -341,5 +354,23 @@ const isEmpty = cart.length === 0;
     .item-total { grid-column: 3; grid-row: 1; }
     .item-actions { grid-column: 4; grid-row: 1; }
     .item-photo { grid-row: span 2; }
+  }
+
+  @media (max-width: 599px) {
+    .item {
+      grid-template-columns: 56px minmax(0, 1fr);
+      gap: 8px 12px;
+    }
+
+    .item-photo { grid-row: span 1; }
+
+    .item-expiry,
+    .item-total,
+    .item-actions {
+      grid-column: 2;
+      grid-row: auto;
+    }
+
+    .item-total { text-align: left; }
   }
 </style>

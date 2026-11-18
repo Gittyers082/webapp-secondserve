@@ -1,7 +1,11 @@
 ---
 import BaseLayout from './BaseLayout.astro';
 import Sidebar from '../components/Sidebar.astro';
-import { navFor, roleLabel } from '../data/nav';
+import Logo from '../components/Logo.astro';
+import Icon from '../components/Icon.astro';
+import ThemeToggle from '../components/ThemeToggle.astro';
+import { navFor, notificationsFor, notificationsHref, roleLabel } from '../data/nav';
+import { unreadCount } from '../data/store';
 import type { Role } from '../data/types';
 
 interface Props {
@@ -15,22 +19,51 @@ interface Props {
   subtitle?: string;
   /** Words in the subtitle set in brick: usually the figure that matters. */
   highlight?: string;
+  /** Sidebar item to mark as current when the page itself is not in the menu. */
+  activeHref?: string;
 }
 
-const { role, username, section, heading, subtitle, highlight } = Astro.props;
+const { role, username, section, heading, subtitle, highlight, activeHref } = Astro.props;
 const nav = navFor(role);
-const current = Astro.url.pathname.replace(/\/$/, '') || '/';
+const current = activeHref ?? (Astro.url.pathname.replace(/\/$/, '') || '/');
 const hasRail = Astro.slots.has('rail');
 const hasActions = Astro.slots.has('actions');
+const unread = unreadCount(notificationsFor[role]);
 
 const [before, after] = highlight && subtitle ? subtitle.split(highlight) : [subtitle, ''];
 ---
 
 <BaseLayout title={`${roleLabel[role]} · ${section}`}>
   <div class:list={['app', { 'has-rail': hasRail }]}>
+    <!-- Top bar below 1000px: the menu, the brand, notifications and theme -->
+    <header class="mobile-bar" data-page-content>
+      <button
+        class="bar-btn"
+        type="button"
+        data-nav-open
+        aria-controls="app-nav"
+        aria-expanded="false"
+        aria-label="Open menu"
+      >
+        <Icon name="menu" />
+      </button>
+      <a class="bar-brand" href={nav[0]!.href} aria-label="SecondServe home"><Logo size={20} /></a>
+      <a
+        class="bar-btn"
+        href={notificationsHref[role]}
+        aria-label={unread ? `Notifications, ${unread} unread` : 'Notifications'}
+      >
+        <Icon name="bell" />
+        {unread > 0 && <span class="bar-dot" aria-hidden="true"></span>}
+      </a>
+      <ThemeToggle />
+    </header>
+
+    <div class="nav-scrim" data-nav-close aria-hidden="true"></div>
+
     <Sidebar role={role} username={username} nav={nav} current={current} />
 
-    <main class="main" id="main" tabindex="-1">
+    <main class="main" id="main" tabindex="-1" data-page-content>
       <header class="page-head">
         <div>
           <h1>{heading}</h1>
@@ -50,7 +83,7 @@ const [before, after] = highlight && subtitle ? subtitle.split(highlight) : [sub
 
     {
       hasRail && (
-        <aside class="rail" aria-label={`${heading} summary`}>
+        <aside class="rail" aria-label={`${heading} summary`} data-page-content>
           <slot name="rail" />
         </aside>
       )
@@ -58,12 +91,25 @@ const [before, after] = highlight && subtitle ? subtitle.split(highlight) : [sub
   </div>
 </BaseLayout>
 
+<script>
+  import { initNavDrawer } from '../scripts/nav-drawer';
+  initNavDrawer();
+</script>
+
 <style>
   .app {
     display: grid;
     grid-template-columns: var(--sidebar) minmax(0, 1fr);
     align-items: start;
+    width: 100%;
+    max-width: var(--app-max);
     min-height: calc(100vh - var(--chrome-h));
+    margin: 0 auto;
+  }
+
+  .mobile-bar,
+  .nav-scrim {
+    display: none;
   }
 
   .app.has-rail {
@@ -130,24 +176,97 @@ const [before, after] = highlight && subtitle ? subtitle.split(highlight) : [sub
     }
   }
 
-  /* Below 1000px the summary rail moves under the main column. */
+  /* Below 1000px: a top bar with the menu, one column, the rail under it. */
   @media (max-width: 999px) {
+    .app,
     .app.has-rail {
-      grid-template-columns: var(--sidebar-compact) minmax(0, 1fr);
-      grid-template-areas:
-        'side main'
-        'side rail';
+      display: block;
     }
 
-    .app.has-rail > :global(.sidebar) { grid-area: side; }
-    .app.has-rail .main { grid-area: main; padding-bottom: 24px; }
+    .mobile-bar {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      display: flex;
+      align-items: center;
+      gap: var(--sp-2);
+      padding: var(--sp-2) var(--sp-4);
+      background: var(--glass-strong);
+      -webkit-backdrop-filter: var(--blur);
+      backdrop-filter: var(--blur);
+    }
+
+    .bar-brand {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      min-height: var(--target);
+      padding: 0 var(--sp-2);
+    }
+
+    .bar-btn {
+      position: relative;
+      display: grid;
+      place-items: center;
+      flex: none;
+      width: var(--target);
+      height: var(--target);
+      border: 0;
+      border-radius: 50%;
+      background: var(--s3);
+      color: var(--text);
+    }
+
+    .bar-dot {
+      position: absolute;
+      top: 9px;
+      right: 10px;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--lime);
+    }
+
+    .nav-scrim {
+      position: fixed;
+      inset: 0;
+      z-index: 75;
+      background: var(--scrim);
+    }
+
+    :global(html[data-nav='open']) .nav-scrim {
+      display: block;
+    }
+
+    .main {
+      padding: var(--sp-6) var(--sp-6) var(--sp-8);
+    }
 
     .rail {
-      grid-area: rail;
       position: static;
       max-height: none;
       overflow: visible;
-      padding: 0 24px 64px 32px;
+      padding: 0 var(--sp-6) var(--sp-16);
+    }
+  }
+
+  @media (max-width: 599px) {
+    .main {
+      padding: var(--sp-5) var(--sp-4) var(--sp-8);
+    }
+
+    .rail {
+      padding: 0 var(--sp-4) var(--sp-12);
+    }
+
+    .page-head {
+      flex-direction: column;
+      align-items: stretch;
+      margin-bottom: var(--sp-6);
+    }
+
+    .page-head h1 {
+      font-size: var(--fs-h2);
     }
   }
 </style>

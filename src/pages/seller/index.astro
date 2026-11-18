@@ -167,6 +167,7 @@ const stats = [
   .toggle {
     display: inline-flex;
     align-items: center;
+    min-height: var(--target);
     gap: 12px;
     flex: none;
     cursor: pointer;
@@ -285,5 +286,15 @@ const stats = [
 
   @media (max-width: 1279px) {
     .stat { padding: 16px 20px; }
+  }
+
+  @media (max-width: 599px) {
+    .stats {
+      grid-template-columns: 1fr;
+    }
+
+    .stat {
+      padding: 16px 20px;
+    }
   }
 </style>

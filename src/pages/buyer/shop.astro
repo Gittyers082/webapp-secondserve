@@ -4,7 +4,6 @@ import ListingCard from '../../components/ListingCard.astro';
 import FoodArt from '../../components/FoodArt.astro';
 import Icon from '../../components/Icon.astro';
 import QuantityStepper from '../../components/QuantityStepper.astro';
-import Dialog from '../../components/Dialog.astro';
 import { buyer, cart, cartItemCount, cartTotal, listings } from '../../data/store';
 import { peso, discountPercent } from '../../data/types';
 import type { FoodArt as FoodArtKey } from '../../data/types';
@@ -84,11 +83,12 @@ const counted = categories.map((category) => ({
         </p>
         <div class="pick-foot">
           <p class="price">
-            <del>{peso(featured.originalPrice)}</del>
-            <ins>{peso(featured.discountedPrice)}</ins>
+            <del><span class="sr-only">Was </span>{peso(featured.originalPrice)}</del>
+            <ins><span class="sr-only">Now </span>{peso(featured.discountedPrice)}</ins>
           </p>
+          <span class="discount">{discountPercent(featured)}% off</span>
           <span class="soft small tnum">{featured.quantity} left</span>
-          <a class="btn btn-primary" href="#shelves">Get it</a>
+          <a class="btn btn-primary" href={`/buyer/listing/${featured.id}`}>See details</a>
         </div>
       </div>
     </article>
@@ -141,6 +141,7 @@ const counted = categories.map((category) => ({
         </div>
         <QuantityStepper value={2} max={featured.quantity} name="shop" />
         <button class="btn btn-primary btn-block btn-lg" type="button" data-add-to-cart>Add to cart</button>
+        <a class="btn btn-block" href={`/buyer/listing/${featured.id}`} data-selection-link>View details</a>
       </div>
 
       <div class="cart-summary">
@@ -176,54 +177,15 @@ const counted = categories.map((category) => ({
     </div>
   </Fragment>
 
-  <!-- Details dialog ----------------------------------------------------- -->
-  <Dialog id="details" title="Listing details" wide>
-    <div class="details">
-      <div class="details-art">
-        <FoodArt art={featured.art} ratio="1 / 1" />
-      </div>
-      <div class="details-copy">
-        <div class="row wrap">
-          <span class="pill pill-lime">Expiring soon</span>
-          <span class="pill pill-neutral">{discountPercent(featured)}% off</span>
-          <span class="pill pill-neutral">{featured.quantity} in stock</span>
-        </div>
-
-        <h3 class="details-name">{featured.name}</h3>
-        <p class="small muted">{featured.shopName} &middot; Session Road, Baguio</p>
-
-        <p class="price details-price">
-          <del>{peso(featured.originalPrice)}</del>
-          <ins>{peso(featured.discountedPrice)}</ins>
-        </p>
-
-        <p class="hint">{featured.description}</p>
-
-        <dl class="details-meta">
-          <div>
-            <dt class="label">Expires</dt>
-            <dd>{featured.expiryLabel}</dd>
-          </div>
-          <div>
-            <dt class="label">Pickup location</dt>
-            <dd>{featured.pickupLocation}</dd>
-          </div>
-        </dl>
-
-        <QuantityStepper value={2} max={featured.quantity} name="details" />
-
-        <div class="dialog-actions">
-          <button class="btn" type="button" data-dialog-close>Close</button>
-          <button class="btn btn-primary" type="button" data-add-to-cart data-autofocus>Add to cart</button>
-        </div>
-      </div>
-    </div>
-  </Dialog>
 </AppLayout>
 
 <script>
+  import { savedListingIds } from '../../data/store';
+  import { initWishlist } from '../../scripts/wishlist';
   import { setupFilters } from '../../scripts/filters';
   import { setupSelection } from '../../scripts/selection';
+
+  initWishlist(savedListingIds);
 
   const cards = () => Array.from(document.querySelectorAll<HTMLElement>('article[data-listing]'));
   const field = (name: string) => document.querySelector<HTMLElement>(`[data-selection-${name}]`);
@@ -261,6 +223,9 @@ const counted = categories.map((category) => ({
 
       const photo = document.querySelector<HTMLImageElement>('[data-selection-photo]');
       if (photo && source) photo.src = source.src;
+
+      const link = document.querySelector<HTMLAnchorElement>('[data-selection-link]');
+      if (link) link.href = `/buyer/listing/${card.dataset.listing}`;
     },
   });
 
@@ -508,45 +473,6 @@ const counted = categories.map((category) => ({
     font-weight: 700;
   }
 
-  /* Details dialog -------------------------------------------------------- */
-
-  .details {
-    display: grid;
-    grid-template-columns: 0.9fr 1.1fr;
-    gap: 24px;
-    margin-top: 16px;
-  }
-
-  .details-copy {
-    display: grid;
-    gap: 12px;
-    align-content: start;
-  }
-
-  .details-name {
-    font-size: var(--fs-h2);
-    font-weight: 700;
-    line-height: 1.2;
-  }
-
-  .details-price ins {
-    font-size: 26px;
-  }
-
-  .details-meta {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-  }
-
-  .details-meta dd {
-    font-size: var(--fs-md);
-  }
-
-  .details .dialog-actions {
-    margin-top: 8px;
-  }
-
   @media (max-width: 1279px) {
     .pick {
       grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
@@ -566,7 +492,18 @@ const counted = categories.map((category) => ({
     }
   }
 
-  @media (max-width: 900px) {
-    .details { grid-template-columns: 1fr; }
+
+  @media (max-width: 699px) {
+    .pick {
+      grid-template-columns: 1fr;
+    }
+
+    .pick-copy {
+      padding: 4px 8px 8px;
+    }
+
+    .pick-blurb {
+      display: block;
+    }
   }
 </style>

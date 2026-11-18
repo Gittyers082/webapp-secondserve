@@ -65,6 +65,8 @@ import { admin, pendingAccounts } from '../../data/store';
 
 <script>
   import { announce } from '../../scripts/announce';
+  import { run } from '../../scripts/request';
+  import { api } from '../../api/client';
 
   const rows = Array.from(document.querySelectorAll<HTMLElement>('[data-account]'));
 
@@ -81,8 +83,11 @@ import { admin, pendingAccounts } from '../../data/store';
 
   rows.forEach((row) => {
     row.querySelectorAll<HTMLButtonElement>('[data-decide]').forEach((button) => {
-      button.addEventListener('click', () => {
-        const decision = button.dataset.decide === 'approved' ? 'Approved' : 'Declined';
+      button.addEventListener('click', async () => {
+        const choice = button.dataset.decide === 'approved' ? 'approved' : 'declined';
+        const saved = await run(button, () => api.admin.decide(row.dataset.account ?? '', choice));
+        if (!saved) return;
+        const decision = choice === 'approved' ? 'Approved' : 'Declined';
         const chip = row.querySelector<HTMLElement>('[data-decision-chip]');
         const actions = row.querySelector<HTMLElement>('.actions');
 
@@ -99,7 +104,7 @@ import { admin, pendingAccounts } from '../../data/store';
         }
 
         row.dataset.decided = 'true';
-        announce(`${row.querySelector('.name')?.textContent ?? 'Account'} ${decision.toLowerCase()}.`);
+        announce(`${row.querySelector('.name')?.textContent?.trim() ?? 'Account'} ${decision.toLowerCase()}.`);
         checkEmpty();
 
         // The buttons are gone; keep keyboard focus on the next pending decision.

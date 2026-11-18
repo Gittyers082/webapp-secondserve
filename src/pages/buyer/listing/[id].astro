@@ -1,0 +1,373 @@
+---
+import AppLayout from '../../../layouts/AppLayout.astro';
+import FoodArt from '../../../components/FoodArt.astro';
+import ListingCard from '../../../components/ListingCard.astro';
+import QuantityStepper from '../../../components/QuantityStepper.astro';
+import Stars from '../../../components/Stars.astro';
+import Icon from '../../../components/Icon.astro';
+import { buyer, listings, reviewsForShop } from '../../../data/store';
+import { averageRating, discountPercent, peso } from '../../../data/types';
+import type { Listing } from '../../../data/types';
+
+export function getStaticPaths() {
+  return listings.map((listing) => ({ params: { id: listing.id }, props: { listing } }));
+}
+
+interface Props {
+  listing: Listing;
+}
+
+const { listing } = Astro.props;
+const expired = listing.status === 'expired';
+const shopReviews = reviewsForShop(listing.shopName);
+const rating = averageRating(shopReviews.map((review) => review.rating));
+const savings = listing.originalPrice - listing.discountedPrice;
+const percent = discountPercent(listing);
+const similar = listings
+  .filter((other) => other.id !== listing.id && other.status === 'active')
+  .sort((a, b) => Number(b.category === listing.category) - Number(a.category === listing.category))
+  .slice(0, 3);
+
+const categoryLabel: Record<Listing['category'], string> = {
+  bread: 'Bread',
+  pastries: 'Pastries',
+  savory: 'Savory',
+  cakes: 'Cakes',
+  'fruit-cups': 'Fruit cups',
+};
+---
+
+<AppLayout
+  role="buyer"
+  username={buyer.username}
+  section={listing.name}
+  heading={listing.name}
+  subtitle={`${listing.shopName} · ${listing.pickupLocation}`}
+  highlight={listing.shopName}
+  activeHref="/buyer/shop"
+>
+  <a class="back" href="/buyer/shop" slot="actions">
+    <Icon name="chevron-right" size={16} class="back-icon" />
+    Back to Shop
+  </a>
+
+  <article class="detail">
+    <div class="detail-photo">
+      <FoodArt art={listing.art} ratio="4 / 3" muted={expired} eager />
+      {expired && <span class="pill pill-danger badge">Expired</span>}
+    </div>
+
+    <div class="detail-copy">
+      <div class="pricing">
+        <p class="price">
+          <del><span class="sr-only">Was </span>{peso(listing.originalPrice)}</del>
+          <ins><span class="sr-only">Now </span>{peso(listing.discountedPrice)}</ins>
+        </p>
+        <span class="discount discount-lg">{percent}% off</span>
+        <p class="save">You save {peso(savings)} on each</p>
+      </div>
+
+      <p class="description">{listing.description}</p>
+
+      <dl class="facts">
+        <div>
+          <dt class="label">Expires</dt>
+          <dd>{listing.expiryLabel}</dd>
+        </div>
+        <div>
+          <dt class="label">In stock</dt>
+          <dd class="tnum">{listing.quantity} left</dd>
+        </div>
+        <div>
+          <dt class="label">Category</dt>
+          <dd>{categoryLabel[listing.category]}</dd>
+        </div>
+        <div>
+          <dt class="label">Pickup</dt>
+          <dd>{listing.pickupLocation}</dd>
+        </div>
+      </dl>
+    </div>
+  </article>
+
+  <!-- Reviews of this shop ------------------------------------------------ -->
+  <section class="section" aria-labelledby="reviews-title">
+    <div class="section-head">
+      <div>
+        <h2 class="section-title" id="reviews-title">Reviews of {listing.shopName}</h2>
+        {
+          shopReviews.length > 0 ? (
+            <p class="section-sub">
+              <Stars rating={rating} showValue /> <span class="hl">{shopReviews.length} reviews</span> from buyers who
+              collected here
+            </p>
+          ) : (
+            <p class="section-sub">No reviews yet. Buyers can rate a shop after they collect an order.</p>
+          )
+        }
+      </div>
+    </div>
+
+    {
+      shopReviews.length > 0 && (
+        <ul class="reviews">
+          {shopReviews.map((review) => (
+            <li class="review panel">
+              <div class="row-between">
+                <span class="who">
+                  <span class="avatar" aria-hidden="true">{review.author.charAt(0)}</span>
+                  <span>
+                    <strong class="review-author">{review.author}</strong>
+                    <span class="small muted">{review.foodName} &middot; {review.date}</span>
+                  </span>
+                </span>
+                <Stars rating={review.rating} />
+              </div>
+              <p class="review-text">{review.comment}</p>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+  </section>
+
+  <!-- Similar -------------------------------------------------------------- -->
+  <section class="section" aria-labelledby="similar-title">
+    <div class="section-head">
+      <div>
+        <h2 class="section-title" id="similar-title">More to rescue nearby</h2>
+        <p class="section-sub">Other listings that are still available.</p>
+      </div>
+      <a class="link-more" href="/buyer/shop">
+        Back to Shop
+        <span class="chev" aria-hidden="true"><Icon name="chevron-right" size={16} /></span>
+      </a>
+    </div>
+    <div class="listing-grid">
+      {similar.map((other) => <ListingCard listing={other} />)}
+    </div>
+  </section>
+
+  <!-- Rail: reserve -------------------------------------------------------- -->
+  <Fragment slot="rail">
+    <div class="panel rail-panel">
+      <div class="panel-inset pickup">
+        <h2 class="panel-title">Reserve</h2>
+        <p class="price rail-price">
+          <del><span class="sr-only">Was </span>{peso(listing.originalPrice)}</del>
+          <ins><span class="sr-only">Now </span>{peso(listing.discountedPrice)}</ins>
+          <span class="discount">{percent}% off</span>
+        </p>
+        <p class="small soft">Collect before {listing.expiryLabel.toLowerCase()}, then pay at the counter.</p>
+      </div>
+
+      {
+        expired ? (
+          <p class="notice notice-error">
+            <span>This listing has expired and can no longer be reserved.</span>
+          </p>
+        ) : (
+          <>
+            <QuantityStepper value={1} max={listing.quantity} name="detail" />
+            <a class="btn btn-primary btn-lg btn-block" href="/buyer/cart">
+              Add to cart
+            </a>
+          </>
+        )
+      }
+
+      <div class="rail-pair">
+        <button
+          class="btn wish"
+          type="button"
+          aria-pressed="false"
+          data-wishlist-toggle={listing.id}
+          data-wishlist-name={listing.name}
+        >
+          <Icon name="heart" size={18} />
+          <span data-wishlist-label>Save</span>
+        </button>
+        <a class="btn" href={`/buyer/compare?ids=${listing.id}`} data-compare-link={listing.id}>
+          <Icon name="compare" size={18} />
+          Compare
+        </a>
+      </div>
+    </div>
+  </Fragment>
+</AppLayout>
+
+<script>
+  import { savedListingIds } from '../../../data/store';
+  import { initWishlist, savedIds } from '../../../scripts/wishlist';
+
+  initWishlist(savedListingIds);
+
+  // Compare this listing with what is already saved, up to three in all.
+  const link = document.querySelector<HTMLAnchorElement>('[data-compare-link]');
+  const sync = () => {
+    if (!link) return;
+    const self = link.dataset.compareLink ?? '';
+    const ids = [self, ...savedIds().filter((id) => id !== self)].slice(0, 3);
+    link.href = `/buyer/compare?ids=${ids.join(',')}`;
+  };
+  sync();
+  document.addEventListener('wishlistchange', sync);
+</script>
+
+<style>
+  .back {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: var(--target);
+    padding: 0 16px;
+    border-radius: var(--r-pill);
+    background: var(--s3);
+    font-size: var(--fs-md);
+    font-weight: 600;
+  }
+
+  .back :global(.back-icon) {
+    transform: rotate(180deg);
+  }
+
+  .detail {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    gap: var(--gutter);
+    align-items: start;
+  }
+
+  .detail-photo {
+    position: relative;
+  }
+
+  .detail-photo :global(.food-photo) {
+    border-radius: var(--r-xl);
+  }
+
+  .badge {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+  }
+
+  .pricing {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+  }
+
+  .pricing .price ins {
+    font-size: var(--fs-figure);
+    letter-spacing: -0.02em;
+  }
+
+  .pricing .price del {
+    font-size: var(--fs-lg);
+  }
+
+  .discount-lg {
+    height: 30px;
+    padding: 0 12px;
+    font-size: var(--fs-md);
+  }
+
+  .save {
+    flex-basis: 100%;
+    color: var(--brick-text);
+    font-weight: 600;
+  }
+
+  .description {
+    margin-top: 20px;
+    color: var(--text-soft);
+    font-size: var(--fs-lg);
+    line-height: 1.6;
+    max-width: 52ch;
+  }
+
+  .facts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px 24px;
+    margin-top: 24px;
+    padding: 20px;
+    border-radius: var(--r-lg);
+    background: var(--s3);
+  }
+
+  .facts dd {
+    margin-top: 2px;
+    font-weight: 600;
+  }
+
+  .section-sub :global(.stars) {
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+
+  .reviews {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--gutter);
+  }
+
+  .review {
+    display: grid;
+    gap: 12px;
+    align-content: start;
+    padding: 20px;
+  }
+
+  .review .who > span:last-child {
+    display: grid;
+  }
+
+  .review-author {
+    font-size: var(--fs-md);
+  }
+
+  .review-text {
+    color: var(--text-soft);
+    font-size: var(--fs-md);
+    line-height: 1.55;
+  }
+
+  .rail-price {
+    flex-wrap: wrap;
+    margin: 12px 0 8px;
+  }
+
+  .rail-price ins {
+    font-size: var(--fs-h2);
+  }
+
+  .rail-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .wish[aria-pressed='true'] {
+    background: var(--danger-bg);
+    color: var(--danger);
+  }
+
+  .wish[aria-pressed='true'] :global(svg) {
+    fill: currentColor;
+  }
+
+  @media (max-width: 1279px) {
+    .detail {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 599px) {
+    .facts {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

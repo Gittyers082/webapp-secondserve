@@ -132,4 +132,10 @@ const initial = role === 'seller' ? 'B' : username.charAt(0).toUpperCase();
       grid-template-columns: 240px minmax(0, 1fr);
     }
   }
+
+  @media (max-width: 799px) {
+    .profile {
+      grid-template-columns: 1fr;
+    }
+  }
 </style>
