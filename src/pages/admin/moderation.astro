@@ -1,6 +1,7 @@
 ---
 import AppLayout from '../../layouts/AppLayout.astro';
 import ListingCard from '../../components/ListingCard.astro';
+import Icon from '../../components/Icon.astro';
 import { admin, moderatedListings } from '../../data/store';
 import { peso } from '../../data/types';
 
@@ -19,9 +20,10 @@ const filters = [
   username={admin.username}
   section="Item Moderation"
   heading="Item Moderation"
-  subtitle="Review what shops are putting on the shelf."
+  subtitle={`${moderatedListings.filter((listing) => listing.flagged).length} flagged listing to review. Check what shops put on the shelf.`}
+  highlight={`${moderatedListings.filter((listing) => listing.flagged).length} flagged listing`}
 >
-  <div class="filters">
+  <div class="filters" role="group" aria-label="Filter listings">
     {
       filters.map((filter) => (
         <button class="filter" type="button" data-filter={filter.id} aria-pressed={filter.id === 'all'}>
@@ -31,7 +33,7 @@ const filters = [
     }
   </div>
 
-  <div class="grid">
+  <div class="listing-grid moderation-grid" data-grid>
     {
       moderatedListings.map((listing) => (
         <div
@@ -46,120 +48,111 @@ const filters = [
     }
   </div>
 
-  <p class="no-results" data-no-results hidden>No listing matches that filter.</p>
+  <p class="no-results" data-no-results hidden>No listing matches that filter. Choose All to see every listing.</p>
 
-  <div class="selection" data-selection>
-    <div class="selection-copy">
-      <p class="selection-name" data-selection-name>{flagged.name}</p>
-      <p class="small muted" data-selection-meta>
-        Selected &middot; {flagged.shopName} &middot; {peso(flagged.discountedPrice)} &middot;{' '}
-        {flagged.expiryLabel.toLowerCase()}
-      </p>
+  <Fragment slot="rail">
+    <div class="panel rail-panel" data-selection>
+      <h2 class="panel-title">Selected listing</h2>
+      <div class="rail-photo">
+        <img class="photo" src={`/photos/${flagged.art}.jpg`} alt="" data-selection-photo />
+      </div>
+      <div>
+        <p class="rail-name" data-selection-name>{flagged.name}</p>
+        <p class="small muted" data-selection-meta>
+          {flagged.shopName} &middot; {peso(flagged.discountedPrice)} &middot; {flagged.expiryLabel.toLowerCase()}
+        </p>
+      </div>
+      <div class="rail-actions">
+        <button class="btn btn-light btn-block" type="button" data-flag>
+          <Icon name="flag" />
+          Flag listing
+        </button>
+        <button class="btn btn-danger btn-block" type="button" data-remove>
+          <Icon name="trash" />
+          Remove listing
+        </button>
+      </div>
+      <p class="hint">Flagged listings stay visible to you until you remove them. Removing takes a listing out of the Shop.</p>
     </div>
-    <button class="btn" type="button" data-flag>Flag listing</button>
-    <button class="btn btn-danger" type="button" data-remove>Remove listing</button>
-  </div>
+  </Fragment>
 </AppLayout>
 
 <script>
-  const cells = Array.from(document.querySelectorAll<HTMLElement>('[data-cell]'));
-  const noResults = document.querySelector<HTMLElement>('[data-no-results]');
+  import { announce } from '../../scripts/announce';
+  import { setupFilters } from '../../scripts/filters';
+  import { setupSelection } from '../../scripts/selection';
+
+  const cells = () => Array.from(document.querySelectorAll<HTMLElement>('[data-cell]'));
+  const cards = () => Array.from(document.querySelectorAll<HTMLElement>('[data-cell] article[data-listing]'));
   const selectionName = document.querySelector<HTMLElement>('[data-selection-name]');
   const selectionMeta = document.querySelector<HTMLElement>('[data-selection-meta]');
 
-  const selectedCell = () => cells.find((cell) => cell.querySelector('.is-selected'));
-
-  document.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const filter = button.dataset.filter ?? 'all';
-      let visible = 0;
-
-      document.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach((other) => {
-        other.setAttribute('aria-pressed', String(other === button));
-      });
-
-      cells.forEach((cell) => {
-        const show =
-          filter === 'all' ||
-          (filter === 'flagged' ? cell.dataset.flagged === 'true' : cell.dataset.status === filter);
-        cell.hidden = !show;
-        if (show) visible += 1;
-      });
-
-      if (noResults) noResults.hidden = visible > 0;
-    });
+  setupFilters({
+    items: cells,
+    noun: 'listing',
+    container: document.querySelector<HTMLElement>('[data-grid]'),
+    matches: (cell, filter) =>
+      filter === 'all' || (filter === 'flagged' ? cell.dataset.flagged === 'true' : cell.dataset.status === filter),
   });
 
-  cells.forEach((cell) => {
-    const card = cell.querySelector<HTMLElement>('article[data-listing]');
-    cell.querySelector<HTMLElement>('.thumb')?.addEventListener('click', () => {
-      cells.forEach((other) => {
-        other
-          .querySelector<HTMLElement>('article[data-listing]')
-          ?.classList.toggle('is-selected', other === cell);
-      });
-
-      const name = card?.querySelector<HTMLElement>('h3')?.textContent ?? '';
-      const shop = card?.querySelector<HTMLElement>('.shop')?.textContent ?? '';
-      const expiry = card?.querySelector<HTMLElement>('.meta div:last-child dd')?.textContent ?? '';
+  const selection = setupSelection({
+    cards,
+    onSelect: (card) => {
+      const name = card.querySelector<HTMLElement>('[data-card-name]')?.textContent ?? '';
+      const shop = card.querySelector<HTMLElement>('[data-card-shop]')?.textContent ?? '';
+      const expiry = (card.dataset.expiry ?? '').toLowerCase();
       if (selectionName) selectionName.textContent = name;
-      if (selectionMeta) selectionMeta.textContent = `Selected · ${shop} · ${expiry}`;
-    });
+      if (selectionMeta) selectionMeta.textContent = `${shop} · ${card.dataset.price ?? ''} · ${expiry}`;
+
+      const photo = document.querySelector<HTMLImageElement>('[data-selection-photo]');
+      const source = card.querySelector<HTMLImageElement>('img');
+      if (photo && source) photo.src = source.src;
+    },
   });
+
+  const nameOf = (card?: HTMLElement) => card?.querySelector<HTMLElement>('[data-card-name]')?.textContent ?? 'Listing';
 
   document.querySelector<HTMLButtonElement>('[data-flag]')?.addEventListener('click', () => {
-    const cell = selectedCell();
-    const chip = cell?.querySelector<HTMLElement>('.foot .chip');
+    const card = selection.selected();
+    const cell = card?.closest<HTMLElement>('[data-cell]');
+    const chip = card?.querySelector<HTMLElement>('[data-state]');
     if (!cell || !chip) return;
     cell.dataset.flagged = 'true';
-    chip.className = 'chip chip-blush';
+    chip.className = 'pill pill-danger';
     chip.textContent = 'Flagged';
+    announce(`${nameOf(card)} flagged.`);
   });
 
   document.querySelector<HTMLButtonElement>('[data-remove]')?.addEventListener('click', () => {
-    selectedCell()?.remove();
+    const card = selection.selected();
+    if (!card) return;
+    const name = nameOf(card);
+    card.closest('[data-cell]')?.remove();
+    if (selectionName) selectionName.textContent = 'Nothing selected';
+    if (selectionMeta) selectionMeta.textContent = 'Select a listing to flag or remove it.';
+    announce(`${name} removed.`);
   });
 </script>
 
 <style>
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 34px 30px;
-    margin-top: 26px;
+  .moderation-grid {
+    margin-top: 24px;
   }
 
-  .no-results {
-    padding: 60px 0;
-    text-align: center;
-    color: var(--muted);
-  }
 
-  .selection {
-    position: sticky;
-    bottom: 12px;
-    z-index: 20;
-    display: flex;
-    align-items: center;
-    gap: 18px;
-    margin-top: 42px;
-    padding: 16px 20px;
-    background: var(--tan);
+  .rail-photo {
+    aspect-ratio: 4 / 3;
     border-radius: var(--r-lg);
-    box-shadow: 0 10px 30px rgba(23, 21, 15, 0.08);
+    overflow: hidden;
   }
 
-  .selection-copy {
-    flex: 1;
-    min-width: 0;
+  .rail-name {
+    font-size: var(--fs-lg);
+    font-weight: 700;
   }
 
-  .selection-name {
-    font-size: 15px;
-    font-weight: 600;
-  }
-
-  @media (max-width: 1200px) {
-    .grid { grid-template-columns: repeat(2, 1fr); }
+  .rail-actions {
+    display: grid;
+    gap: 12px;
   }
 </style>

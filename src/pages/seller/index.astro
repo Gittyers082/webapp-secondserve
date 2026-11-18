@@ -2,6 +2,7 @@
 import AppLayout from '../../layouts/AppLayout.astro';
 import ListingCard from '../../components/ListingCard.astro';
 import FoodArt from '../../components/FoodArt.astro';
+import Icon from '../../components/Icon.astro';
 import { expiringWithinThreeDays, handoverQueue, seller, sellerListings } from '../../data/store';
 
 const nextToExpire = expiringWithinThreeDays[0]!;
@@ -19,60 +20,97 @@ const stats = [
   username={seller.username}
   section="Overview"
   heading="Overview"
-  subtitle={`What's nearing expiry at ${seller.shopName}.`}
-  accent="nearing expiry"
+  subtitle={`${expiringWithinThreeDays.length} items at ${seller.shopName} expire within 3 days.`}
+  highlight={`${expiringWithinThreeDays.length} items`}
 >
-  <section class="stats">
+  <section class="stats" aria-label="Shop at a glance">
     {
       stats.map((stat) => (
-        <article class="stat panel">
-          <p class:list={['stat-value', { hot: stat.hot }]}>{stat.value}</p>
-          <p class="eyebrow">{stat.label}</p>
-        </article>
+        <div class="stat">
+          <p class:list={['stat-value tnum', { hot: stat.hot }]}>{stat.value}</p>
+          <p class="label">{stat.label}</p>
+        </div>
       ))
     }
-
-    <article class="stat next">
-      <span class="next-art">
-        <FoodArt art={nextToExpire.art} />
-      </span>
-      <div>
-        <p class="eyebrow next-label">Next to expire</p>
-        <p class="next-name">{nextToExpire.name.replace(' (box of 6)', '')}</p>
-        <p class="small">{nextToExpire.expiryLabel}</p>
-      </div>
-    </article>
   </section>
 
-  <div class="toolbar">
-    <label class="toggle">
-      <input type="checkbox" checked data-expiry-filter />
-      <span class="track" aria-hidden="true"></span>
-      <span class="toggle-label">Expiring within 3 days</span>
-    </label>
-    <p class="small muted" data-shown>Showing {expiringWithinThreeDays.length} of {sellerListings.length} items</p>
-  </div>
-
-  <div class="grid">
-    {
-      sellerListings.map((listing) => {
-        const soon = expiringWithinThreeDays.includes(listing);
-        return (
-          <div class="cell" data-soon={String(soon)} hidden={!soon}>
-            <ListingCard listing={listing} variant="seller" />
-          </div>
-        );
-      })
-    }
-
-    <div class="later panel-outline" data-later>
-      <p class="later-head">{laterCount} more items expire after Nov 7.</p>
-      <p class="later-note">Switch the filter off to see them.</p>
+  <section class="section" aria-labelledby="expiring-title">
+    <div class="section-head">
+      <div>
+        <h2 class="section-title" id="expiring-title">Your listings</h2>
+        <p class="section-sub tnum" data-shown>Showing {expiringWithinThreeDays.length} of {sellerListings.length} items</p>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" role="switch" checked data-expiry-filter />
+        <span class="track" aria-hidden="true"></span>
+        <span class="toggle-label">Expiring within 3 days</span>
+      </label>
     </div>
-  </div>
+
+    <div class="listing-grid">
+      {
+        sellerListings.map((listing) => {
+          const soon = expiringWithinThreeDays.includes(listing);
+          return (
+            <div class="cell" data-soon={String(soon)} hidden={!soon}>
+              <ListingCard listing={listing} variant="seller" />
+            </div>
+          );
+        })
+      }
+
+      <div class="grid-tile" data-later>
+        <span class="grid-tile-icon" aria-hidden="true"><Icon name="clock" /></span>
+        <p class="grid-tile-title">{laterCount} more items expire after Nov 7</p>
+        <p class="small muted">Switch the filter off to see them.</p>
+      </div>
+    </div>
+  </section>
+
+  <Fragment slot="rail">
+    <div class="panel rail-panel">
+      <article class="next">
+        <div class="next-photo">
+          <FoodArt art={nextToExpire.art} ratio="16 / 10" />
+          <span class="pill pill-lime next-badge">Next to expire</span>
+        </div>
+        <p class="next-name">{nextToExpire.name}</p>
+        <p class="next-when">
+          <Icon name="clock" size={16} />
+          {nextToExpire.expiryLabel}
+        </p>
+      </article>
+
+      <div class="reserved">
+        <div class="row-between">
+          <h2 class="panel-title">Reserved orders</h2>
+          <span class="count">{handoverQueue.length}</span>
+        </div>
+        <ul class="reserved-list">
+          {
+            handoverQueue.map((order) => (
+              <li class="reserved-item">
+                <span class="food-thumb"><FoodArt art={order.art} ratio="1 / 1" /></span>
+                <span class="reserved-copy">
+                  <span class="reserved-food">{order.foodName}</span>
+                  <span class="small muted">{order.buyerUsername} &middot; &times; {order.quantity}</span>
+                </span>
+                <span class:list={['pill', order.status === 'ready' ? 'pill-ok' : 'pill-neutral']}>
+                  {order.status === 'ready' ? 'Ready' : 'Reserved'}
+                </span>
+              </li>
+            ))
+          }
+        </ul>
+        <a class="btn btn-dark btn-block" href="/seller/handover">Open Reserved / Handover</a>
+      </div>
+    </div>
+  </Fragment>
 </AppLayout>
 
 <script>
+  import { announce } from '../../scripts/announce';
+
   const toggle = document.querySelector<HTMLInputElement>('[data-expiry-filter]');
   const cells = Array.from(document.querySelectorAll<HTMLElement>('.cell'));
   const later = document.querySelector<HTMLElement>('[data-later]');
@@ -89,7 +127,9 @@ const stats = [
     });
 
     if (later) later.hidden = !filtered;
-    if (shown) shown.textContent = `Showing ${visible} of ${cells.length} items`;
+    const message = `Showing ${visible} of ${cells.length} items`;
+    if (shown) shown.textContent = message;
+    announce(message);
   };
 
   toggle?.addEventListener('change', render);
@@ -98,69 +138,37 @@ const stats = [
 <style>
   .stats {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 18px;
+    grid-template-columns: repeat(3, 1fr);
+    border-radius: var(--r-xl);
+    background: var(--s2);
+    -webkit-backdrop-filter: var(--blur);
+    backdrop-filter: var(--blur);
   }
 
   .stat {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    min-height: 128px;
+    padding: 24px 24px;
   }
 
   .stat-value {
-    font-family: var(--display);
-    font-size: 52px;
-    line-height: 1;
-    margin-bottom: 12px;
+    font-size: var(--fs-figure);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
   }
 
   .stat-value.hot {
-    color: var(--brick);
+    color: var(--brick-text);
   }
 
-  .next {
-    flex-direction: row;
-    align-items: center;
-    gap: 18px;
-    background: var(--lime);
-    border-radius: var(--r-lg);
-    padding: 24px;
-  }
-
-  .next-art {
-    width: 76px;
-    flex: none;
-  }
-
-  .next-art :global(.art) {
-    background: rgba(255, 255, 255, 0.45);
-  }
-
-  .next-label {
-    color: rgba(23, 21, 15, 0.6);
-  }
-
-  .next-name {
-    margin: 4px 0 2px;
-    font-size: 19px;
-    font-weight: 600;
-    line-height: 1.2;
-  }
-
-  .toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
-    margin: 32px 0 22px;
+  .stat .label {
+    margin-top: 4px;
   }
 
   .toggle {
     display: inline-flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
+    flex: none;
     cursor: pointer;
   }
 
@@ -172,11 +180,11 @@ const stats = [
 
   .track {
     position: relative;
-    width: 54px;
+    width: 50px;
     height: 28px;
     border-radius: var(--r-pill);
-    background: var(--tan-deep);
-    transition: background 0.18s ease;
+    background: var(--s4);
+    transition: background var(--dur) var(--ease-out);
   }
 
   .track::after {
@@ -187,56 +195,95 @@ const stats = [
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background: var(--ink);
-    transition: transform 0.18s ease;
+    background: var(--text);
+    transition: transform var(--dur) var(--ease-out), background var(--dur) var(--ease-out);
   }
 
   .toggle input:checked + .track {
-    background: var(--lime);
+    background: var(--brick);
   }
 
   .toggle input:checked + .track::after {
-    transform: translateX(26px);
+    transform: translateX(22px);
+    background: #fff;
   }
 
   .toggle input:focus-visible + .track {
-    outline: 2px solid var(--brick);
+    outline: 2px solid var(--focus);
     outline-offset: 2px;
   }
 
   .toggle-label {
-    font-size: 17px;
+    font-size: var(--fs-md);
+    font-weight: 600;
   }
 
-  .grid {
+
+  .next {
+    padding: 12px 12px 16px;
+    border-radius: var(--r-lg);
+    background: var(--s3);
+  }
+
+  .next-photo {
+    position: relative;
+  }
+
+  .next-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+  }
+
+  .next-name {
+    margin-top: 16px;
+    padding: 0 8px;
+    font-size: var(--fs-lg);
+    font-weight: 700;
+  }
+
+  .next-when {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    padding: 0 8px;
+    color: var(--text-soft);
+    font-size: var(--fs-md);
+  }
+
+  .reserved {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 34px 30px;
+    gap: 16px;
+    padding: 0 8px 4px;
   }
 
-  .later {
+  .reserved-list {
     display: grid;
-    place-content: center;
-    text-align: center;
-    padding: 40px 28px;
-    min-height: 260px;
+    gap: 12px;
   }
 
-  .later-head {
-    font-family: var(--display);
-    font-size: 25px;
-    line-height: 1.2;
+  .reserved-item {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
   }
 
-  .later-note {
-    margin-top: 10px;
-    font-family: var(--display);
-    font-size: 14px;
-    color: var(--muted);
+  .reserved-copy {
+    display: grid;
+    min-width: 0;
   }
 
-  @media (max-width: 1200px) {
-    .stats { grid-template-columns: repeat(2, 1fr); }
-    .grid { grid-template-columns: repeat(2, 1fr); }
+  .reserved-food {
+    font-size: var(--fs-md);
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 1279px) {
+    .stat { padding: 16px 20px; }
   }
 </style>

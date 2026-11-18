@@ -2,6 +2,7 @@
 import AppLayout from '../../layouts/AppLayout.astro';
 import { activeSessions, admin } from '../../data/store';
 import { roleLabel } from '../../data/nav';
+import Icon from '../../components/Icon.astro';
 ---
 
 <AppLayout
@@ -9,13 +10,15 @@ import { roleLabel } from '../../data/nav';
   username={admin.username}
   section="Active Sessions"
   heading="Active Sessions"
-  subtitle="Who is connected right now."
+  subtitle={`${activeSessions.length} people are connected right now.`}
+  highlight={`${activeSessions.length} people`}
 >
-  <div class="toolbar">
-    <span class="chip chip-mint">{activeSessions.length} online</span>
-    <button class="btn btn-sm" type="button" data-refresh>Refresh</button>
-  </div>
+  <button class="btn" type="button" data-refresh slot="actions">
+    <Icon name="refresh" />
+    <span data-refresh-label>Refresh</span>
+  </button>
 
+  <div class="table-wrap">
   <table class="table">
     <thead>
       <tr>
@@ -29,7 +32,12 @@ import { roleLabel } from '../../data/nav';
       {
         activeSessions.map((session) => (
           <tr>
-            <td class="username">{session.username}</td>
+            <td class="name">
+              <span class="who">
+                <span class="avatar" aria-hidden="true">{session.username.charAt(0)}</span>
+                {session.username}
+              </span>
+            </td>
             <td>{roleLabel[session.role]}</td>
             <td class="muted">{session.connectedSince}</td>
             <td class="muted tnum">{session.clientAddress}</td>
@@ -38,32 +46,27 @@ import { roleLabel } from '../../data/nav';
       }
     </tbody>
   </table>
+  </div>
 </AppLayout>
 
 <script>
+  import { announce } from '../../scripts/announce';
+
   const button = document.querySelector<HTMLButtonElement>('[data-refresh]');
 
   button?.addEventListener('click', () => {
-    const original = button.textContent;
-    button.textContent = 'Refreshing…';
+    const label = button.querySelector<HTMLElement>('[data-refresh-label]');
+    if (!label) return;
+    const original = label.textContent;
+    label.textContent = 'Refreshing…';
     button.disabled = true;
 
     window.setTimeout(() => {
-      button.textContent = original;
+      label.textContent = original;
       button.disabled = false;
+      button.focus();
+      announce('Session list refreshed.');
     }, 700);
   });
 </script>
 
-<style>
-  .toolbar {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin-bottom: 22px;
-  }
-
-  .username {
-    font-size: 15px;
-  }
-</style>

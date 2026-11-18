@@ -11,12 +11,12 @@ interface Props {
 const { value = 1, min = 1, max = 99, label = 'Quantity', name = 'quantity' } = Astro.props;
 ---
 
-<div class="stepper" data-stepper={name} data-min={min} data-max={max}>
-  <span class="field-label stepper-label">{label}</span>
+<div class="stepper" data-stepper={name} data-min={min} data-max={max} role="group" aria-labelledby={`${name}-qty-label`}>
+  <span class="field-label stepper-label" id={`${name}-qty-label`}>{label}</span>
   <div class="controls">
-    <button type="button" class="step" data-step="-1" aria-label="Decrease quantity">&minus;</button>
-    <output class="value tnum" data-stepper-value>{value}</output>
-    <button type="button" class="step" data-step="1" aria-label="Increase quantity">+</button>
+    <button type="button" class="step" data-step="-1" aria-label={`Decrease ${label.toLowerCase()}`} disabled={value <= min}>&minus;</button>
+    <output class="value tnum" data-stepper-value aria-live="polite">{value}</output>
+    <button type="button" class="step" data-step="1" aria-label={`Increase ${label.toLowerCase()}`} disabled={value >= max}>+</button>
   </div>
 </div>
 
@@ -27,12 +27,23 @@ const { value = 1, min = 1, max = 99, label = 'Quantity', name = 'quantity' } = 
 
     const min = Number(stepper.dataset.min ?? 1);
     const max = Number(stepper.dataset.max ?? 99);
+    const buttons = Array.from(stepper.querySelectorAll<HTMLButtonElement>('[data-step]'));
 
-    stepper.querySelectorAll<HTMLButtonElement>('[data-step]').forEach((button) => {
+    const sync = (value: number) => {
+      buttons.forEach((button) => {
+        const delta = Number(button.dataset.step);
+        button.disabled = delta < 0 ? value <= min : value >= max;
+      });
+    };
+
+    buttons.forEach((button) => {
       button.addEventListener('click', () => {
         const delta = Number(button.dataset.step);
         const next = Math.min(max, Math.max(min, Number(output.textContent) + delta));
         output.textContent = String(next);
+        sync(next);
+        // Keep focus on a usable control when this one just became disabled.
+        if (button.disabled) buttons.find((other) => other !== button)?.focus();
         stepper.dispatchEvent(new CustomEvent('quantitychange', { detail: next, bubbles: true }));
       });
     });
@@ -43,7 +54,8 @@ const { value = 1, min = 1, max = 99, label = 'Quantity', name = 'quantity' } = 
   .stepper {
     display: flex;
     align-items: center;
-    gap: 14px;
+    justify-content: space-between;
+    gap: 16px;
   }
 
   .stepper-label {
@@ -53,31 +65,35 @@ const { value = 1, min = 1, max = 99, label = 'Quantity', name = 'quantity' } = 
   .controls {
     display: inline-flex;
     align-items: center;
-    gap: 2px;
-    height: 38px;
-    padding: 0 6px;
-    border: 1px solid var(--line-strong);
-    border-radius: var(--r-pill);
-    background: var(--field);
+    gap: 12px;
   }
 
   .step {
-    width: 30px;
-    height: 30px;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
     border: 0;
     border-radius: 50%;
-    background: transparent;
-    font-size: 16px;
+    background: var(--s3);
+    color: var(--text);
+    font-size: 17px;
     line-height: 1;
-    color: var(--ink);
+    transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
   }
 
-  .step:hover { background: rgba(23, 21, 15, 0.07); }
+  .step:hover:not(:disabled) { background: var(--s4); }
+  .step:active:not(:disabled) { transform: scale(0.92); }
+
+  .step:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
 
   .value {
-    min-width: 26px;
+    min-width: 22px;
     text-align: center;
-    font-size: 15px;
-    font-weight: 600;
+    font-size: var(--fs-body);
+    font-weight: 700;
   }
 </style>

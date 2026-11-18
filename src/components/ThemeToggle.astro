@@ -1,0 +1,71 @@
+---
+import Icon from './Icon.astro';
+
+interface Props {
+  class?: string;
+}
+
+const { class: className } = Astro.props;
+---
+
+<!--
+  A small round button. It shows a sun in dark mode and a moon in light mode;
+  aria-pressed tells assistive tech whether light mode is on.
+-->
+<button
+  class:list={['theme-btn', className]}
+  type="button"
+  aria-pressed="false"
+  aria-label="Light mode"
+  title="Switch to light mode"
+  data-theme-toggle
+>
+  <span class="when-dark"><Icon name="sun" size={18} /></span>
+  <span class="when-light"><Icon name="moon" size={18} /></span>
+</button>
+
+<style>
+  .theme-btn {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--s3);
+    color: var(--text-soft);
+    transition:
+      background var(--dur-fast) var(--ease-out),
+      color var(--dur-fast) var(--ease-out),
+      transform var(--dur) var(--ease-out);
+  }
+
+  .theme-btn:hover {
+    background: var(--s4);
+    color: var(--text);
+  }
+
+  .theme-btn:active {
+    transform: scale(0.92) rotate(-20deg);
+  }
+
+  .when-dark,
+  .when-light {
+    display: grid;
+    place-items: center;
+  }
+
+  .when-light {
+    display: none;
+  }
+
+  :global(:root[data-theme='light']) .when-light {
+    display: grid;
+  }
+
+  :global(:root[data-theme='light']) .when-dark {
+    display: none;
+  }
+</style>

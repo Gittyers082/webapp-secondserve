@@ -1,0 +1,68 @@
+---
+/**
+ * The app's icon set: 24px outline icons drawn on one grid with one stroke
+ * weight, so every icon in the app reads as part of the same family.
+ * Decorative by default; pass `label` when the icon stands alone.
+ */
+import type { IconName } from '../data/icons';
+
+interface Props {
+  name: IconName;
+  size?: number;
+  label?: string;
+  class?: string;
+}
+
+const { name, size = 20, label, class: className } = Astro.props;
+
+const paths: Record<IconName, string> = {
+  grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
+  bag: 'M5 8h14l-1 12H6L5 8zM9 8V6a3 3 0 0 1 6 0v2',
+  cart: 'M3 4h2.5l2.2 10.5h10.6L20.5 7H7M9.5 19.5a1 1 0 1 0 0-.01M17 19.5a1 1 0 1 0 0-.01',
+  clock: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7.5V12l3 2',
+  receipt: 'M6 3h12v18l-3-2-3 2-3-2-3 2V3zM9 8h6M9 12h6M9 16h3',
+  user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4.5 20.5c1.2-3.7 4-5.5 7.5-5.5s6.3 1.8 7.5 5.5',
+  plus: 'M12 5v14M5 12h14',
+  shelf: 'M4 5h16M4 12h16M4 19h16M7 5v4M12 5v4M10 12v4M15 12v4',
+  sliders: 'M4 7h9M17 7h3M4 17h3M11 17h9M15 5v4M9 15v4',
+  handover: 'M3 13h4l3 3h5a2 2 0 0 0 0-4h-3M7 13l4-4h4l6 6M3 19h18',
+  users: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20c1-3.3 3.4-5 6.5-5s5.5 1.7 6.5 5M16 4.5a3.5 3.5 0 0 1 0 6.5M18 15c1.8.6 3 2.2 3.5 5',
+  'user-check': 'M10 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM3.5 20c1-3.3 3.4-5 6.5-5 1.4 0 2.6.3 3.6 1M15 18l2 2 4-4',
+  'list-check': 'M10 6h10M10 12h10M10 18h10M3.5 6l1.5 1.5L7.5 5M3.5 12l1.5 1.5L7.5 11M3.5 18l1.5 1.5L7.5 17',
+  flag: 'M5 21V4M5 4h11l-2 4 2 4H5',
+  pulse: 'M3 12h4l2-5 4 10 2-5h6',
+  logout: 'M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 16l-4-4 4-4M6 12h10',
+  search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM16.5 16.5L21 21',
+  pin: 'M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
+  'chevron-right': 'M9 5l7 7-7 7',
+  check: 'M5 12.5l4.5 4.5L19 7',
+  camera: 'M4 8h3l2-3h6l2 3h3v11H4V8zM12 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z',
+  upload: 'M12 16V4M7 9l5-5 5 5M4 16v4h16v-4',
+  trash: 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3',
+  pencil: 'M15.5 4.5l4 4L9 19H5v-4L15.5 4.5z',
+  info: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 11v5M12 7.5v.5',
+  refresh: 'M20 11a8 8 0 0 0-14.5-4.5L4 8M4 4v4h4M4 13a8 8 0 0 0 14.5 4.5L20 16M20 20v-4h-4',
+  store: 'M4 10v10h16V10M3 10l2-6h14l2 6H3zM9 20v-5h6v5',
+  minus: 'M5 12h14',
+  sun: 'M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4',
+  moon: 'M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z',
+};
+---
+
+<svg
+  class:list={['icon', className]}
+  width={size}
+  height={size}
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="1.8"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  role={label ? 'img' : undefined}
+  aria-label={label}
+  aria-hidden={label ? undefined : 'true'}
+  focusable="false"
+>
+  <path d={paths[name]} />
+</svg>
