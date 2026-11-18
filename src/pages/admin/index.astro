@@ -1,0 +1,187 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import Dialog from '../../components/Dialog.astro';
+import { admin, users } from '../../data/store';
+
+const filters = [
+  { id: 'all', label: 'All' },
+  { id: 'buyer', label: 'Buyers' },
+  { id: 'seller', label: 'Sellers' },
+  { id: 'banned', label: 'Banned' },
+];
+---
+
+<AppLayout
+  role="admin"
+  username={admin.username}
+  section="User Management"
+  heading="User Management"
+  subtitle="Keep the community safe and active."
+  accent="safe and active."
+>
+  <div class="toolbar">
+    <div class="search">
+      <label class="sr-only" for="user-search">Search username</label>
+      <input class="input" id="user-search" type="search" placeholder="Search username&hellip;" data-search />
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M16.5 16.5L21 21"></path></svg>
+    </div>
+
+    <div class="filters">
+      {
+        filters.map((filter) => (
+          <button class="filter" type="button" data-filter={filter.id} aria-pressed={filter.id === 'all'}>
+            {filter.label}
+          </button>
+        ))
+      }
+    </div>
+  </div>
+
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Username</th>
+        <th>Account type</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {
+        users.map((user) => (
+          <tr data-user={user.username} data-role={user.role} data-status={user.status}>
+            <td class="username">{user.username}</td>
+            <td>{user.role === 'seller' ? 'Seller' : 'Buyer'}</td>
+            <td>
+              <span
+                class:list={['chip', user.status === 'banned' ? 'chip-blush' : 'chip-mint']}
+                data-status-chip
+              >
+                {user.status === 'banned' ? 'Banned' : 'Active'}
+              </span>
+            </td>
+            <td>
+              <button
+                class:list={['btn', 'btn-sm', user.status === 'banned' ? '' : 'btn-danger']}
+                type="button"
+                data-toggle-ban={user.username}
+              >
+                {user.status === 'banned' ? 'Unban' : 'Ban user'}
+              </button>
+            </td>
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+
+  <p class="no-results" data-no-results hidden>No user matches that search.</p>
+
+  <Dialog id="confirm-ban" title="Ban this user?" message="">
+    <div class="dialog-actions">
+      <button class="btn" type="button" data-dialog-close>Cancel</button>
+      <button class="btn btn-primary" type="button" data-confirm-ban>Ban user</button>
+    </div>
+  </Dialog>
+</AppLayout>
+
+<script>
+  const rows = Array.from(document.querySelectorAll<HTMLElement>('[data-user]'));
+  const search = document.querySelector<HTMLInputElement>('[data-search]');
+  const noResults = document.querySelector<HTMLElement>('[data-no-results]');
+  const scrim = document.querySelector<HTMLElement>('[data-dialog="confirm-ban"]');
+  const dialogTitle = scrim?.querySelector<HTMLElement>('h2');
+  const dialogBody = scrim?.querySelector<HTMLElement>('p');
+
+  let filter = 'all';
+  let pending: HTMLElement | null = null;
+
+  const applyFilters = () => {
+    const term = (search?.value ?? '').trim().toLowerCase();
+    let visible = 0;
+
+    rows.forEach((row) => {
+      const matchesFilter =
+        filter === 'all' ||
+        (filter === 'banned' ? row.dataset.status === 'banned' : row.dataset.role === filter);
+      const matchesTerm = term === '' || (row.dataset.user ?? '').includes(term);
+      const show = matchesFilter && matchesTerm;
+      row.hidden = !show;
+      if (show) visible += 1;
+    });
+
+    if (noResults) noResults.hidden = visible > 0;
+  };
+
+  document.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach((button) => {
+    button.addEventListener('click', () => {
+      filter = button.dataset.filter ?? 'all';
+      document.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach((other) => {
+        other.setAttribute('aria-pressed', String(other === button));
+      });
+      applyFilters();
+    });
+  });
+
+  search?.addEventListener('input', applyFilters);
+
+  const setBanned = (row: HTMLElement, banned: boolean) => {
+    const chip = row.querySelector<HTMLElement>('[data-status-chip]');
+    const button = row.querySelector<HTMLButtonElement>('[data-toggle-ban]');
+    if (!chip || !button) return;
+
+    row.dataset.status = banned ? 'banned' : 'active';
+    chip.className = `chip ${banned ? 'chip-blush' : 'chip-mint'}`;
+    chip.textContent = banned ? 'Banned' : 'Active';
+    button.className = `btn btn-sm${banned ? '' : ' btn-danger'}`;
+    button.textContent = banned ? 'Unban' : 'Ban user';
+  };
+
+  rows.forEach((row) => {
+    row.querySelector<HTMLButtonElement>('[data-toggle-ban]')?.addEventListener('click', () => {
+      if (row.dataset.status === 'banned') {
+        setBanned(row, false);
+        return;
+      }
+
+      pending = row;
+      if (dialogTitle) dialogTitle.textContent = `Ban ${row.dataset.user}?`;
+      if (dialogBody) {
+        dialogBody.textContent =
+          'They will be signed out and unable to sign in. You can unban them later from User Management.';
+      }
+      if (scrim) scrim.hidden = false;
+    });
+  });
+
+  document.querySelector<HTMLButtonElement>('[data-confirm-ban]')?.addEventListener('click', () => {
+    if (pending) setBanned(pending, true);
+    pending = null;
+    if (scrim) scrim.hidden = true;
+    applyFilters();
+  });
+</script>
+
+<style>
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 26px;
+    flex-wrap: wrap;
+  }
+
+  .toolbar .search {
+    width: 340px;
+  }
+
+  .username {
+    font-size: 15px;
+  }
+
+  .no-results {
+    padding: 60px 0;
+    text-align: center;
+    color: var(--muted);
+  }
+</style>

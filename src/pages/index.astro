@@ -1,0 +1,76 @@
+---
+import AuthLayout from '../layouts/AuthLayout.astro';
+import { SERVER } from '../data/store';
+---
+
+<AuthLayout
+  title="Connect to Server"
+  headline="Good products deserve a second chance."
+  accent="a second chance."
+  lede="Sellers list surplus products at a discount. Buyers find them, reserve them, and pick them up."
+>
+  <form class="connect" method="get" action="/login">
+    <h2>Connect to server</h2>
+    <p class="hint">Enter the address of your SecondServe server to begin.</p>
+
+    <div class="field">
+      <label class="field-label" for="host">Server address</label>
+      <input class="input" id="host" name="host" value={SERVER.host} autocomplete="off" />
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="port">Port</label>
+      <input class="input" id="port" name="port" value={SERVER.port} inputmode="numeric" autocomplete="off" />
+    </div>
+
+    <p class="notice notice-error" data-connect-error hidden>
+      <strong>Connection failed.</strong> Could not reach server. Check the address and port.
+    </p>
+
+    <button class="btn btn-primary btn-lg btn-block" type="submit">Connect</button>
+    <p class="caption">First screen of the desktop app</p>
+  </form>
+</AuthLayout>
+
+<script>
+  const form = document.querySelector<HTMLFormElement>('.connect');
+  const error = document.querySelector<HTMLElement>('[data-connect-error]');
+
+  form?.addEventListener('submit', (event) => {
+    const host = form.querySelector<HTMLInputElement>('#host')?.value.trim();
+    const port = form.querySelector<HTMLInputElement>('#port')?.value.trim();
+
+    if (!host || !port) {
+      event.preventDefault();
+      if (error) error.hidden = false;
+    }
+  });
+</script>
+
+<style>
+  .connect h2 {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: 34px;
+    letter-spacing: -0.01em;
+  }
+
+  .connect .hint {
+    margin: 6px 0 22px;
+  }
+
+  .notice {
+    margin-top: 16px;
+  }
+
+  .connect .btn {
+    margin-top: 20px;
+  }
+
+  .caption {
+    margin-top: 14px;
+    text-align: center;
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+</style>

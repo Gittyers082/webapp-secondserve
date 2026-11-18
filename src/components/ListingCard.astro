@@ -1,0 +1,221 @@
+---
+import FoodArt from './FoodArt.astro';
+import { peso } from '../data/types';
+import type { Listing } from '../data/types';
+
+interface Props {
+  listing: Listing;
+  /** `shop` shows stock + a Details button, `seller` shows qty + lifecycle state. */
+  variant?: 'shop' | 'seller' | 'moderation';
+  /** Renders the card as a selectable tile with a checkmark. */
+  selectable?: boolean;
+  selected?: boolean;
+}
+
+const { listing, variant = 'shop', selectable = false, selected = false } = Astro.props;
+
+const expired = listing.status === 'expired';
+const expiringSoon =
+  !expired && listing.status === 'active' && listing.expiresAt !== '' && listing.expiresAt <= '2026-11-07';
+
+const stateChip = (() => {
+  switch (listing.status) {
+    case 'sold':
+      return { label: 'Sold', tone: 'chip-tan' };
+    case 'withdrawn':
+      return { label: 'Withdrawn', tone: 'chip-tan' };
+    case 'expired':
+      return { label: 'Expired', tone: 'chip-blush' };
+    default:
+      return {
+        label: listing.reserved ? `Active · ${listing.reserved} reserved` : 'Active',
+        tone: 'chip-mint',
+      };
+  }
+})();
+
+const quantityLabel =
+  listing.status === 'sold' && listing.originalQuantity
+    ? `0 of ${listing.originalQuantity} left`
+    : String(listing.quantity);
+---
+
+<article
+  class:list={['card', { 'is-selectable': selectable, 'is-selected': selected, 'is-expired': expired }]}
+  data-listing={listing.id}
+  data-category={listing.category}
+  data-status={listing.status}
+  data-name={listing.name.toLowerCase()}
+  data-shop={listing.shopName.toLowerCase()}
+>
+  <div class="thumb">
+    <FoodArt art={listing.art} muted={expired} />
+
+    {listing.flagged && <span class="chip chip-blush badge">Flagged</span>}
+    {!listing.flagged && expired && <span class="chip chip-blush badge">Expired</span>}
+    {!listing.flagged && expiringSoon && <span class="chip chip-lime badge">Expiring soon</span>}
+
+    {
+      selectable && (
+        <span class="tick" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+            <path d="M4 12.5l5.5 5.5L20 6" />
+          </svg>
+        </span>
+      )
+    }
+  </div>
+
+  <div class="head">
+    <h3>{listing.name}</h3>
+    <span class="price">
+      {
+        listing.originalPrice !== listing.discountedPrice && (
+          <del class="tnum">{peso(listing.originalPrice)}</del>
+        )
+      }
+      <ins class="tnum">{peso(listing.discountedPrice)}</ins>
+    </span>
+  </div>
+
+  {variant !== 'seller' && <p class="shop">{listing.shopName}</p>}
+
+  <dl class="meta">
+    <div>
+      <dd class="tnum">{variant === 'shop' ? listing.quantity : quantityLabel}</dd>
+      <dt>{variant === 'shop' ? 'Left' : 'Qty'}</dt>
+    </div>
+    <div>
+      <dd>{listing.expiryLabel}</dd>
+      <dt>Expires</dt>
+    </div>
+  </dl>
+
+  {
+    variant === 'shop' && (
+      <div class="foot">
+        {expired ? (
+          <button class="btn btn-sm" type="button" disabled>
+            Unavailable
+          </button>
+        ) : (
+          <button class="btn btn-sm js-details" type="button" data-details-for={listing.id}>
+            Details
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  {
+    variant === 'seller' && (
+      <div class="foot">
+        <span class:list={['chip', stateChip.tone]}>{stateChip.label}</span>
+      </div>
+    )
+  }
+
+  {
+    variant === 'moderation' && (
+      <div class="foot">
+        <span class:list={['chip', listing.flagged ? 'chip-blush' : stateChip.tone]}>
+          {listing.flagged ? 'Flagged' : stateChip.label}
+        </span>
+      </div>
+    )
+  }
+</article>
+
+<style>
+  .card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .thumb {
+    position: relative;
+    border-radius: var(--r-md);
+    overflow: hidden;
+  }
+
+  .is-selectable .thumb {
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+  }
+
+  .is-selectable:hover .thumb { border-color: var(--line-strong); }
+  .is-selected .thumb { border-color: var(--ink); }
+
+  .badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+  }
+
+  .tick {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    color: var(--ink);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+
+  .is-selected .tick { opacity: 1; }
+
+  .head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 14px;
+  }
+
+  .head h3 {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.055em;
+    text-transform: uppercase;
+    line-height: 1.35;
+  }
+
+  .shop {
+    margin-top: -4px;
+    color: var(--ink-soft);
+    font-size: 13.5px;
+  }
+
+  .meta {
+    display: flex;
+    gap: 34px;
+    margin: 2px 0 0;
+  }
+
+  .meta dd {
+    margin: 0;
+    font-size: 14px;
+  }
+
+  .meta dt {
+    margin-top: 1px;
+    font-size: 9.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  .foot {
+    margin-top: 4px;
+  }
+
+  .is-expired .head h3,
+  .is-expired .shop {
+    color: var(--muted);
+  }
+</style>

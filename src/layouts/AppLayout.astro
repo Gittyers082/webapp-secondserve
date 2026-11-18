@@ -1,0 +1,65 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import TopBar from '../components/TopBar.astro';
+import StatusBar from '../components/StatusBar.astro';
+import { navFor, roleLabel } from '../data/nav';
+import type { Role } from '../data/types';
+
+interface Props {
+  role: Role;
+  username: string;
+  /** Tab name, used for the window title: "Buyer · Shop". */
+  section: string;
+  /** Large serif page title. */
+  heading: string;
+  /** Subtitle; the words in `accent` are set in red italic serif. */
+  subtitle?: string;
+  accent?: string;
+}
+
+const { role, username, section, heading, subtitle, accent } = Astro.props;
+const nav = navFor(role);
+const current = Astro.url.pathname.replace(/\/$/, '') || '/';
+
+const [before, after] = accent && subtitle ? subtitle.split(accent) : [subtitle, ''];
+---
+
+<BaseLayout title={`${roleLabel[role]} · ${section}`}>
+  <div class="app">
+    <TopBar role={role} username={username} nav={nav} current={current} showLogout={role === 'admin'} />
+
+    <main class="app-main">
+      <div class="shell">
+        <div class="page-head">
+          <h1>{heading}</h1>
+          {
+            subtitle && (
+              <p>
+                {before}
+                {accent && <em>{accent}</em>}
+                {after}
+              </p>
+            )
+          }
+        </div>
+
+        <slot />
+      </div>
+    </main>
+
+    <StatusBar username={username} />
+  </div>
+</BaseLayout>
+
+<style>
+  .app {
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100vh - 44px);
+  }
+
+  .app-main {
+    flex: 1;
+    padding-bottom: 72px;
+  }
+</style>

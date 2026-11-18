@@ -1,0 +1,427 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import ListingCard from '../../components/ListingCard.astro';
+import FoodArt from '../../components/FoodArt.astro';
+import QuantityStepper from '../../components/QuantityStepper.astro';
+import Dialog from '../../components/Dialog.astro';
+import { buyer, listings } from '../../data/store';
+import { peso, discountPercent } from '../../data/types';
+
+const featured = listings[0]!;
+
+const categories = [
+  { id: 'all', label: 'All' },
+  { id: 'bread', label: 'Bread' },
+  { id: 'pastries', label: 'Pastries' },
+  { id: 'savory', label: 'Savory' },
+  { id: 'cakes', label: 'Cakes' },
+  { id: 'fruit-cups', label: 'Fruit cups' },
+].map((category) => ({
+  ...category,
+  count:
+    category.id === 'all'
+      ? listings.length
+      : listings.filter((listing) => listing.category === category.id).length,
+}));
+---
+
+<AppLayout
+  role="buyer"
+  username={buyer.username}
+  section="Shop"
+  heading="Shop"
+  subtitle="Discounted food from Baguio shops, before it expires."
+  accent="before it expires."
+>
+  <!-- Today's pick ------------------------------------------------------- -->
+  <section class="feature">
+    <div class="feature-art">
+      <FoodArt art={featured.art} />
+      <span class="chip chip-lime badge">Expiring soon</span>
+      <span class="sun" aria-hidden="true"></span>
+    </div>
+
+    <div class="feature-copy">
+      <div>
+        <p class="eyebrow">Today&rsquo;s pick &middot; {featured.shopName}</p>
+        <h2 class="feature-head">
+          Soft ube pandesal with melted cheese, <em>half price</em> tonight.
+        </h2>
+        <div class="feature-cta">
+          <a class="btn btn-dark" href="#shelves">Get it &rarr;</a>
+          <p class="feature-price tnum">
+            {peso(featured.originalPrice)} &rarr; <strong>{peso(featured.discountedPrice)}</strong> &middot;{' '}
+            {featured.quantity} left
+          </p>
+        </div>
+      </div>
+
+      <p class="feature-blurb">
+        Baked this morning and still fresh. Collect it from Session Road, Baguio before 6:00 PM tomorrow.
+        Reserve through the cart, then show your name at the counter.
+      </p>
+    </div>
+  </section>
+
+  <!-- Shelves ------------------------------------------------------------ -->
+  <section id="shelves" class="shelves">
+    <div class="shelves-head">
+      <h2 class="section-title">Fresh from today&rsquo;s shelves</h2>
+      <div class="filters">
+        {
+          categories.map((category) => (
+            <button class="filter" type="button" data-filter={category.id} aria-pressed={category.id === 'all'}>
+              {category.label} <span>{category.count}</span>
+            </button>
+          ))
+        }
+      </div>
+    </div>
+
+    <div class="search">
+      <label class="sr-only" for="shop-search">Search shop or food</label>
+      <input class="input" id="shop-search" type="search" placeholder="Search shop or food" data-search />
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M16.5 16.5L21 21"></path></svg>
+    </div>
+
+    <div class="grid" data-grid>
+      {listings.map((listing) => <ListingCard listing={listing} selectable selected={listing.id === featured.id} />)}
+    </div>
+
+    <p class="no-results" data-no-results hidden>Nothing matches that search. Try another shop or food name.</p>
+  </section>
+
+  <!-- Selection bar ------------------------------------------------------ -->
+  <div class="selection" data-selection>
+    <div class="selection-art"><FoodArt art={featured.art} /></div>
+    <div class="selection-copy">
+      <p class="selection-name" data-selection-name>{featured.name}</p>
+      <p class="small muted" data-selection-meta>
+        Selected &middot; {featured.shopName} &middot; {featured.quantity} in stock
+      </p>
+    </div>
+    <QuantityStepper value={2} max={featured.quantity} name="shop" />
+    <button class="btn btn-primary" type="button" data-add-to-cart>Add to cart</button>
+  </div>
+
+  <!-- Details dialog ----------------------------------------------------- -->
+  <Dialog id="details" title="Listing details" wide>
+    <div class="details">
+      <div class="details-art">
+        <FoodArt art={featured.art} />
+      </div>
+      <div class="details-copy">
+        <div class="row wrap">
+          <span class="chip chip-lime">Expiring soon</span>
+          <span class="chip chip-tan">{discountPercent(featured)}% off</span>
+          <span class="chip chip-ghost">{featured.quantity} in stock</span>
+        </div>
+
+        <h3 class="details-name">{featured.name}</h3>
+        <p class="small muted">{featured.shopName} &middot; Session Road, Baguio</p>
+
+        <p class="price details-price">
+          <del class="tnum">{peso(featured.originalPrice)}</del>
+          <ins class="tnum">{peso(featured.discountedPrice)}</ins>
+        </p>
+
+        <p class="hint">{featured.description}</p>
+
+        <dl class="details-meta">
+          <div>
+            <dt class="field-label">Expires</dt>
+            <dd>{featured.expiryLabel}</dd>
+          </div>
+          <div>
+            <dt class="field-label">Pickup location</dt>
+            <dd>{featured.pickupLocation}</dd>
+          </div>
+        </dl>
+
+        <div class="details-actions">
+          <QuantityStepper value={2} max={featured.quantity} name="details" />
+          <button class="btn btn-primary" type="button" data-dialog-close>Add to cart</button>
+          <button class="btn" type="button" data-dialog-close>Close</button>
+        </div>
+      </div>
+    </div>
+  </Dialog>
+</AppLayout>
+
+<script>
+  const grid = document.querySelector<HTMLElement>('[data-grid]');
+  const cards = Array.from(document.querySelectorAll<HTMLElement>('article[data-listing]'));
+  const noResults = document.querySelector<HTMLElement>('[data-no-results]');
+  const search = document.querySelector<HTMLInputElement>('[data-search]');
+  const selectionName = document.querySelector<HTMLElement>('[data-selection-name]');
+  const selectionMeta = document.querySelector<HTMLElement>('[data-selection-meta]');
+
+  let category = 'all';
+
+  const applyFilters = () => {
+    const term = (search?.value ?? '').trim().toLowerCase();
+    let visible = 0;
+
+    cards.forEach((card) => {
+      const matchesCategory = category === 'all' || card.dataset.category === category;
+      const matchesTerm =
+        term === '' ||
+        (card.dataset.name ?? '').includes(term) ||
+        (card.dataset.shop ?? '').includes(term);
+      const show = matchesCategory && matchesTerm;
+      card.hidden = !show;
+      if (show) visible += 1;
+    });
+
+    if (noResults) noResults.hidden = visible > 0;
+    if (grid) grid.hidden = visible === 0;
+  };
+
+  document.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach((button) => {
+    button.addEventListener('click', () => {
+      category = button.dataset.filter ?? 'all';
+      document.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach((other) => {
+        other.setAttribute('aria-pressed', String(other === button));
+      });
+      applyFilters();
+    });
+  });
+
+  search?.addEventListener('input', applyFilters);
+
+  cards.forEach((card) => {
+    const thumb = card.querySelector<HTMLElement>('.thumb');
+    thumb?.addEventListener('click', () => {
+      if (card.dataset.status === 'expired') return;
+      cards.forEach((other) => other.classList.toggle('is-selected', other === card));
+
+      const name = card.querySelector<HTMLElement>('h3')?.textContent ?? '';
+      const shop = card.querySelector<HTMLElement>('.shop')?.textContent ?? '';
+      const left = card.querySelector<HTMLElement>('.meta dd')?.textContent ?? '';
+
+      if (selectionName) selectionName.textContent = name;
+      if (selectionMeta) selectionMeta.textContent = `Selected · ${shop} · ${left} in stock`;
+    });
+  });
+
+  document.querySelectorAll<HTMLButtonElement>('.js-details').forEach((button) => {
+    button.addEventListener('click', () => {
+      const dialog = document.querySelector<HTMLElement>('[data-dialog="details"]');
+      if (dialog) dialog.hidden = false;
+    });
+  });
+
+  document.querySelector<HTMLButtonElement>('[data-add-to-cart]')?.addEventListener('click', () => {
+    window.location.href = '/buyer/cart';
+  });
+</script>
+
+<style>
+  /* Today's pick ---------------------------------------------------------- */
+
+  .feature-art {
+    position: relative;
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    background: var(--tan-deep);
+  }
+
+  .feature-art :global(.art) {
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .feature-art :global(svg) {
+    max-height: 360px;
+    padding: 30px 0;
+  }
+
+  .feature-art .badge {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    z-index: 2;
+  }
+
+  .sun {
+    position: absolute;
+    right: -70px;
+    top: -10px;
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    background: var(--lime);
+    opacity: 0.85;
+    z-index: 0;
+  }
+
+  .feature-art :global(.art) {
+    position: relative;
+    z-index: 1;
+  }
+
+  .feature-copy {
+    display: grid;
+    grid-template-columns: 1.35fr 1fr;
+    gap: 48px;
+    align-items: start;
+    margin-top: 20px;
+  }
+
+  .feature-head {
+    margin-top: 6px;
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: 32px;
+    line-height: 1.18;
+    letter-spacing: -0.01em;
+    max-width: 22ch;
+  }
+
+  .feature-head em {
+    font-style: italic;
+    color: var(--brick);
+  }
+
+  .feature-cta {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
+
+  .feature-price {
+    font-size: 13.5px;
+    color: var(--muted);
+  }
+
+  .feature-price strong {
+    color: var(--price);
+    font-size: 15px;
+  }
+
+  .feature-blurb {
+    color: var(--ink-soft);
+    font-size: 13.5px;
+    line-height: 1.6;
+    padding-top: 18px;
+  }
+
+  /* Shelves --------------------------------------------------------------- */
+
+  .shelves {
+    margin-top: 46px;
+  }
+
+  .shelves-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .shelves .search {
+    margin-top: 18px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 34px 30px;
+    margin-top: 28px;
+  }
+
+  .no-results {
+    padding: 70px 0;
+    text-align: center;
+    color: var(--muted);
+  }
+
+  /* Selection bar --------------------------------------------------------- */
+
+  .selection {
+    position: sticky;
+    bottom: 12px;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    margin-top: 42px;
+    padding: 14px 18px;
+    background: var(--tan);
+    border-radius: var(--r-lg);
+    box-shadow: 0 10px 30px rgba(23, 21, 15, 0.08);
+  }
+
+  .selection-art {
+    width: 56px;
+    flex: none;
+  }
+
+  .selection-art :global(.art) {
+    background: var(--tan-deep);
+  }
+
+  .selection-copy {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .selection-name {
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  /* Details dialog -------------------------------------------------------- */
+
+  .details {
+    display: grid;
+    grid-template-columns: 0.9fr 1.1fr;
+    gap: 28px;
+    margin-top: 6px;
+  }
+
+  .details-name {
+    margin-top: 12px;
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: 27px;
+    line-height: 1.15;
+  }
+
+  .details-price {
+    margin: 12px 0;
+  }
+
+  .details-price ins {
+    font-size: 24px;
+  }
+
+  .details-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    margin: 20px 0 0;
+  }
+
+  .details-meta dd {
+    margin: 0;
+    font-size: 14px;
+  }
+
+  .details-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 24px;
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 1100px) {
+    .grid { grid-template-columns: repeat(2, 1fr); }
+    .feature-copy { grid-template-columns: 1fr; gap: 22px; }
+    .details { grid-template-columns: 1fr; }
+  }
+</style>

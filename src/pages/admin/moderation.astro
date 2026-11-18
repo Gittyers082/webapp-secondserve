@@ -1,0 +1,165 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import ListingCard from '../../components/ListingCard.astro';
+import { admin, moderatedListings } from '../../data/store';
+import { peso } from '../../data/types';
+
+const flagged = moderatedListings.find((listing) => listing.flagged)!;
+
+const filters = [
+  { id: 'all', label: 'All' },
+  { id: 'flagged', label: 'Flagged' },
+  { id: 'expired', label: 'Expired' },
+  { id: 'active', label: 'Active' },
+];
+---
+
+<AppLayout
+  role="admin"
+  username={admin.username}
+  section="Item Moderation"
+  heading="Item Moderation"
+  subtitle="Review what shops are putting on the shelf."
+>
+  <div class="filters">
+    {
+      filters.map((filter) => (
+        <button class="filter" type="button" data-filter={filter.id} aria-pressed={filter.id === 'all'}>
+          {filter.label}
+        </button>
+      ))
+    }
+  </div>
+
+  <div class="grid">
+    {
+      moderatedListings.map((listing) => (
+        <div
+          class="cell"
+          data-cell
+          data-status={listing.status}
+          data-flagged={String(Boolean(listing.flagged))}
+        >
+          <ListingCard listing={listing} variant="moderation" selectable selected={Boolean(listing.flagged)} />
+        </div>
+      ))
+    }
+  </div>
+
+  <p class="no-results" data-no-results hidden>No listing matches that filter.</p>
+
+  <div class="selection" data-selection>
+    <div class="selection-copy">
+      <p class="selection-name" data-selection-name>{flagged.name}</p>
+      <p class="small muted" data-selection-meta>
+        Selected &middot; {flagged.shopName} &middot; {peso(flagged.discountedPrice)} &middot;{' '}
+        {flagged.expiryLabel.toLowerCase()}
+      </p>
+    </div>
+    <button class="btn" type="button" data-flag>Flag listing</button>
+    <button class="btn btn-danger" type="button" data-remove>Remove listing</button>
+  </div>
+</AppLayout>
+
+<script>
+  const cells = Array.from(document.querySelectorAll<HTMLElement>('[data-cell]'));
+  const noResults = document.querySelector<HTMLElement>('[data-no-results]');
+  const selectionName = document.querySelector<HTMLElement>('[data-selection-name]');
+  const selectionMeta = document.querySelector<HTMLElement>('[data-selection-meta]');
+
+  const selectedCell = () => cells.find((cell) => cell.querySelector('.is-selected'));
+
+  document.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const filter = button.dataset.filter ?? 'all';
+      let visible = 0;
+
+      document.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach((other) => {
+        other.setAttribute('aria-pressed', String(other === button));
+      });
+
+      cells.forEach((cell) => {
+        const show =
+          filter === 'all' ||
+          (filter === 'flagged' ? cell.dataset.flagged === 'true' : cell.dataset.status === filter);
+        cell.hidden = !show;
+        if (show) visible += 1;
+      });
+
+      if (noResults) noResults.hidden = visible > 0;
+    });
+  });
+
+  cells.forEach((cell) => {
+    const card = cell.querySelector<HTMLElement>('article[data-listing]');
+    cell.querySelector<HTMLElement>('.thumb')?.addEventListener('click', () => {
+      cells.forEach((other) => {
+        other
+          .querySelector<HTMLElement>('article[data-listing]')
+          ?.classList.toggle('is-selected', other === cell);
+      });
+
+      const name = card?.querySelector<HTMLElement>('h3')?.textContent ?? '';
+      const shop = card?.querySelector<HTMLElement>('.shop')?.textContent ?? '';
+      const expiry = card?.querySelector<HTMLElement>('.meta div:last-child dd')?.textContent ?? '';
+      if (selectionName) selectionName.textContent = name;
+      if (selectionMeta) selectionMeta.textContent = `Selected · ${shop} · ${expiry}`;
+    });
+  });
+
+  document.querySelector<HTMLButtonElement>('[data-flag]')?.addEventListener('click', () => {
+    const cell = selectedCell();
+    const chip = cell?.querySelector<HTMLElement>('.foot .chip');
+    if (!cell || !chip) return;
+    cell.dataset.flagged = 'true';
+    chip.className = 'chip chip-blush';
+    chip.textContent = 'Flagged';
+  });
+
+  document.querySelector<HTMLButtonElement>('[data-remove]')?.addEventListener('click', () => {
+    selectedCell()?.remove();
+  });
+</script>
+
+<style>
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 34px 30px;
+    margin-top: 26px;
+  }
+
+  .no-results {
+    padding: 60px 0;
+    text-align: center;
+    color: var(--muted);
+  }
+
+  .selection {
+    position: sticky;
+    bottom: 12px;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-top: 42px;
+    padding: 16px 20px;
+    background: var(--tan);
+    border-radius: var(--r-lg);
+    box-shadow: 0 10px 30px rgba(23, 21, 15, 0.08);
+  }
+
+  .selection-copy {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .selection-name {
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  @media (max-width: 1200px) {
+    .grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>

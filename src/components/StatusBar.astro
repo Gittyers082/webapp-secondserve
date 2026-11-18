@@ -1,0 +1,49 @@
+---
+import { serverAddress } from '../data/store';
+
+interface Props {
+  username: string;
+}
+
+const { username } = Astro.props;
+---
+
+<footer class="statusbar">
+  <span class="left">
+    <span class="dot" aria-hidden="true"></span>
+    Connected &middot; {serverAddress}
+  </span>
+  <span class="right">Signed in as {username}</span>
+</footer>
+
+<style>
+  .statusbar {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 11px var(--gutter);
+    background: var(--paper-soft);
+    border-top: 1px solid var(--line);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .left {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+  }
+
+  .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #3f8f43;
+  }
+</style>

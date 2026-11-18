@@ -1,0 +1,120 @@
+---
+import type { Role } from '../data/types';
+
+interface Props {
+  username: string;
+  role: Exclude<Role, 'admin'>;
+}
+
+const { username, role } = Astro.props;
+const initial = role === 'seller' ? 'B' : username.charAt(0).toUpperCase();
+---
+
+<div class="profile">
+  <aside class="identity panel">
+    <span class="avatar" aria-hidden="true">{initial}</span>
+    <p class="username">{username}</p>
+    <p class="chip chip-tan">{role === 'seller' ? 'Seller account' : 'Buyer account'}</p>
+    <p class="hint note">
+      {role === 'seller'
+        ? 'Buyers see your shop name on every listing.'
+        : 'Sellers see "Seller account" here. Same screen for Buyer and Seller.'}
+    </p>
+  </aside>
+
+  <div class="forms">
+    <form class="block" method="get" action="#">
+      <div class="field">
+        <label class="field-label" for="username-field">Update username</label>
+        <input class="input" id="username-field" name="username" value={username} autocomplete="username" />
+      </div>
+      <button class="btn" type="submit">Update username</button>
+    </form>
+
+    <form class="block" method="get" action="#">
+      <div class="field">
+        <label class="field-label" for="current-password">Current password</label>
+        <input class="input" id="current-password" type="password" value="password" autocomplete="current-password" />
+      </div>
+
+      <div class="field-row">
+        <div>
+          <label class="field-label" for="new-password">New password</label>
+          <input class="input" id="new-password" type="password" value="newpassword" autocomplete="new-password" />
+        </div>
+        <div>
+          <label class="field-label" for="confirm-password">Confirm new password</label>
+          <input class="input" id="confirm-password" type="password" value="newpassword" autocomplete="new-password" />
+        </div>
+      </div>
+
+      <button class="btn" type="submit">Change password</button>
+    </form>
+
+    <a class="btn btn-danger logout" href="/login">Log out</a>
+  </div>
+</div>
+
+<style>
+  .profile {
+    display: grid;
+    grid-template-columns: 330px minmax(0, 1fr);
+    gap: 40px;
+    align-items: start;
+  }
+
+  .identity {
+    text-align: center;
+  }
+
+  .avatar {
+    display: grid;
+    place-items: center;
+    width: 72px;
+    height: 72px;
+    margin: 6px auto 16px;
+    border-radius: 50%;
+    background: var(--ink);
+    color: var(--paper);
+    font-size: 28px;
+    font-weight: 700;
+  }
+
+  .username {
+    font-family: var(--display);
+    font-size: 28px;
+    line-height: 1.1;
+  }
+
+  .identity .chip {
+    margin-top: 10px;
+  }
+
+  .note {
+    margin-top: 16px;
+  }
+
+  .block {
+    background: var(--tan);
+    border-radius: var(--r-lg);
+    padding: 24px;
+  }
+
+  .block + .block {
+    margin-top: 18px;
+  }
+
+  .block .btn {
+    margin-top: 18px;
+  }
+
+  .logout {
+    margin-top: 18px;
+  }
+
+  @media (max-width: 1000px) {
+    .profile {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

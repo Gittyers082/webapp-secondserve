@@ -1,0 +1,47 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import { accountDecisions, admin } from '../../data/store';
+---
+
+<AppLayout
+  role="admin"
+  username={admin.username}
+  section="Approved/Declined Users"
+  heading="Approved/Declined Users"
+  subtitle="A record of every past decision."
+>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Username</th>
+        <th>Account type</th>
+        <th>Shop / business</th>
+        <th>Decision</th>
+        <th>Decided on</th>
+      </tr>
+    </thead>
+    <tbody>
+      {
+        accountDecisions.map((entry) => (
+          <tr>
+            <td class="username">{entry.username}</td>
+            <td>{entry.role === 'seller' ? 'Seller' : 'Buyer'}</td>
+            <td class="muted">{entry.shopName ?? '—'}</td>
+            <td>
+              <span class:list={['chip', entry.decision === 'approved' ? 'chip-mint' : 'chip-blush']}>
+                {entry.decision === 'approved' ? 'Approved' : 'Declined'}
+              </span>
+            </td>
+            <td class="muted">{entry.decidedAt}</td>
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+</AppLayout>
+
+<style>
+  .username {
+    font-size: 15px;
+  }
+</style>

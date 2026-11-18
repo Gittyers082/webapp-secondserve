@@ -1,0 +1,301 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import FoodArt from '../../components/FoodArt.astro';
+import Dialog from '../../components/Dialog.astro';
+import { seller, sellerListings } from '../../data/store';
+import { peso } from '../../data/types';
+
+const draft = sellerListings[0]!;
+---
+
+<AppLayout
+  role="seller"
+  username={seller.username}
+  section="Add Listing"
+  heading="Add Listing"
+  subtitle="Turn tomorrow's surplus into today's sale."
+  accent="today's sale."
+>
+  <div class="add">
+    <!-- Listing details -------------------------------------------------- -->
+    <form class="form" method="get" action="/seller/listed-items">
+      <div class="field">
+        <label class="field-label" for="food-name">Food name</label>
+        <input class="input" id="food-name" name="name" value={draft.name} />
+      </div>
+
+      <div class="field-row">
+        <div>
+          <label class="field-label" for="quantity">Quantity</label>
+          <input class="input" id="quantity" name="quantity" value={draft.quantity} inputmode="numeric" />
+        </div>
+        <div>
+          <label class="field-label" for="original-price">Original price</label>
+          <input class="input" id="original-price" name="originalPrice" value={peso(draft.originalPrice)} />
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div>
+          <label class="field-label" for="discounted-price">Discounted price</label>
+          <input class="input" id="discounted-price" name="discountedPrice" value={peso(draft.discountedPrice)} />
+        </div>
+        <div>
+          <label class="field-label" for="expiry-date">Expiry date</label>
+          <input class="input" id="expiry-date" name="expiryDate" value="Nov 5, 2026" />
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div>
+          <label class="field-label" for="expiry-time">Expiry time</label>
+          <input class="input" id="expiry-time" name="expiryTime" value="6:00 PM" />
+        </div>
+        <div>
+          <label class="field-label" for="pickup">Pickup location</label>
+          <input class="input" id="pickup" name="pickup" value={draft.pickupLocation} />
+        </div>
+      </div>
+
+      <p class="hint eligibility">
+        Eligible products: surplus food that is still safe to eat and not yet expired. The discounted price must
+        be lower than the original price.
+      </p>
+
+      <div class="form-actions">
+        <button class="btn btn-primary" type="submit">Publish listing</button>
+        <button class="btn" type="reset">Clear form</button>
+      </div>
+    </form>
+
+    <!-- Product photo ---------------------------------------------------- -->
+    <aside class="photo">
+      <div class="row-between">
+        <p class="eyebrow">Product photo</p>
+        <span class="chip chip-mint" data-photo-state="added">Photo added</span>
+        <span class="chip chip-blush" data-photo-state="empty" hidden>Required</span>
+      </div>
+
+      <!-- With a photo -->
+      <div data-photo-added>
+        <div class="photo-frame">
+          <FoodArt art={draft.art} />
+        </div>
+
+        <p class="photo-name">{draft.name}</p>
+        <p class="small muted">
+          {draft.shopName} &middot; {peso(draft.discountedPrice)} &middot; {draft.quantity} left
+        </p>
+        <p class="small muted file">ube-pandesal.jpg &middot; 1.2 MB &middot; taken with camera</p>
+
+        <div class="photo-actions">
+          <button class="btn btn-sm btn-dark" type="button" data-dialog-open="camera">Retake with camera</button>
+          <button class="btn btn-sm" type="button">Replace from file</button>
+          <button class="btn btn-sm btn-danger" type="button" data-remove-photo>Remove</button>
+        </div>
+
+        <p class="hint">Shoppers see this photo first. It is saved with the listing.</p>
+      </div>
+
+      <!-- Without a photo -->
+      <div data-photo-empty hidden>
+        <div class="photo-frame empty-frame">
+          <p class="empty-title">Show shoppers your food</p>
+          <p class="hint">Take a photo with your computer&rsquo;s camera, or upload one you already have.</p>
+          <div class="photo-actions center">
+            <button class="btn btn-sm btn-dark" type="button" data-dialog-open="camera">Take photo</button>
+            <button class="btn btn-sm" type="button" data-restore-photo>Upload from computer</button>
+          </div>
+        </div>
+        <p class="hint">JPG or PNG, up to 5 MB. Saved with the listing.</p>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Camera dialogs ----------------------------------------------------- -->
+  <Dialog id="camera" title="Take a product photo" wide>
+    <div class="camera">
+      <div class="camera-select">
+        <label class="field-label" for="camera-device">Camera</label>
+        <select class="input" id="camera-device">
+          <option>Built-in Camera</option>
+          <option>USB Camera</option>
+        </select>
+      </div>
+
+      <div class="viewfinder">
+        <span class="chip chip-blush live">Live</span>
+        <FoodArt art={draft.art} />
+      </div>
+
+      <p class="hint">Camera access allowed. No camera? Use Upload from Computer.</p>
+
+      <div class="dialog-actions">
+        <button class="btn" type="button" data-dialog-close>Cancel</button>
+        <button class="btn" type="button" data-dialog-close>Upload instead</button>
+        <button class="btn btn-primary" type="button" data-capture>Capture</button>
+      </div>
+    </div>
+  </Dialog>
+
+  <Dialog
+    id="confirm-photo"
+    title="Use this photo?"
+    message="Check that the food is centered and well lit. You can retake it as many times as you like."
+    wide
+  >
+    <div class="viewfinder captured">
+      <span class="chip chip-mint live">Captured</span>
+      <FoodArt art={draft.art} />
+    </div>
+
+    <div class="dialog-actions">
+      <button class="btn" type="button" data-retake>Retake</button>
+      <button class="btn btn-primary" type="button" data-use-photo>Use this photo</button>
+    </div>
+  </Dialog>
+</AppLayout>
+
+<script>
+  const added = document.querySelector<HTMLElement>('[data-photo-added]');
+  const empty = document.querySelector<HTMLElement>('[data-photo-empty]');
+  const stateAdded = document.querySelector<HTMLElement>('[data-photo-state="added"]');
+  const stateEmpty = document.querySelector<HTMLElement>('[data-photo-state="empty"]');
+
+  const setPhoto = (hasPhoto: boolean) => {
+    if (added) added.hidden = !hasPhoto;
+    if (empty) empty.hidden = hasPhoto;
+    if (stateAdded) stateAdded.hidden = !hasPhoto;
+    if (stateEmpty) stateEmpty.hidden = hasPhoto;
+  };
+
+  const show = (id: string) => {
+    const node = document.querySelector<HTMLElement>(`[data-dialog="${id}"]`);
+    if (node) node.hidden = false;
+  };
+
+  const hide = (id: string) => {
+    const node = document.querySelector<HTMLElement>(`[data-dialog="${id}"]`);
+    if (node) node.hidden = true;
+  };
+
+  document.querySelector<HTMLButtonElement>('[data-remove-photo]')?.addEventListener('click', () => setPhoto(false));
+  document.querySelector<HTMLButtonElement>('[data-restore-photo]')?.addEventListener('click', () => setPhoto(true));
+
+  document.querySelector<HTMLButtonElement>('[data-capture]')?.addEventListener('click', () => {
+    hide('camera');
+    show('confirm-photo');
+  });
+
+  document.querySelector<HTMLButtonElement>('[data-retake]')?.addEventListener('click', () => {
+    hide('confirm-photo');
+    show('camera');
+  });
+
+  document.querySelector<HTMLButtonElement>('[data-use-photo]')?.addEventListener('click', () => {
+    hide('confirm-photo');
+    setPhoto(true);
+  });
+</script>
+
+<style>
+  .add {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+    gap: 60px;
+    align-items: start;
+  }
+
+  .eligibility {
+    margin-top: 18px;
+    max-width: 64ch;
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 22px;
+  }
+
+  .photo-frame {
+    margin-top: 12px;
+    border-radius: var(--r-md);
+    overflow: hidden;
+    background: var(--tan-deep);
+  }
+
+  .photo-frame :global(svg) {
+    padding: 22px 0;
+  }
+
+  .empty-frame {
+    display: grid;
+    place-content: center;
+    text-align: center;
+    gap: 10px;
+    padding: 48px 32px;
+    background: var(--tan);
+    border: 1px dashed var(--line-strong);
+  }
+
+  .empty-title {
+    font-family: var(--display);
+    font-size: 22px;
+  }
+
+  .photo-name {
+    margin-top: 16px;
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .file {
+    margin-top: 8px;
+  }
+
+  .photo-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 16px 0 12px;
+  }
+
+  .photo-actions.center {
+    justify-content: center;
+    margin-bottom: 0;
+  }
+
+  .camera-select {
+    max-width: 280px;
+  }
+
+  .viewfinder {
+    position: relative;
+    margin-top: 16px;
+    border-radius: var(--r-md);
+    overflow: hidden;
+    background: var(--tan-deep);
+  }
+
+  .viewfinder .live {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 2;
+  }
+
+  .viewfinder :global(svg) {
+    padding: 24px 0;
+  }
+
+  .captured {
+    margin-bottom: 4px;
+  }
+
+  @media (max-width: 1100px) {
+    .add {
+      grid-template-columns: 1fr;
+      gap: 34px;
+    }
+  }
+</style>
