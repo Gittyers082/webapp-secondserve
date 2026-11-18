@@ -15,7 +15,7 @@ import { SERVER } from '../data/store';
 
     <div class="field">
       <label class="field-label" for="host">Server address</label>
-      <input class="input" id="host" name="host" value={SERVER.host} autocomplete="off" required aria-describedby="connect-error" />
+      <input class="input" id="host" name="host" value={SERVER.host} autocomplete="off" required data-error="Enter the server address, for example 192.168.1.20." />
     </div>
 
     <div class="field">
@@ -28,7 +28,7 @@ import { SERVER } from '../data/store';
         inputmode="numeric"
         autocomplete="off"
         required
-        aria-describedby="connect-error"
+        data-error="Enter the port number, for example 5050."
       />
     </div>
 
@@ -42,24 +42,27 @@ import { SERVER } from '../data/store';
 </AuthLayout>
 
 <script>
+  import { liveValidate, validate } from '../scripts/validate';
+
   const form = document.querySelector<HTMLFormElement>('.connect');
-  const error = document.querySelector<HTMLElement>('[data-connect-error]');
+
+  // The port must be a whole number a server can listen on.
+  const portRule = (field: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement) => {
+    if (field.id !== 'port' || field.value.trim() === '') return null;
+    const port = Number(field.value);
+    return Number.isInteger(port) && port > 0 && port < 65536
+      ? null
+      : 'The port is a whole number from 1 to 65535, for example 5050.';
+  };
+
+  if (form) liveValidate(form, portRule);
 
   form?.addEventListener('submit', (event) => {
     event.preventDefault();
+    if (!validate(form, { extra: portRule })) return;
 
-    const fields = Array.from(form.querySelectorAll<HTMLInputElement>('#host, #port'));
-    const missing = fields.filter((field) => field.value.trim() === '');
-
-    fields.forEach((field) => field.setAttribute('aria-invalid', String(missing.includes(field))));
-    if (error) error.hidden = missing.length === 0;
-
-    if (missing.length > 0) {
-      missing[0]?.focus();
-      return;
-    }
-
-    // No server yet: a reachable address moves straight on to sign-in.
+    form.querySelector<HTMLButtonElement>('[type="submit"]')?.setAttribute('aria-busy', 'true');
+    // No server yet: a valid address moves straight on to sign-in.
     window.location.assign('/login');
   });
 </script>

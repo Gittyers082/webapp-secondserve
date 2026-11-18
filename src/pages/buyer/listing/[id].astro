@@ -5,7 +5,8 @@ import ListingCard from '../../../components/ListingCard.astro';
 import QuantityStepper from '../../../components/QuantityStepper.astro';
 import Stars from '../../../components/Stars.astro';
 import Icon from '../../../components/Icon.astro';
-import { buyer, listings, reviewsForShop } from '../../../data/store';
+import ShopLogo from '../../../components/ShopLogo.astro';
+import { buyer, listings, reviewsForShop, shopProfiles } from '../../../data/store';
 import { averageRating, discountPercent, peso } from '../../../data/types';
 import type { Listing } from '../../../data/types';
 
@@ -20,6 +21,7 @@ interface Props {
 const { listing } = Astro.props;
 const expired = listing.status === 'expired';
 const shopReviews = reviewsForShop(listing.shopName);
+const shopProfile = shopProfiles[listing.shopName];
 const rating = averageRating(shopReviews.map((review) => review.rating));
 const savings = listing.originalPrice - listing.discountedPrice;
 const percent = discountPercent(listing);
@@ -53,7 +55,7 @@ const categoryLabel: Record<Listing['category'], string> = {
 
   <article class="detail">
     <div class="detail-photo">
-      <FoodArt art={listing.art} ratio="4 / 3" muted={expired} eager />
+      <FoodArt art={listing.art} ratio="4 / 3" muted={expired} eager sizes="(max-width: 1279px) 92vw, 50vw" />
       {expired && <span class="pill pill-danger badge">Expired</span>}
     </div>
 
@@ -89,6 +91,23 @@ const categoryLabel: Record<Listing['category'], string> = {
       </dl>
     </div>
   </article>
+
+  <!-- The shop's public profile (NFR-USER-PERS-3) ----------------------- -->
+  {
+    shopProfile && (
+      <section class="section shop-card panel" aria-labelledby="shop-title">
+        <ShopLogo name={shopProfile.shopName} logoUrl={shopProfile.logoUrl} size={64} />
+        <div class="shop-copy">
+          <h2 class="panel-title" id="shop-title">About {shopProfile.shopName}</h2>
+          <p class="small muted">{shopProfile.location}</p>
+          <p class="shop-description">{shopProfile.description}</p>
+          <ul class="shop-tags" aria-label="Shop categories">
+            {shopProfile.tags.map((tag) => <li class="pill pill-neutral">{tag}</li>)}
+          </ul>
+        </div>
+      </section>
+    )
+  }
 
   <!-- Reviews of this shop ------------------------------------------------ -->
   <section class="section" aria-labelledby="reviews-title">
@@ -301,6 +320,32 @@ const categoryLabel: Record<Listing['category'], string> = {
   .facts dd {
     margin-top: 2px;
     font-weight: 600;
+  }
+
+  .shop-card {
+    display: flex;
+    gap: var(--sp-5);
+    align-items: flex-start;
+  }
+
+  .shop-copy {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .shop-description {
+    margin-top: 4px;
+    color: var(--text-soft);
+    line-height: 1.55;
+    max-width: 68ch;
+  }
+
+  .shop-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
   }
 
   .section-sub :global(.stars) {

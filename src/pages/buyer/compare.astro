@@ -98,6 +98,16 @@ const columns = listings.map((listing) => {
           }
         </tr>
         <tr>
+          <th scope="row">You save</th>
+          {
+            columns.map(({ listing }) => (
+              <td data-col={listing.id} class="save-cell tnum">
+                {peso(listing.originalPrice - listing.discountedPrice)}
+              </td>
+            ))
+          }
+        </tr>
+        <tr>
           <th scope="row">Shop</th>
           {columns.map(({ listing }) => <td data-col={listing.id}>{listing.shopName}</td>)}
         </tr>
@@ -245,6 +255,11 @@ const columns = listings.map((listing) => {
   .compare td .discount + .best {
     display: flex;
     width: max-content;
+  }
+
+  .save-cell {
+    color: var(--brick-text);
+    font-weight: 700;
   }
 
   .rating {

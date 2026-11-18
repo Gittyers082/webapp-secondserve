@@ -12,6 +12,7 @@ import type {
   FaqEntry,
   Review,
   SaleRecord,
+  ShopProfile,
   CartLine,
   Listing,
   Order,
@@ -866,3 +867,26 @@ export const faq: FaqEntry[] = [
 /* -------------------------------------------------------------------------- */
 
 export const unreadCount = (items: AppNotification[]) => items.filter((item) => !item.read).length;
+
+/* -------------------------------------------------------------------------- */
+/* Shop profiles                                                               */
+/* -------------------------------------------------------------------------- */
+
+export const shopProfiles: Record<string, ShopProfile> = {
+  "Mang Ben's Bakery": {
+    shopName: "Mang Ben's Bakery",
+    description:
+      'Family bakery on Session Road since 1998. We bake pandesal, ensaymada and cheese rolls every morning and list what is left after 4 PM.',
+    tags: ['Bread', 'Pastries', 'Filipino classics'],
+    location: 'Session Road, Baguio',
+  },
+  'Kape Atbp Café': {
+    shopName: 'Kape Atbp Café',
+    description: 'Small café on Upper Session Road. Pastries from our morning bake, half price before closing.',
+    tags: ['Pastries', 'Coffee shop'],
+    location: 'Upper Session Rd, Baguio',
+  },
+};
+
+/** The signed-in seller's profile. */
+export const sellerProfile: ShopProfile = shopProfiles["Mang Ben's Bakery"]!;

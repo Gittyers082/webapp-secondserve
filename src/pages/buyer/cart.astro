@@ -3,6 +3,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
 import FoodArt from '../../components/FoodArt.astro';
 import Icon from '../../components/Icon.astro';
 import { buyer, cart, cartItemCount, cartShopCount, cartTotal } from '../../data/store';
+
+const cartSavings = cart.reduce((sum, line) => sum + line.quantity * (line.originalUnitPrice - line.unitPrice), 0);
 import { discountPercent, peso } from '../../data/types';
 import type { CartLine } from '../../data/types';
 
@@ -59,6 +61,9 @@ const isEmpty = cart.length === 0;
                       </span>
                       <span class="discount">{discountPercent({ originalPrice: line.originalUnitPrice, discountedPrice: line.unitPrice })}% off</span>
                       <span class="tnum" data-qty={line.quantity}>&times; {line.quantity}</span>
+                    </p>
+                    <p class="line-savings" data-line-savings={line.quantity * (line.originalUnitPrice - line.unitPrice)}>
+                      You save {peso(line.quantity * (line.originalUnitPrice - line.unitPrice))}
                     </p>
                   </div>
                   <div class="item-expiry">
@@ -125,6 +130,10 @@ const isEmpty = cart.length === 0;
                 </dt>
                 <dd class="tnum" data-subtotal>{peso(cartTotal)}</dd>
               </div>
+              <div class="row-between savings-row">
+                <dt>You save</dt>
+                <dd class="tnum" data-savings>{peso(cartSavings)}</dd>
+              </div>
               <div class="row-between grand">
                 <dt>Total</dt>
                 <dd class="tnum" data-total>{peso(cartTotal)}</dd>
@@ -150,10 +159,12 @@ const isEmpty = cart.length === 0;
   const recalculate = () => {
     let total = 0;
     let items = 0;
+    let savings = 0;
 
     rows().forEach((row) => {
       total += Number(row.querySelector<HTMLElement>('[data-line-total]')?.dataset.lineTotal ?? 0);
       items += Number(row.querySelector<HTMLElement>('[data-qty]')?.dataset.qty ?? 0);
+      savings += Number(row.querySelector<HTMLElement>('[data-line-savings]')?.dataset.lineSavings ?? 0);
     });
 
     const shops = document.querySelectorAll('.shop-group:not([hidden])').length;
@@ -166,6 +177,7 @@ const isEmpty = cart.length === 0;
     set('[data-subtotal]', peso(total));
     set('[data-item-count]', String(items));
     set('[data-shop-count]', String(shops));
+    set('[data-savings]', peso(savings));
 
     return { total, items };
   };
@@ -253,6 +265,18 @@ const isEmpty = cart.length === 0;
   }
 
   .item-name {
+    font-weight: 700;
+  }
+
+  .line-savings {
+    margin-top: 2px;
+    color: var(--brick-text);
+    font-size: var(--fs-sm);
+    font-weight: 600;
+  }
+
+  .savings-row {
+    color: var(--brick-text);
     font-weight: 700;
   }
 

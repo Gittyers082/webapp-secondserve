@@ -43,6 +43,7 @@ export const sellerNav: NavItem[] = [
   { label: 'My Listed Items', href: '/seller/listed-items', icon: 'shelf' },
   { label: 'Manage Listings', href: '/seller/manage', icon: 'sliders' },
   { label: 'Reserved / Handover', href: '/seller/handover', icon: 'handover', count: handoverQueue.length },
+  { label: 'Shop Profile', href: '/seller/shop-profile', icon: 'store' },
   { label: 'Reviews', href: '/seller/reviews', icon: 'star' },
   { label: 'Notifications', href: '/seller/notifications', icon: 'bell', count: unreadCount(sellerNotifications), countNoun: 'unread' },
   { label: 'My Profile', href: '/seller/profile', icon: 'user' },

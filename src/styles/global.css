@@ -186,6 +186,17 @@
 }
 
 /* Swap themes without animating every surface at once. */
+/* Page changes cross-fade where the browser supports it, so moving between
+   screens has visible feedback without any script. */
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 180ms;
+}
+
 :root.theme-switching *,
 :root.theme-switching *::before,
 :root.theme-switching *::after {
@@ -506,7 +517,31 @@ table {
 
 .btn-sm.btn-icon { width: var(--target); }
 
-.btn:disabled,
+/* Waiting on the server: the label stays, a spinner joins it, and the
+   button can't be pressed twice (NFR-USER-U-10). */
+.btn[aria-busy="true"] {
+  position: relative;
+  cursor: progress;
+  opacity: 1;
+}
+
+.btn[aria-busy="true"]::after {
+  content: '';
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* A busy button keeps its colours; only a truly unavailable one greys out. */
+.btn:disabled:not([aria-busy="true"]),
 .btn[aria-disabled="true"] {
   opacity: 0.4;
   cursor: not-allowed;
@@ -566,6 +601,10 @@ select.input {
 }
 
 .field + .field { margin-top: 16px; }
+
+.field-hint {
+  margin-top: 6px;
+}
 
 .field-error {
   margin-top: 6px;
@@ -1093,6 +1132,14 @@ a.grid-tile:hover .grid-tile-icon {
 @media (prefers-reduced-motion: reduce) {
   body::before {
     animation: none;
+  }
+
+  @view-transition {
+    navigation: none;
+  }
+
+  .btn[aria-busy="true"]::after {
+    animation-duration: 2s;
   }
 
   *,
