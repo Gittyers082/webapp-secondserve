@@ -138,13 +138,14 @@ const quantityLabel =
     padding: 12px;
     border-radius: var(--r-lg);
     background: var(--s2);
-    outline: 2px solid transparent;
-    outline-offset: -2px;
-    transition: background var(--dur) var(--ease-out), outline-color var(--dur-fast) var(--ease-out);
+    -webkit-backdrop-filter: var(--blur);
+    backdrop-filter: var(--blur);
+    transition: background var(--dur) var(--ease-out), transform var(--dur) var(--ease-out);
   }
 
   .card:hover {
-    background: var(--s3);
+    background: var(--glass-strong);
+    transform: translateY(-2px);
   }
 
   .card:hover :global(.photo) {
@@ -165,12 +166,14 @@ const quantityLabel =
   }
 
   .is-selectable .thumb:focus-visible {
-    outline: 2px solid var(--lime);
+    outline: 2px solid var(--focus);
     outline-offset: 3px;
   }
 
-  .is-selected {
-    outline-color: var(--brick);
+  /* Selected: the glass takes on the brick, and the tick appears. */
+  .is-selected,
+  .is-selected:hover {
+    background: rgba(193, 61, 31, 0.24);
   }
 
   .badge {

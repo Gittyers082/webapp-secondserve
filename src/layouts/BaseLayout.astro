@@ -64,8 +64,9 @@ const { title, description = 'Good products deserve a second chance.' } = Astro.
     justify-content: center;
     height: var(--chrome-h);
     padding: 0 20px;
-    background: var(--bg);
-    border-bottom: 1px solid var(--line);
+    background: var(--glass-strong);
+    -webkit-backdrop-filter: var(--blur);
+    backdrop-filter: var(--blur);
   }
 
   .lights {

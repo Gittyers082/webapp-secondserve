@@ -1,20 +1,30 @@
 /* ==========================================================================
    SecondServe — design tokens and base styles
 
-   A dark working surface built from the brand's near-black ink, with the
-   brand's brick on actions and the active place, lime on counts and things
-   that need attention, and the cream paper colour for text.
+   Frosted glass over a slow wash of the brand's colours. Surfaces are
+   translucent and blur what sits behind them; they are told apart by tone,
+   not by outlines. Brick marks actions and the active place, lime marks
+   counts and things that need attention, cream carries the text.
    ========================================================================== */
 
 :root {
   color-scheme: dark;
 
-  /* Surfaces, darkest to lightest. --s1 is the brand ink. */
+  /* Ground and glass. --s1 is the brand ink, used where a surface must be
+     solid; --s2 is the glass every panel and card is made of; --s3 and --s4
+     are tints laid on glass for controls, insets and hover. */
   --bg: #0f0d0a;
   --s1: #17150f;
-  --s2: #211e17;
-  --s3: #2c281f;
-  --s4: #38332a;
+  --s2: rgba(38, 34, 26, 0.62);
+  --s3: rgba(255, 244, 222, 0.07);
+  --s4: rgba(255, 244, 222, 0.12);
+  --glass-strong: rgba(30, 27, 21, 0.78);
+  --blur: blur(24px) saturate(150%);
+
+  /* The colour wash behind the glass */
+  --wash-1: rgba(193, 61, 31, 0.26);
+  --wash-2: rgba(228, 238, 76, 0.1);
+  --wash-3: rgba(193, 61, 31, 0.16);
 
   /* Text. Every tier holds 4.5:1 on --s3, the lightest surface text sits on. */
   --text: #f2efe4;
@@ -30,16 +40,17 @@
   --paper: #f2efe4;
 
   /* Roles that flip with the theme */
-  --field: var(--s1);                /* inside of inputs */
+  --field: rgba(255, 244, 222, 0.08); /* inside of inputs */
+  --field-hover: rgba(255, 244, 222, 0.12);
   --solid: var(--s1);                /* solid secondary button */
   --solid-text: var(--text);
   --solid-hover: #000;
   --contrast: var(--paper);          /* highest-contrast pill: chosen filter, edit buttons */
   --contrast-text: var(--s1);
-  --contrast-muted: #5f584d;
+  --contrast-muted: #5a5347;
   --contrast-hover: #fff;
   --focus: var(--lime);
-  --ring: rgba(242, 239, 228, 0.12);
+  --ring: rgba(242, 239, 228, 0.16);
   --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23cfc8b8' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
 
   /* Status, as a text colour over a 16% tint of itself */
@@ -49,7 +60,7 @@
   --warn-bg: #403f1f;
   --danger: #f07a5c;
   --danger-bg: #44291f;
-  --neutral-bg: #38332a;
+  --neutral-bg: rgba(255, 244, 222, 0.12);
   --online: #7cc46a;
 
   /* Lines. --line-control marks an input or control and holds 3:1. */
@@ -119,11 +130,16 @@
 :root[data-theme="light"] {
   color-scheme: light;
 
-  --bg: #e6e0d0;
+  --bg: #ece6d8;
   --s1: #f2efe4;
-  --s2: #fbf9f3;
-  --s3: #ebe5d6;
-  --s4: #ddd5c2;
+  --s2: rgba(255, 253, 247, 0.62);
+  --s3: rgba(23, 21, 15, 0.05);
+  --s4: rgba(23, 21, 15, 0.09);
+  --glass-strong: rgba(255, 253, 247, 0.78);
+
+  --wash-1: rgba(193, 61, 31, 0.14);
+  --wash-2: rgba(228, 238, 76, 0.34);
+  --wash-3: rgba(193, 61, 31, 0.1);
 
   --text: #17150f;
   --text-soft: #3d3831;
@@ -137,7 +153,7 @@
   --warn-bg: #e4ee4c;
   --danger: #ad2f2f;
   --danger-bg: #f7dcdc;
-  --neutral-bg: #e2dac7;
+  --neutral-bg: rgba(23, 21, 15, 0.08);
   --online: #3f8f43;
 
   --line: rgba(23, 21, 15, 0.1);
@@ -149,7 +165,8 @@
   --scrim: rgba(23, 21, 15, 0.45);
   --shadow-float: 0 24px 64px rgba(23, 21, 15, 0.22);
 
-  --field: #fffdf8;
+  --field: rgba(255, 255, 255, 0.72);
+  --field-hover: rgba(255, 255, 255, 0.92);
   --solid: #17150f;
   --solid-text: #f2efe4;
   --solid-hover: #000;
@@ -191,6 +208,31 @@ body {
   line-height: 1.5;
   accent-color: var(--brick);
   caret-color: var(--brick-text);
+}
+
+/* The wash: three soft fields of brand colour that drift slowly behind
+   the glass, so the surfaces have something to frost. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: -10%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(42vw 42vw at 10% 6%, var(--wash-1), transparent 70%),
+    radial-gradient(36vw 36vw at 92% 18%, var(--wash-2), transparent 70%),
+    radial-gradient(48vw 48vw at 68% 104%, var(--wash-3), transparent 70%);
+  animation: wash-drift 38s ease-in-out infinite alternate;
+}
+
+@keyframes wash-drift {
+  to { transform: translate3d(3%, -4%, 0) scale(1.08); }
+}
+
+/* Every glass surface frosts what is behind it. */
+:where(.panel, .empty, .dialog, .glass) {
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
 }
 
 ::selection {
@@ -391,8 +433,8 @@ table {
   height: 42px;
   padding: 0 20px;
   border-radius: var(--r-pill);
-  border: 1px solid var(--line-control);
-  background: transparent;
+  border: 0;
+  background: var(--s3);
   font-size: var(--fs-md);
   font-weight: 600;
   white-space: nowrap;
@@ -409,8 +451,8 @@ table {
   flex: none;
 }
 
-.btn:hover { background: var(--hover); border-color: var(--text-soft); }
-.btn:active:not(:disabled) { transform: translateY(1px); background: var(--press); }
+.btn:hover { background: var(--s4); }
+.btn:active:not(:disabled) { transform: scale(0.98); }
 
 .btn-primary {
   background: var(--brick);
@@ -440,11 +482,11 @@ table {
 .btn-light:active:not(:disabled) { background: var(--contrast-hover); border-color: var(--contrast-hover); }
 
 .btn-danger {
-  border-color: var(--danger);
+  background: var(--danger-bg);
   color: var(--danger);
 }
 
-.btn-danger:hover { background: var(--danger-bg); border-color: var(--danger); }
+.btn-danger:hover { background: var(--danger-bg); filter: brightness(1.12); }
 
 .btn-block { width: 100%; }
 .btn-lg { height: 52px; padding: 0 32px; font-size: var(--fs-lg); }
@@ -461,8 +503,7 @@ table {
 .btn[aria-disabled="true"] {
   opacity: 0.4;
   cursor: not-allowed;
-  background: transparent;
-  border-color: var(--line-control);
+  background: var(--s3);
   color: var(--muted);
 }
 
@@ -475,20 +516,20 @@ table {
   height: 48px;
   padding: 0 16px;
   background: var(--field);
-  border: 1px solid var(--line-control);
+  border: 0;
   border-radius: var(--r-pill);
   font: inherit;
   font-size: var(--fs-body);
   color: var(--text);
-  transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+  transition: background var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
 }
 
 .input::placeholder { color: var(--muted); }
-.input:hover { border-color: var(--text-soft); }
+.input:hover { background: var(--field-hover); }
 
 .input:focus {
   outline: none;
-  border-color: var(--text);
+  background: var(--field-hover);
   box-shadow: 0 0 0 3px var(--ring);
 }
 
@@ -497,7 +538,7 @@ table {
   outline-offset: 2px;
 }
 
-.input[aria-invalid="true"] { border-color: var(--danger); }
+.input[aria-invalid="true"] { box-shadow: 0 0 0 2px var(--danger); }
 
 select.input {
   appearance: none;
@@ -554,7 +595,7 @@ select.input {
   grid-auto-columns: 1fr;
   gap: 4px;
   padding: 4px;
-  border: 1px solid var(--line-control);
+  background: var(--s3);
   border-radius: var(--r-pill);
 }
 
@@ -627,8 +668,8 @@ select.input {
   height: 36px;
   padding: 0 16px;
   border-radius: var(--r-pill);
-  border: 1px solid var(--line-control);
-  background: transparent;
+  border: 0;
+  background: var(--s3);
   color: var(--text-soft);
   font-size: var(--fs-md);
   font-weight: 600;
@@ -639,13 +680,12 @@ select.input {
     color var(--dur-fast) var(--ease-out);
 }
 
-.filter:hover { border-color: var(--text-soft); color: var(--text); }
+.filter:hover { background: var(--s4); color: var(--text); }
 
 .filter span { color: var(--muted); font-weight: 500; font-variant-numeric: tabular-nums; }
 
 .filter[aria-pressed="true"] {
   background: var(--contrast);
-  border-color: var(--contrast);
   color: var(--contrast-text);
 }
 
@@ -669,15 +709,14 @@ select.input {
   min-height: 240px;
   padding: var(--sp-6);
   text-align: center;
-  border: 1.5px dashed var(--line-control);
   border-radius: var(--r-lg);
+  background: var(--s3);
   color: var(--text-soft);
-  transition: border-color var(--dur) var(--ease-out), background var(--dur) var(--ease-out);
+  transition: background var(--dur) var(--ease-out);
 }
 
 a.grid-tile:hover {
-  border-color: var(--text);
-  background: var(--hover);
+  background: var(--s4);
 }
 
 .grid-tile-icon {
@@ -686,7 +725,7 @@ a.grid-tile:hover {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: var(--s3);
+  background: var(--s4);
   color: var(--text);
   transition: transform var(--dur) var(--ease-out), background var(--dur) var(--ease-out);
 }
@@ -741,9 +780,11 @@ a.grid-tile:hover .grid-tile-icon {
   overflow-x: auto;
 }
 
+/* Rows are separate glass strips: no rules between them, just a gap. */
 .table {
   border-collapse: separate;
-  border-spacing: 0;
+  border-spacing: 0 6px;
+  margin-top: -6px;
 }
 
 .table th {
@@ -752,7 +793,7 @@ a.grid-tile:hover .grid-tile-icon {
   font-weight: 500;
   color: var(--text-soft);
   padding: 12px 16px;
-  background: var(--s2);
+  background: var(--s3);
   white-space: nowrap;
 }
 
@@ -760,19 +801,18 @@ a.grid-tile:hover .grid-tile-icon {
 .table thead th:last-child { border-radius: 0 var(--r-pill) var(--r-pill) 0; padding-right: 24px; }
 
 .table td {
-  padding: 16px 16px;
-  border-bottom: 1px solid var(--line);
+  padding: 14px 16px;
+  background: var(--s2);
   vertical-align: middle;
   font-size: var(--fs-md);
   color: var(--text-soft);
 }
 
-.table td:first-child { padding-left: 24px; }
-.table td:last-child { padding-right: 24px; }
+.table td:first-child { padding-left: 24px; border-radius: var(--r-lg) 0 0 var(--r-lg); }
+.table td:last-child { padding-right: 24px; border-radius: 0 var(--r-lg) var(--r-lg) 0; }
 
-.table tbody tr { transition: background var(--dur-fast) var(--ease-out); }
-.table tbody tr:hover td { background: var(--hover); }
-.table tbody tr:last-child td { border-bottom: 0; }
+.table tbody td { transition: background var(--dur-fast) var(--ease-out); }
+.table tbody tr:hover td { background: var(--glass-strong); }
 
 .table .num {
   text-align: right;
@@ -875,8 +915,7 @@ a.grid-tile:hover .grid-tile-icon {
   width: min(520px, 100%);
   max-height: calc(100vh - 64px);
   overflow-y: auto;
-  background: var(--s2);
-  border: 1px solid var(--line);
+  background: var(--glass-strong);
   border-radius: var(--r-xl);
   padding: 32px;
   box-shadow: var(--shadow-float);
@@ -947,6 +986,10 @@ a.grid-tile:hover .grid-tile-icon {
    -------------------------------------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
+  body::before {
+    animation: none;
+  }
+
   *,
   *::before,
   *::after {

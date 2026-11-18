@@ -225,6 +225,8 @@ const isEmpty = cart.length === 0;
     padding: 8px;
     border-radius: var(--r-xl);
     background: var(--s2);
+    -webkit-backdrop-filter: var(--blur);
+    backdrop-filter: var(--blur);
   }
 
   .item {
@@ -237,13 +239,8 @@ const isEmpty = cart.length === 0;
     transition: background var(--dur-fast) var(--ease-out);
   }
 
-  .item + .item {
-    border-top: 1px solid var(--line);
-    border-radius: 0 0 var(--r-lg) var(--r-lg);
-  }
-
   .item:hover {
-    background: var(--hover);
+    background: var(--s3);
   }
 
   .item-photo :global(.food-photo) {
@@ -316,8 +313,9 @@ const isEmpty = cart.length === 0;
 
   .grand {
     margin-top: 8px;
-    padding-top: 16px;
-    border-top: 1.5px dashed var(--line-strong);
+    padding: 16px 16px;
+    border-radius: var(--r-md);
+    background: var(--s3);
     font-size: var(--fs-h3);
     font-weight: 700;
   }

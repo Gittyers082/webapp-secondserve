@@ -26,7 +26,8 @@ function save(theme: Theme): void {
 
 function syncToggles(theme: Theme): void {
   document.querySelectorAll<HTMLButtonElement>('[data-theme-toggle]').forEach((button) => {
-    button.setAttribute('aria-checked', String(theme === 'light'));
+    button.setAttribute('aria-pressed', String(theme === 'light'));
+    button.title = theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode';
   });
 }
 

@@ -118,11 +118,16 @@ src/
   where a screen acts on one thing at a time, a summary rail on the right (the
   selected listing and cart on Shop, the order summary on View Cart, the
   selected listing's actions on Manage Listings and Item Moderation).
-- **Light and dark.** The sidebar (and the footer of the sign-in screens) has a
-  Light mode switch. The choice is saved in the browser and applied by a small
-  inline script in `BaseLayout` before the page paints, so a reload never
-  flashes the other theme. Both themes are the same set of roles in
-  `global.css`; the light one swaps in the brand's cream as the surface.
+- **Glass, not outlines.** Panels, cards, the sidebar and dialogs are
+  translucent and blur a slow wash of brand colour behind them. Nothing has a
+  border: surfaces are told apart by tone, controls by a tinted fill. Only the
+  keyboard focus ring draws a line. The wash stops moving when the system asks
+  for reduced motion.
+- **Light and dark.** A small round button beside the account name in the
+  sidebar (and in the footer of the sign-in screens) switches themes. The
+  choice is saved in the browser and applied by a small inline script in
+  `BaseLayout` before the page paints, so a reload never flashes the other
+  theme. Both themes are the same set of roles in `global.css`.
 - **Spacing** uses one 4px-step scale (`--sp-1` to `--sp-16`), one gutter
   between sibling blocks and a wider step between sections.
 - **Photos, not drawings.** `FoodArt.astro` shows an openly licensed photograph

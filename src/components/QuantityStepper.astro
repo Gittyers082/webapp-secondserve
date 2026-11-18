@@ -73,17 +73,17 @@ const { value = 1, min = 1, max = 99, label = 'Quantity', name = 'quantity' } = 
     place-items: center;
     width: 32px;
     height: 32px;
-    border: 1px solid var(--line-control);
+    border: 0;
     border-radius: 50%;
-    background: transparent;
+    background: var(--s3);
     color: var(--text);
     font-size: 17px;
     line-height: 1;
     transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
   }
 
-  .step:hover:not(:disabled) { background: var(--hover); border-color: var(--text); }
-  .step:active:not(:disabled) { background: var(--press); }
+  .step:hover:not(:disabled) { background: var(--s4); }
+  .step:active:not(:disabled) { transform: scale(0.92); }
 
   .step:disabled {
     opacity: 0.4;
