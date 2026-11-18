@@ -80,6 +80,9 @@ src/
   layouts/      BaseLayout (window chrome), AppLayout (signed-in shell),
                 AuthLayout (split hero for connect, sign-in, register)
   pages/        One file per screen, grouped by role
+  scripts/      Shared client behaviour: dialog (focus trap and restore),
+                filters, selection, announce (screen-reader status),
+                demo-forms (form stand-ins until a server exists)
   styles/       global.css — design tokens and shared primitives
 ```
 
@@ -87,11 +90,21 @@ src/
   wireframes: `User`, `Listing`, `Order`, plus the status unions each screen
   switches on. Seed data in `store.ts` is typed against it, so a wrong status or a
   missing field is a build error.
-- **Plain CSS.** Design tokens live on `:root` in `global.css`; components carry
-  scoped styles. No CSS framework.
+- **Plain CSS.** Design tokens live on `:root` in `global.css`: colours, a type
+  scale with an 11px floor, motion durations and easing, radii and spacing.
+  Shared patterns (listing grid, grid tile, action bar, tables, chips, filters)
+  live there too; components and pages carry only their own scoped styles. No CSS
+  framework.
+- **Accessible by default.** Text colours hold WCAG AA contrast on every surface
+  they sit on, control borders hold 3:1, dialogs trap and restore focus, filter
+  results and row actions are announced through one polite status region, and
+  every selectable card works from the keyboard. Motion respects
+  `prefers-reduced-motion`.
 - **No client framework.** Filtering, search, selection, steppers and dialogs are
-  small TypeScript modules in each page's `<script>` block, so pages ship almost no
-  JavaScript.
+  small TypeScript modules in `src/scripts/`, imported by each page's `<script>`
+  block, so pages ship almost no JavaScript.
+- **Breakpoints.** Screens are laid out for 1440px and checked down to 1024px.
+  Below 1200px listing grids go to two columns; below 1100px side panels stack.
 - **Illustrations are inline SVG** in `FoodArt.astro`, keyed by the `FoodArt`
   union, so there are no image assets to keep in sync.
 - **Branding** lives in `public/brand/`. `Logo.astro` takes a `variant`:
@@ -102,5 +115,7 @@ src/
 ## Connecting it to a backend
 
 Swap the seed data in `src/data/store.ts` for calls to the API and keep the types in
-`types.ts` as the contract. The forms currently use `GET` navigations as stand-ins
-for the real submissions.
+`types.ts` as the contract. Forms are marked `data-demo-form` and handled by
+`src/scripts/demo-forms.ts`, which stops the submission (so no field value, password
+included, reaches the address bar) and moves to the next screen or shows a
+confirmation. Replace that module with real submissions.
