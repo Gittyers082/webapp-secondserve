@@ -10,6 +10,20 @@ TypeScript.
 This repository holds the **frontend only**. Every screen runs on typed seed data in
 `src/data/`, so the whole flow is clickable before a server exists.
 
+## Monorepo layout and team docs
+
+This repo now holds both halves of SecondServe:
+
+| Folder | What | Deploys to |
+| --- | --- | --- |
+| `/` (this README) | Astro frontend | Vercel |
+| [`backend/`](backend/README.md) | FastAPI API, database models, migrations | Render |
+| [`docs/`](docs/) | [Decisions](docs/DECISIONS.md), [team roles](docs/ROLES.md) | — |
+
+Start with [CONTRIBUTING.md](CONTRIBUTING.md) for branches, commits and PRs.
+The frontend talks to the API through `src/lib/api.ts`; copy `.env.example` to `.env`
+and set `PUBLIC_API_URL`.
+
 ## Running it
 
 ```bash

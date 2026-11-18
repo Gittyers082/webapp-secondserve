@@ -5,3 +5,12 @@ dist/
 .env.production
 .DS_Store
 npm-debug.log*
+
+# Python (backend)
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+backend/.env
