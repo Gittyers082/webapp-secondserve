@@ -101,6 +101,11 @@ const quantityLabel =
         )
       }
     </div>
+    {
+      listing.originalPrice > listing.discountedPrice && (
+        <p class="savings">You save {peso(listing.originalPrice - listing.discountedPrice)}</p>
+      )
+    }
 
     <p class="meta">
       <span class="left tnum">{variant === 'shop' ? `${listing.quantity} left` : quantityLabel}</span>
@@ -249,6 +254,17 @@ const quantityLabel =
     flex-wrap: wrap;
     gap: 8px;
     margin-top: 12px;
+  }
+
+  .savings {
+    margin-top: 4px;
+    color: var(--brick-text);
+    font-size: var(--fs-sm);
+    font-weight: 600;
+  }
+
+  .is-expired .savings {
+    color: var(--muted);
   }
 
   .meta {

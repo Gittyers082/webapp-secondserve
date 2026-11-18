@@ -15,6 +15,7 @@ import type {
   Review,
   SaleRecord,
   Session,
+  ShopProfile,
   User,
 } from '../data/types';
 
@@ -55,6 +56,10 @@ export interface Endpoints {
   'POST /seller/orders/:id/ready': { response: Order };
   'GET /seller/sales': { response: SaleRecord[] };
   'GET /seller/reviews': { response: Review[] };
+  'GET /seller/profile': { response: ShopProfile };
+  'PATCH /seller/profile': { body: Partial<Omit<ShopProfile, 'logoUrl'>>; response: ShopProfile };
+  /** multipart/form-data with a "logo" file (PNG or JPG, up to 2 MB). */
+  'POST /seller/profile/logo': { body: FormData; response: { logoUrl: string } };
 
   // Buyer
   'POST /reviews': { body: ReviewInput; response: Review };

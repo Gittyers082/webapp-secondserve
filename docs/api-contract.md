@@ -31,6 +31,9 @@ endpoints are typed in `src/api/contract.ts`; the frontend calls them through
 | POST | `/seller/orders/:id/ready` | | `Order` |
 | GET | `/seller/sales?from=&to=` | | `SaleRecord[]` |
 | GET | `/seller/reviews` | | `Review[]` |
+| GET | `/seller/profile` | | `ShopProfile` |
+| PATCH | `/seller/profile` | `{ shopName?, description?, tags?, location? }` | `ShopProfile` |
+| POST | `/seller/profile/logo` | multipart, field `logo` (PNG or JPG, up to 2 MB) | `{ logoUrl }` |
 
 `ListingInput`: `name`, `description?`, `category`, `quantity`,
 `originalPrice`, `discountedPrice` (must be lower), `expiresAt`,

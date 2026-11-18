@@ -15,6 +15,7 @@ import type {
   PendingAccount,
   Review,
   Session,
+  ShopProfile,
   User,
 } from '../data/types';
 import * as seed from '../data/store';
@@ -86,6 +87,22 @@ export const api = {
         : offline({ ...find(seed.handoverQueue, orderId), status: 'ready' } as Order),
 
     reviews: () => (isLive ? request<Review[]>('GET', '/seller/reviews') : offline(seed.reviews)),
+
+    profile: () => (isLive ? request<ShopProfile>('GET', '/seller/profile') : offline(seed.sellerProfile)),
+
+    updateProfile: (input: Partial<Omit<ShopProfile, 'logoUrl'>>) =>
+      isLive
+        ? request<ShopProfile>('PATCH', '/seller/profile', input)
+        : offline({ ...seed.sellerProfile, ...input }),
+
+    uploadLogo: async (file: File): Promise<{ logoUrl: string }> => {
+      if (!isLive) return offline({ logoUrl: URL.createObjectURL(file) });
+      const body = new FormData();
+      body.append('logo', file);
+      const response = await fetch(`${BASE_URL}/seller/profile/logo`, { method: 'POST', credentials: 'include', body });
+      if (!response.ok) throw { status: response.status, message: response.statusText } satisfies ApiError;
+      return (await response.json()) as { logoUrl: string };
+    },
   },
 
   buyer: {
@@ -141,6 +158,22 @@ export const api = {
 /** A readable message for a failed call, for notices and announcements. */
 export function errorMessage(error: unknown): string {
   const apiError = error as Partial<ApiError>;
-  if (apiError?.status === 0 || error instanceof TypeError) return 'Could not reach the server. Check your connection.';
-  return apiError?.message ? `Something went wrong: ${apiError.message}` : 'Something went wrong. Try again.';
+  if (apiError?.status === 0 || error instanceof TypeError) {
+    return 'Could not reach the SecondServe server. Check that this computer is online, then try again.';
+  }
+  switch (apiError?.status) {
+    case 401:
+      return 'Your session has ended. Sign in again to continue.';
+    case 403:
+      return 'Your account cannot do this. Ask an administrator if you think it should.';
+    case 404:
+      return 'This item no longer exists. Refresh the page to see the latest list.';
+    case 409:
+      return apiError.message ?? 'Someone changed this at the same time. Refresh the page and try again.';
+    default:
+      if (apiError?.status && apiError.status >= 500) {
+        return 'The server had a problem and nothing was saved. Wait a moment, then try again.';
+      }
+      return apiError?.message ?? 'That did not work and nothing was saved. Try again.';
+  }
 }

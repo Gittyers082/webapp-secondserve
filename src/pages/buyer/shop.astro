@@ -57,7 +57,7 @@ const counted = categories.map((category) => ({
         counted.map((category) => (
           <button class="category" type="button" data-filter={category.id} aria-pressed={category.id === 'all'}>
             <span class="category-photo">
-              <FoodArt art={category.art} ratio="1 / 1" eager />
+              <FoodArt art={category.art} ratio="1 / 1" sizes="84px" />
             </span>
             <span class="category-label">{category.label}</span>
             <span class="category-count tnum">{category.count}</span>
@@ -71,7 +71,7 @@ const counted = categories.map((category) => ({
   <section class="section" aria-labelledby="pick-title">
     <article class="pick">
       <div class="pick-photo">
-        <FoodArt art={featured.art} ratio="4 / 3" eager />
+        <FoodArt art={featured.art} ratio="4 / 3" eager sizes="(max-width: 699px) 92vw, 40vw" />
         <span class="pill pill-lime pick-badge">Expiring soon</span>
       </div>
       <div class="pick-copy">
@@ -87,6 +87,7 @@ const counted = categories.map((category) => ({
             <ins><span class="sr-only">Now </span>{peso(featured.discountedPrice)}</ins>
           </p>
           <span class="discount">{discountPercent(featured)}% off</span>
+          <span class="pick-save">You save {peso(featured.originalPrice - featured.discountedPrice)}</span>
           <span class="soft small tnum">{featured.quantity} left</span>
           <a class="btn btn-primary" href={`/buyer/listing/${featured.id}`}>See details</a>
         </div>
@@ -131,7 +132,7 @@ const counted = categories.map((category) => ({
         <h2 class="rail-subtitle">Selected</h2>
         <div class="selected-item">
           <span class="selected-photo">
-            <img class="photo" src={`/photos/${featured.art}.jpg`} alt="" data-selection-photo />
+            <img class="photo" src={`/photos/480/${featured.art}.jpg`} alt="" data-selection-photo />
           </span>
           <div class="selected-copy">
             <p class="selected-name" data-selection-name>{featured.name}</p>
@@ -357,6 +358,12 @@ const counted = categories.map((category) => ({
     flex-wrap: wrap;
     gap: 16px;
     margin-top: 24px;
+  }
+
+  .pick-save {
+    color: var(--brick-text);
+    font-size: var(--fs-sm);
+    font-weight: 700;
   }
 
   .pick-foot .price ins {

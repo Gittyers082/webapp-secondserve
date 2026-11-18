@@ -180,3 +180,38 @@ export function averageRating(ratings: number[]): number {
   if (ratings.length === 0) return 0;
   return Math.round((ratings.reduce((sum, value) => sum + value, 0) / ratings.length) * 10) / 10;
 }
+
+/** Tags a shop can show on its public profile. */
+export const shopTags = [
+  'Bread',
+  'Pastries',
+  'Savory',
+  'Cakes',
+  'Fruit cups',
+  'Filipino classics',
+  'Coffee shop',
+  'Vegetarian options',
+] as const;
+
+export type ShopTag = (typeof shopTags)[number];
+
+/** What buyers see about a shop (NFR-USER-PERS-3). */
+export interface ShopProfile {
+  shopName: string;
+  description: string;
+  tags: ShopTag[];
+  /** URL of the uploaded logo; without one the shop's initials are shown. */
+  logoUrl?: string;
+  location: string;
+}
+
+/** Up to two initials for a shop with no logo: "Mang Ben's Bakery" → "MB". */
+export function shopInitials(name: string): string {
+  return name
+    .replace(/[^A-Za-z\s]/g, '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0]!.toUpperCase())
+    .join('');
+}

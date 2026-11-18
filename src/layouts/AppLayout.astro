@@ -30,7 +30,10 @@ const hasRail = Astro.slots.has('rail');
 const hasActions = Astro.slots.has('actions');
 const unread = unreadCount(notificationsFor[role]);
 
-const [before, after] = highlight && subtitle ? subtitle.split(highlight) : [subtitle, ''];
+// Only highlight words that are really in the subtitle; otherwise show it plain.
+const [before, after] =
+  highlight && subtitle && subtitle.includes(highlight) ? subtitle.split(highlight) : [subtitle, ''];
+const showHighlight = Boolean(highlight && subtitle?.includes(highlight));
 ---
 
 <BaseLayout title={`${roleLabel[role]} · ${section}`}>
@@ -70,7 +73,7 @@ const [before, after] = highlight && subtitle ? subtitle.split(highlight) : [sub
           {
             subtitle && (
               <p class="section-sub">
-                {before}{highlight && <span class="hl">{highlight}</span>}{after}
+                {before}{showHighlight && <span class="hl">{highlight}</span>}{after}
               </p>
             )
           }
@@ -198,6 +201,7 @@ const [before, after] = highlight && subtitle ? subtitle.split(highlight) : [sub
 
     .bar-brand {
       flex: 1;
+      min-width: 0;
       display: flex;
       align-items: center;
       min-height: var(--target);
@@ -247,6 +251,13 @@ const [before, after] = highlight && subtitle ? subtitle.split(highlight) : [sub
       max-height: none;
       overflow: visible;
       padding: 0 var(--sp-6) var(--sp-16);
+    }
+  }
+
+  /* The narrowest phones keep the mark and drop the wordmark. */
+  @media (max-width: 379px) {
+    .bar-brand :global(.logo-word) {
+      display: none;
     }
   }
 

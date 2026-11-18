@@ -71,7 +71,8 @@ The dev server prints a local address, usually <http://localhost:4321>.
 | ----------------------- | ---------------------------------------------------------- |
 | `/seller`               | Overview: expiry stats and a 3-day filter                  |
 | `/seller/analytics`     | Revenue, items rescued, savings, daily chart, top items    |
-| `/seller/add-listing`   | Listing form plus photo capture, upload and confirm states |
+| `/seller/add-listing`   | Four-step listing wizard plus photo capture and upload     |
+| `/seller/shop-profile`  | Public shop profile: logo, description, area, category tags |
 | `/seller/listed-items`  | Read-only shelf                                            |
 | `/seller/manage`        | Select a listing to edit, mark sold, withdraw or delete    |
 | `/seller/handover`      | Reservations to hand over, and the completed order record  |
@@ -96,7 +97,8 @@ The dev server prints a local address, usually <http://localhost:4321>.
 
 ```
 docs/
-  api-contract.md  The API the frontend is built against, for the backend team
+  api-contract.md          The API the frontend is built against, for the backend team
+  requirements-coverage.md How each NFR-USER-U requirement and PERS-3 is met
 public/
   brand/        secondserve-logo.png (full square lockup),
                 secondserve-mark.png (tray-and-hand tile, rounded)
@@ -138,8 +140,13 @@ src/
   selectable card works from the keyboard. Motion respects
   `prefers-reduced-motion`.
 - **Clear pricing.** Wherever a price is shown (cards, today's pick, listing
-  detail, cart, compare) the original price is struck through and the discount
-  percentage sits beside it in a brick badge.
+  detail, cart, compare) the original price is struck through, the discount
+  percentage sits beside it in a brick badge, and the amount saved is spelled
+  out.
+- **Forms explain themselves.** Errors appear under the field in plain words
+  and say how to fix them; info buttons beside fields open short explanations;
+  buttons waiting on the server show a spinner. See
+  `docs/requirements-coverage.md` for the full mapping to the spec.
 - **No client framework.** Filtering, search, selection, steppers and dialogs are
   small TypeScript modules in `src/scripts/`, imported by each page's `<script>`
   block, so pages ship almost no JavaScript.
