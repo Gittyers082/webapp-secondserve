@@ -1,0 +1,18 @@
+[project]
+name = "secondserve-api"
+version = "0.1.0"
+description = "SecondServe backend (FastAPI)"
+requires-python = ">=3.10"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+# FastAPI's Depends() in default arguments is intentional.
+ignore = ["B008"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

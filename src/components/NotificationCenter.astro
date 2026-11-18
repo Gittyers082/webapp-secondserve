@@ -1,0 +1,236 @@
+---
+import Icon from './Icon.astro';
+import type { IconName } from '../data/icons';
+import type { AppNotification, NotificationKind } from '../data/types';
+
+interface Props {
+  items: AppNotification[];
+}
+
+const { items } = Astro.props;
+
+const kindIcon: Record<NotificationKind, IconName> = {
+  order: 'bag',
+  listing: 'clock',
+  account: 'user',
+  review: 'star',
+};
+
+const kindLabel: Record<NotificationKind, string> = {
+  order: 'Order',
+  listing: 'Listing',
+  account: 'Account',
+  review: 'Review',
+};
+---
+
+<div class="center">
+  <div class="toolbar">
+    <div class="filters" role="group" aria-label="Show notifications">
+      <button class="filter" type="button" data-filter="all" aria-pressed="true">All</button>
+      <button class="filter" type="button" data-filter="unread" aria-pressed="false">
+        Unread <span data-unread-total>{items.filter((item) => !item.read).length}</span>
+      </button>
+    </div>
+    <button class="btn btn-sm" type="button" data-mark-all>
+      <Icon name="check" size={16} />
+      Mark all as read
+    </button>
+  </div>
+
+  <ul class="list" aria-label="Notifications">
+    {
+      items.map((item) => (
+        <li class:list={['item', { unread: !item.read }]} data-notification={item.id} data-read={String(item.read)}>
+          <span class="kind" aria-hidden="true">
+            <Icon name={kindIcon[item.kind]} size={18} />
+          </span>
+          <div class="copy">
+            <p class="title">
+              {!item.read && <span class="sr-only">Unread: </span>}
+              {item.href ? <a href={item.href}>{item.title}</a> : item.title}
+            </p>
+            <p class="body">{item.body}</p>
+            <p class="meta small muted">
+              {kindLabel[item.kind]} &middot; {item.time}
+            </p>
+          </div>
+          {!item.read && (
+            <button class="btn btn-sm read-btn" type="button" data-mark-read={item.id} aria-label={`Mark "${item.title}" as read`}>
+              Mark read
+            </button>
+          )}
+        </li>
+      ))
+    }
+  </ul>
+
+  <p class="no-results" data-no-results hidden>You are all caught up. Nothing unread.</p>
+</div>
+
+<script>
+  import { announce } from '../scripts/announce';
+  import { setupFilters } from '../scripts/filters';
+  import { api, errorMessage } from '../api/client';
+
+  const items = () => Array.from(document.querySelectorAll<HTMLElement>('[data-notification]'));
+
+  const { apply } = setupFilters({
+    items,
+    noun: 'notification',
+    matches: (item, filter) => filter === 'all' || item.dataset.read === 'false',
+  });
+
+  const syncCounts = () => {
+    const unread = items().filter((item) => item.dataset.read === 'false').length;
+    document.querySelectorAll<HTMLElement>('[data-unread-total]').forEach((node) => {
+      node.textContent = String(unread);
+    });
+    document.querySelectorAll<HTMLElement>('[data-unread-count]').forEach((node) => {
+      node.textContent = String(unread);
+      node.hidden = unread === 0;
+      node.setAttribute('aria-label', `${unread} unread`);
+    });
+    const markAll = document.querySelector<HTMLButtonElement>('[data-mark-all]');
+    if (markAll) markAll.disabled = unread === 0;
+  };
+
+  const markRead = (item: HTMLElement) => {
+    item.dataset.read = 'true';
+    item.classList.remove('unread');
+    item.querySelector('.sr-only')?.remove();
+    item.querySelector('[data-mark-read]')?.remove();
+  };
+
+  document.querySelectorAll<HTMLButtonElement>('[data-mark-read]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const item = button.closest<HTMLElement>('[data-notification]');
+      if (!item) return;
+      button.disabled = true;
+      try {
+        await api.notifications.markRead(item.dataset.notification ?? '');
+        // Keep focus on the item's link once its button is gone.
+        const link = item.querySelector<HTMLElement>('a');
+        markRead(item);
+        link?.focus();
+        syncCounts();
+        apply(false);
+        announce('Marked as read.');
+      } catch (error) {
+        button.disabled = false;
+        announce(errorMessage(error));
+      }
+    });
+  });
+
+  document.querySelector<HTMLButtonElement>('[data-mark-all]')?.addEventListener('click', async (event) => {
+    const button = event.currentTarget as HTMLButtonElement;
+    button.disabled = true;
+    try {
+      await api.notifications.markAllRead();
+      items().forEach(markRead);
+      syncCounts();
+      apply(false);
+      announce('All notifications marked as read.');
+    } catch (error) {
+      button.disabled = false;
+      announce(errorMessage(error));
+    }
+  });
+
+  syncCounts();
+</script>
+
+<style>
+  .toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-5);
+  }
+
+  .list {
+    display: grid;
+    gap: 8px;
+  }
+
+  .item {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    align-items: start;
+    gap: var(--sp-4);
+    padding: var(--sp-4) var(--sp-5);
+    border-radius: var(--r-lg);
+    background: var(--s2);
+    -webkit-backdrop-filter: var(--blur);
+    backdrop-filter: var(--blur);
+    transition: background var(--dur) var(--ease-out);
+  }
+
+  .item.unread {
+    background: var(--glass-strong);
+  }
+
+  .kind {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--s3);
+    color: var(--text-soft);
+  }
+
+  .unread .kind::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--lime);
+  }
+
+  .title {
+    font-weight: 600;
+  }
+
+  .unread .title {
+    font-weight: 700;
+  }
+
+  .title a {
+    display: inline-block;
+    min-height: 24px;
+  }
+
+  .title a:hover {
+    color: var(--brick-text);
+  }
+
+  .body {
+    margin-top: 2px;
+    color: var(--text-soft);
+    font-size: var(--fs-md);
+    line-height: 1.5;
+  }
+
+  .meta {
+    margin-top: 6px;
+  }
+
+  @media (max-width: 599px) {
+    .item {
+      grid-template-columns: 44px minmax(0, 1fr);
+    }
+
+    .read-btn {
+      grid-column: 2;
+      justify-self: start;
+    }
+  }
+</style>

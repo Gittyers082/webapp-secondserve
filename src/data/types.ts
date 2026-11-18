@@ -118,11 +118,100 @@ export interface Session {
 
 /** Formats a peso amount the way every screen in the wireframes does. */
 export function peso(amount: number): string {
-  return `₱${amount.toFixed(2)}`;
+  return `₱${amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 /** Percentage knocked off the original price, rounded to a whole number. */
 export function discountPercent(listing: Pick<Listing, 'originalPrice' | 'discountedPrice'>): number {
   if (listing.originalPrice <= 0) return 0;
   return Math.round((1 - listing.discountedPrice / listing.originalPrice) * 100);
+}
+
+/** A buyer's rating of a shop after collecting an order. */
+export interface Review {
+  id: string;
+  listingId: string;
+  shopName: string;
+  foodName: string;
+  author: string;
+  /** Whole stars, 1 to 5. */
+  rating: number;
+  comment: string;
+  date: string;
+  /** The order it was written for, so a buyer reviews each order once. */
+  orderId?: string;
+}
+
+export type NotificationKind = 'order' | 'listing' | 'account' | 'review';
+
+export interface AppNotification {
+  id: string;
+  kind: NotificationKind;
+  title: string;
+  body: string;
+  time: string;
+  read: boolean;
+  /** Where the notification leads when opened. */
+  href?: string;
+}
+
+/** One completed sale, the unit seller analytics is computed from. */
+export interface SaleRecord {
+  date: string;
+  /** Short day label for charts, e.g. "Mon 2". */
+  day: string;
+  listingName: string;
+  category: FoodCategory;
+  quantity: number;
+  total: number;
+  /** What the same food would have cost at full price. */
+  fullPrice: number;
+}
+
+export interface FaqEntry {
+  question: string;
+  answer: string;
+  /** Which roles see it; omit for everyone. */
+  roles?: Role[];
+}
+
+/** Average of a set of 1-5 ratings, to one decimal place. */
+export function averageRating(ratings: number[]): number {
+  if (ratings.length === 0) return 0;
+  return Math.round((ratings.reduce((sum, value) => sum + value, 0) / ratings.length) * 10) / 10;
+}
+
+/** Tags a shop can show on its public profile. */
+export const shopTags = [
+  'Bread',
+  'Pastries',
+  'Savory',
+  'Cakes',
+  'Fruit cups',
+  'Filipino classics',
+  'Coffee shop',
+  'Vegetarian options',
+] as const;
+
+export type ShopTag = (typeof shopTags)[number];
+
+/** What buyers see about a shop (NFR-USER-PERS-3). */
+export interface ShopProfile {
+  shopName: string;
+  description: string;
+  tags: ShopTag[];
+  /** URL of the uploaded logo; without one the shop's initials are shown. */
+  logoUrl?: string;
+  location: string;
+}
+
+/** Up to two initials for a shop with no logo: "Mang Ben's Bakery" → "MB". */
+export function shopInitials(name: string): string {
+  return name
+    .replace(/[^A-Za-z\s]/g, '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0]!.toUpperCase())
+    .join('');
 }

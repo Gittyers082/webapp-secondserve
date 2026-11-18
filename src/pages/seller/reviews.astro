@@ -1,0 +1,190 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import Stars from '../../components/Stars.astro';
+import { reviewsForShop, seller } from '../../data/store';
+import { averageRating } from '../../data/types';
+
+const shopReviews = reviewsForShop(seller.shopName ?? '');
+const average = averageRating(shopReviews.map((review) => review.rating));
+const distribution = [5, 4, 3, 2, 1].map((stars) => {
+  const count = shopReviews.filter((review) => review.rating === stars).length;
+  return { stars, count, share: shopReviews.length ? count / shopReviews.length : 0 };
+});
+
+const filters = [
+  { id: 'all', label: 'All' },
+  { id: '5', label: '5 stars' },
+  { id: '4', label: '4 stars' },
+  { id: 'low', label: '3 or fewer' },
+];
+---
+
+<AppLayout
+  role="seller"
+  username={seller.username}
+  section="Reviews"
+  heading="Reviews"
+  subtitle={`${shopReviews.length} reviews from buyers who collected at ${seller.shopName}.`}
+  highlight={`${shopReviews.length} reviews`}
+>
+  <section class="summary panel" aria-label="Rating summary">
+    <div class="score">
+      <p class="score-value tnum">{average.toFixed(1)}</p>
+      <Stars rating={average} size={20} />
+      <p class="label">Average of {shopReviews.length} reviews</p>
+    </div>
+
+    <ul class="bars" aria-label="Reviews by star rating">
+      {
+        distribution.map((row) => (
+          <li class="bar-row">
+            <span class="bar-label tnum">{row.stars} stars</span>
+            <span class="bar-track" aria-hidden="true">
+              <span class="bar-fill" style={`width:${Math.round(row.share * 100)}%`}></span>
+            </span>
+            <span class="bar-count tnum">{row.count}</span>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+
+  <section class="section" aria-labelledby="list-title">
+    <div class="section-head">
+      <h2 class="section-title" id="list-title">What buyers said</h2>
+      <div class="filters" role="group" aria-label="Filter reviews">
+        {
+          filters.map((filter) => (
+            <button class="filter" type="button" data-filter={filter.id} aria-pressed={filter.id === 'all'}>
+              {filter.label}
+            </button>
+          ))
+        }
+      </div>
+    </div>
+
+    <ul class="reviews">
+      {
+        shopReviews.map((review) => (
+          <li class="review panel" data-review data-rating={review.rating}>
+            <div class="row-between">
+              <span class="who">
+                <span class="avatar" aria-hidden="true">{review.author.charAt(0)}</span>
+                <span class="who-copy">
+                  <strong>{review.author}</strong>
+                  <span class="small muted">{review.date}</span>
+                </span>
+              </span>
+              <Stars rating={review.rating} />
+            </div>
+            <p class="review-food small soft">{review.foodName}</p>
+            <p class="review-text">{review.comment}</p>
+          </li>
+        ))
+      }
+    </ul>
+    <p class="no-results" data-no-results hidden>No reviews with that rating yet.</p>
+  </section>
+</AppLayout>
+
+<script>
+  import { setupFilters } from '../../scripts/filters';
+
+  setupFilters({
+    items: () => Array.from(document.querySelectorAll<HTMLElement>('[data-review]')),
+    noun: 'review',
+    matches: (item, filter) => {
+      const rating = Number(item.dataset.rating);
+      if (filter === 'all') return true;
+      if (filter === 'low') return rating <= 3;
+      return rating === Number(filter);
+    },
+  });
+</script>
+
+<style>
+  .summary {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: var(--sp-8);
+    align-items: center;
+  }
+
+  .score {
+    display: grid;
+    justify-items: start;
+    gap: 6px;
+  }
+
+  .score-value {
+    font-size: 48px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+
+  .bars {
+    display: grid;
+    gap: 8px;
+  }
+
+  .bar-row {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr) 24px;
+    align-items: center;
+    gap: 12px;
+    font-size: var(--fs-sm);
+  }
+
+  .bar-track {
+    height: 10px;
+    border-radius: var(--r-pill);
+    background: var(--s3);
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    display: block;
+    height: 100%;
+    border-radius: var(--r-pill);
+    background: var(--star);
+  }
+
+  .bar-count {
+    text-align: right;
+    color: var(--text-soft);
+  }
+
+  .reviews {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--gutter);
+  }
+
+  .review {
+    display: grid;
+    gap: 8px;
+    align-content: start;
+    padding: 20px;
+  }
+
+  .who-copy {
+    display: grid;
+  }
+
+  .review-text {
+    color: var(--text-soft);
+    line-height: 1.55;
+  }
+
+  @media (max-width: 599px) {
+    .summary {
+      grid-template-columns: 1fr;
+      gap: var(--sp-5);
+    }
+
+    .reviews {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

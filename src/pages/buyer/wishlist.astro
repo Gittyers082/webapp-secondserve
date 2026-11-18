@@ -1,0 +1,144 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import ListingCard from '../../components/ListingCard.astro';
+import Icon from '../../components/Icon.astro';
+import { buyer, listings, savedListingIds } from '../../data/store';
+---
+
+<AppLayout
+  role="buyer"
+  username={buyer.username}
+  section="Wishlist"
+  heading="Wishlist"
+  subtitle="Food you saved. Pick up to 3 to compare side by side."
+  highlight="up to 3"
+>
+  <a class="btn btn-primary" href="/buyer/compare" slot="actions" data-compare-go aria-disabled="true">
+    <Icon name="compare" />
+    <span data-compare-label>Compare</span>
+  </a>
+
+  <div class="listing-grid" data-wishlist-grid>
+    {
+      listings.map((listing) => (
+        <div class="cell" data-cell={listing.id} hidden={!savedListingIds.includes(listing.id)}>
+          <ListingCard listing={listing} />
+          <label class="compare-pick">
+            <input type="checkbox" data-compare-pick={listing.id} />
+            <span>Compare</span>
+          </label>
+        </div>
+      ))
+    }
+  </div>
+
+  <div class="empty" data-wishlist-empty hidden>
+    <h2>Nothing saved yet.</h2>
+    <p>Use the heart on any listing in the Shop to keep it here.</p>
+    <a class="btn btn-primary" href="/buyer/shop">Browse the shop</a>
+  </div>
+
+  <p class="hint page-note" data-compare-hint>Choose two or three items, then select Compare.</p>
+</AppLayout>
+
+<script>
+  import { savedListingIds } from '../../data/store';
+  import { announce } from '../../scripts/announce';
+  import { COMPARE_LIMIT, initWishlist, savedIds } from '../../scripts/wishlist';
+
+  initWishlist(savedListingIds);
+
+  const cells = Array.from(document.querySelectorAll<HTMLElement>('[data-cell]'));
+  const picks = Array.from(document.querySelectorAll<HTMLInputElement>('[data-compare-pick]'));
+  const go = document.querySelector<HTMLAnchorElement>('[data-compare-go]');
+  const label = document.querySelector<HTMLElement>('[data-compare-label]');
+  const empty = document.querySelector<HTMLElement>('[data-wishlist-empty]');
+  const grid = document.querySelector<HTMLElement>('[data-wishlist-grid]');
+
+  const render = () => {
+    const ids = savedIds();
+    cells.forEach((cell) => {
+      cell.hidden = !ids.includes(cell.dataset.cell ?? '');
+    });
+    picks.forEach((pick) => {
+      if (!ids.includes(pick.dataset.comparePick ?? '')) pick.checked = false;
+    });
+
+    const any = ids.length > 0;
+    if (empty) empty.hidden = any;
+    if (grid) grid.hidden = !any;
+    syncCompare();
+  };
+
+  const syncCompare = () => {
+    const chosen = picks.filter((pick) => pick.checked).map((pick) => pick.dataset.comparePick ?? '');
+    const full = chosen.length >= COMPARE_LIMIT;
+    picks.forEach((pick) => {
+      pick.disabled = full && !pick.checked;
+    });
+
+    const ready = chosen.length >= 2;
+    if (go) {
+      go.href = `/buyer/compare?ids=${chosen.join(',')}`;
+      go.setAttribute('aria-disabled', String(!ready));
+      go.tabIndex = ready ? 0 : -1;
+    }
+    if (label) label.textContent = chosen.length ? `Compare ${chosen.length}` : 'Compare';
+  };
+
+  picks.forEach((pick) =>
+    pick.addEventListener('change', () => {
+      syncCompare();
+      const count = picks.filter((other) => other.checked).length;
+      announce(count >= COMPARE_LIMIT ? `${count} chosen, the most you can compare.` : `${count} chosen to compare.`);
+    }),
+  );
+
+  go?.addEventListener('click', (event) => {
+    if (go.getAttribute('aria-disabled') === 'true') event.preventDefault();
+  });
+
+  document.addEventListener('wishlistchange', render);
+  render();
+</script>
+
+<style>
+  .cell {
+    display: grid;
+    gap: 8px;
+  }
+
+  .compare-pick {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: var(--target);
+    padding: 0 16px;
+    border-radius: var(--r-pill);
+    background: var(--s3);
+    font-size: var(--fs-md);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .compare-pick input {
+    width: 20px;
+    height: 20px;
+    margin: 0;
+  }
+
+  .compare-pick:has(input:disabled) {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .compare-pick:has(input:checked) {
+    background: var(--contrast);
+    color: var(--contrast-text);
+  }
+
+  [data-compare-go][aria-disabled='true'] {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+</style>

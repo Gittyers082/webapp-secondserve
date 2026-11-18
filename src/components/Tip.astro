@@ -1,0 +1,78 @@
+---
+import Icon from './Icon.astro';
+
+interface Props {
+  /** What the tip is about, read out with the button: "More about Discounted price". */
+  about: string;
+  /** The help text. */
+  text: string;
+}
+
+const { about, text } = Astro.props;
+const id = `tip-${about.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+---
+
+<!--
+  A toggletip (NFR-USER-U-9): a small info button beside a field label that
+  opens a short explanation. Click or Enter opens it; Escape, a second click
+  or clicking elsewhere closes it. The text is announced when it opens.
+-->
+<span class="tip">
+  <button
+    class="tip-btn"
+    type="button"
+    aria-expanded="false"
+    aria-controls={id}
+    aria-label={`More about ${about}`}
+    data-tip
+  >
+    <Icon name="info" size={16} />
+  </button>
+  <span class="tip-bubble" id={id} role="status" hidden>{text}</span>
+</span>
+
+<style>
+  .tip {
+    position: relative;
+    display: inline-flex;
+    vertical-align: middle;
+  }
+
+  /* 44px to hit, 24px to see */
+  .tip-btn {
+    display: grid;
+    place-items: center;
+    width: var(--target);
+    height: var(--target);
+    margin: -14px -10px -14px -6px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--muted);
+  }
+
+  .tip-btn:hover,
+  .tip-btn[aria-expanded='true'] {
+    color: var(--brick-text);
+  }
+
+  .tip-bubble {
+    position: absolute;
+    left: -8px;
+    top: calc(100% + 10px);
+    z-index: 20;
+    width: max-content;
+    max-width: min(300px, 80vw);
+    padding: var(--sp-3) var(--sp-4);
+    border-radius: var(--r-md);
+    background: var(--contrast);
+    color: var(--contrast-text);
+    font-size: var(--fs-sm);
+    font-weight: 500;
+    line-height: 1.45;
+    text-transform: none;
+    letter-spacing: 0;
+    box-shadow: var(--shadow-float);
+  }
+</style>

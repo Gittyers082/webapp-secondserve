@@ -1,0 +1,16 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import HelpCenter from '../../components/HelpCenter.astro';
+import { buyer } from '../../data/store';
+---
+
+<AppLayout
+  role="buyer"
+  username={buyer.username}
+  section="Help & FAQ"
+  heading="Help & FAQ"
+  subtitle="Answers to common questions, and who to ask when you are stuck."
+  highlight="who to ask"
+>
+  <HelpCenter role="buyer" />
+</AppLayout>

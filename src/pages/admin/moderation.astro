@@ -54,7 +54,7 @@ const filters = [
     <div class="panel rail-panel" data-selection>
       <h2 class="panel-title">Selected listing</h2>
       <div class="rail-photo">
-        <img class="photo" src={`/photos/${flagged.art}.jpg`} alt="" data-selection-photo />
+        <img class="photo" src={`/photos/480/${flagged.art}.jpg`} alt="" data-selection-photo />
       </div>
       <div>
         <p class="rail-name" data-selection-name>{flagged.name}</p>
@@ -81,6 +81,8 @@ const filters = [
   import { announce } from '../../scripts/announce';
   import { setupFilters } from '../../scripts/filters';
   import { setupSelection } from '../../scripts/selection';
+  import { run } from '../../scripts/request';
+  import { api } from '../../api/client';
 
   const cells = () => Array.from(document.querySelectorAll<HTMLElement>('[data-cell]'));
   const cards = () => Array.from(document.querySelectorAll<HTMLElement>('[data-cell] article[data-listing]'));
@@ -112,21 +114,29 @@ const filters = [
 
   const nameOf = (card?: HTMLElement) => card?.querySelector<HTMLElement>('[data-card-name]')?.textContent ?? 'Listing';
 
-  document.querySelector<HTMLButtonElement>('[data-flag]')?.addEventListener('click', () => {
+  document.querySelector<HTMLButtonElement>('[data-flag]')?.addEventListener('click', async (event) => {
     const card = selection.selected();
     const cell = card?.closest<HTMLElement>('[data-cell]');
     const chip = card?.querySelector<HTMLElement>('[data-state]');
-    if (!cell || !chip) return;
+    if (!card || !cell || !chip) return;
+    const listing = await run(event.currentTarget as HTMLButtonElement, () =>
+      api.admin.flagListing(card.dataset.listing ?? ''),
+    );
+    if (!listing) return;
     cell.dataset.flagged = 'true';
     chip.className = 'pill pill-danger';
     chip.textContent = 'Flagged';
     announce(`${nameOf(card)} flagged.`);
   });
 
-  document.querySelector<HTMLButtonElement>('[data-remove]')?.addEventListener('click', () => {
+  document.querySelector<HTMLButtonElement>('[data-remove]')?.addEventListener('click', async (event) => {
     const card = selection.selected();
     if (!card) return;
     const name = nameOf(card);
+    const done = await run(event.currentTarget as HTMLButtonElement, () =>
+      api.admin.removeListing(card.dataset.listing ?? ''),
+    );
+    if (done === undefined) return;
     card.closest('[data-cell]')?.remove();
     if (selectionName) selectionName.textContent = 'Nothing selected';
     if (selectionMeta) selectionMeta.textContent = 'Select a listing to flag or remove it.';

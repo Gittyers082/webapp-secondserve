@@ -8,12 +8,18 @@
  * not the markup.
  */
 import { announce } from './announce';
+import { liveValidate, validate } from './validate';
 
 export function initDemoForms(): void {
   document.querySelectorAll<HTMLFormElement>('form[data-demo-form]').forEach((form) => {
+    liveValidate(form);
     form.addEventListener('submit', (event) => {
       event.preventDefault();
-      if (!form.reportValidity()) return;
+      if (!validate(form)) return;
+
+      // Immediate feedback while the next screen loads (NFR-USER-U-10).
+      const submit = form.querySelector<HTMLButtonElement>('[type="submit"]');
+      submit?.setAttribute('aria-busy', 'true');
 
       const next = form.dataset.next;
       if (next) {
@@ -21,6 +27,7 @@ export function initDemoForms(): void {
         return;
       }
 
+      submit?.removeAttribute('aria-busy');
       const message = form.dataset.success ?? 'Saved.';
       const status = form.querySelector<HTMLElement>('[data-form-status]');
       if (status) {
