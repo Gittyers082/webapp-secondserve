@@ -3,8 +3,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
 import ListingCard from '../../components/ListingCard.astro';
 import FoodArt from '../../components/FoodArt.astro';
 import Dialog from '../../components/Dialog.astro';
+import Icon from '../../components/Icon.astro';
 import { seller, sellerListings } from '../../data/store';
-import { peso } from '../../data/types';
 
 const first = sellerListings[0]!;
 ---
@@ -14,43 +14,59 @@ const first = sellerListings[0]!;
   username={seller.username}
   section="Manage Listings"
   heading="Manage Listings"
-  subtitle="Edit what you listed or take it down."
+  subtitle={`${sellerListings.length} listings. Edit what you listed or take it down.`}
+  highlight={`${sellerListings.length} listings`}
 >
-  <div class="toolbar">
-    <button class="btn btn-sm" type="button" data-dialog-open="edit-listing" data-needs-selection>Edit selected</button>
-    <button class="btn btn-sm" type="button" data-mark-sold data-needs-selection>Mark as sold</button>
-    <button class="btn btn-sm" type="button" data-withdraw data-needs-selection>Withdraw</button>
-    <button class="btn btn-sm btn-danger" type="button" data-dialog-open="delete-listing" data-needs-selection>
-      Delete selected
-    </button>
-  </div>
-
-  <div class="grid">
+  <div class="listing-grid">
     {
       sellerListings.map((listing, index) => (
         <ListingCard listing={listing} variant="seller" selectable selected={index === 0} />
       ))
     }
 
-    <a class="add-tile panel-outline" href="/seller/add-listing">
-      <span class="plus" aria-hidden="true">+</span>
-      <span class="add-title">Add a new listing</span>
+    <a class="grid-tile" href="/seller/add-listing">
+      <span class="grid-tile-icon" aria-hidden="true"><Icon name="plus" /></span>
+      <span class="grid-tile-title">Add a new listing</span>
       <span class="small muted">Open the Add Listing tab</span>
     </a>
   </div>
 
-  <p class="hint footnote">
-    Select a photo, then edit it, mark it sold, withdraw it from the marketplace, or delete it.
-  </p>
+  <Fragment slot="rail">
+    <div class="panel rail-panel" role="toolbar" aria-label="Selected listing" data-selection>
+      <h2 class="panel-title">Selected listing</h2>
+      <div class="rail-photo">
+        <img class="photo" src={`/photos/${first.art}.jpg`} alt="" data-selection-photo />
+      </div>
+      <div>
+        <p class="rail-name" data-selection-name>{first.name}</p>
+        <p class="small muted" data-selection-meta>{first.quantity} left &middot; {first.expiryLabel}</p>
+      </div>
+      <div class="rail-actions">
+        <button class="btn btn-light btn-block" type="button" data-dialog-open="edit-listing" aria-haspopup="dialog" data-needs-selection>
+          <Icon name="pencil" />
+          Edit listing
+        </button>
+        <div class="rail-pair">
+          <button class="btn" type="button" data-mark-sold data-needs-selection>Mark as sold</button>
+          <button class="btn" type="button" data-withdraw data-needs-selection>Withdraw</button>
+        </div>
+        <button class="btn btn-danger btn-block" type="button" data-dialog-open="delete-listing" aria-haspopup="dialog" data-needs-selection>
+          <Icon name="trash" />
+          Delete listing
+        </button>
+      </div>
+      <p class="hint">Select a photo in the grid to choose which listing these act on.</p>
+    </div>
+  </Fragment>
 
   <!-- Edit ------------------------------------------------------------- -->
   <Dialog id="edit-listing" title="Edit listing" wide>
-    <form class="edit" method="get" action="#">
+    <form class="edit" method="post" data-edit-form>
       <div class="edit-photo">
         <span class="field-label">Product photo</span>
-        <div class="photo-frame"><FoodArt art={first.art} /></div>
+        <div class="photo-frame"><FoodArt art={first.art} ratio="1 / 1" /></div>
         <div class="photo-actions">
-          <button class="btn btn-sm btn-dark" type="button">Retake with camera</button>
+          <button class="btn btn-sm btn-light" type="button">Retake with camera</button>
           <button class="btn btn-sm" type="button">Replace from file</button>
         </div>
       </div>
@@ -58,46 +74,46 @@ const first = sellerListings[0]!;
       <div class="edit-fields">
         <div class="field">
           <label class="field-label" for="edit-name">Food name</label>
-          <input class="input" id="edit-name" value={first.name} />
+          <input class="input" id="edit-name" name="name" value={first.name} required data-autofocus />
         </div>
 
         <div class="field-row">
           <div>
             <label class="field-label" for="edit-qty">Quantity</label>
-            <input class="input" id="edit-qty" value={first.quantity} inputmode="numeric" />
+            <input class="input" id="edit-qty" name="quantity" type="number" min="0" step="1" value={first.quantity} />
           </div>
           <div>
-            <label class="field-label" for="edit-original">Original price</label>
-            <input class="input" id="edit-original" value={peso(first.originalPrice)} />
+            <label class="field-label" for="edit-original">Original price (₱)</label>
+            <input class="input" id="edit-original" name="originalPrice" type="number" min="1" step="0.01" value={first.originalPrice.toFixed(2)} />
           </div>
         </div>
 
         <div class="field-row">
           <div>
-            <label class="field-label" for="edit-discounted">Discounted price</label>
-            <input class="input" id="edit-discounted" value={peso(first.discountedPrice)} />
+            <label class="field-label" for="edit-discounted">Discounted price (₱)</label>
+            <input class="input" id="edit-discounted" name="discountedPrice" type="number" min="0" step="0.01" value={first.discountedPrice.toFixed(2)} />
           </div>
           <div>
             <label class="field-label" for="edit-date">Expiry date</label>
-            <input class="input" id="edit-date" value="Nov 5, 2026" />
+            <input class="input" id="edit-date" name="expiryDate" type="date" value="2026-11-05" />
           </div>
         </div>
 
         <div class="field-row">
           <div>
             <label class="field-label" for="edit-time">Expiry time</label>
-            <input class="input" id="edit-time" value="6:00 PM" />
+            <input class="input" id="edit-time" name="expiryTime" type="time" value="18:00" />
           </div>
           <div>
             <label class="field-label" for="edit-pickup">Pickup location</label>
-            <input class="input" id="edit-pickup" value={first.pickupLocation} />
+            <input class="input" id="edit-pickup" name="pickup" value={first.pickupLocation} />
           </div>
         </div>
       </div>
 
       <div class="dialog-actions edit-actions">
         <button class="btn" type="button" data-dialog-close>Cancel</button>
-        <button class="btn btn-primary" type="button" data-dialog-close>Save changes</button>
+        <button class="btn btn-primary" type="submit">Save changes</button>
       </div>
     </form>
   </Dialog>
@@ -116,115 +132,126 @@ const first = sellerListings[0]!;
 </AppLayout>
 
 <script>
-  let cards = Array.from(document.querySelectorAll<HTMLElement>('article[data-listing]'));
-  const deleteTitle = document.querySelector<HTMLElement>('[data-dialog="delete-listing"] h2');
+  import { announce } from '../../scripts/announce';
+  import { closeDialog } from '../../scripts/dialog';
+  import { setupSelection } from '../../scripts/selection';
+  import { run } from '../../scripts/request';
+  import { api } from '../../api/client';
 
-  const selected = () => cards.find((card) => card.isConnected && card.classList.contains('is-selected'));
+  const cards = () => Array.from(document.querySelectorAll<HTMLElement>('article[data-listing]'));
+  const deleteTitle = document.querySelector<HTMLElement>('[data-dialog="delete-listing"] [data-dialog-title]');
+
+  /** The card title is uppercased by CSS; textContent keeps the real casing. */
+  const nameOf = (card?: HTMLElement) =>
+    card?.querySelector<HTMLElement>('h3')?.textContent?.replace(/\s*\(.*\)\s*$/, '') ?? '';
 
   const syncToolbar = () => {
-    const card = selected();
+    const card = selection.selected();
 
     document.querySelectorAll<HTMLButtonElement>('[data-needs-selection]').forEach((button) => {
       button.disabled = !card;
     });
 
-    if (deleteTitle) {
-      // The card title is uppercased by CSS, so textContent still holds the
-      // original casing. Drop the "(box of 4)" tail for a readable question.
-      const name = card?.querySelector<HTMLElement>('h3')?.textContent?.replace(/\s*\(.*\)\s*$/, '');
-      deleteTitle.textContent = name ? `Delete ${name}?` : 'Delete this listing?';
-    }
+    if (deleteTitle) deleteTitle.textContent = card ? `Delete ${nameOf(card)}?` : 'Delete this listing?';
   };
 
-  cards.forEach((card) => {
-    card.querySelector<HTMLElement>('.thumb')?.addEventListener('click', () => {
-      cards.forEach((other) => other.classList.toggle('is-selected', other === card));
+  const selection = setupSelection({
+    cards,
+    onSelect: (card) => {
+      const name = document.querySelector<HTMLElement>('[data-selection-name]');
+      const meta = document.querySelector<HTMLElement>('[data-selection-meta]');
+      const photo = document.querySelector<HTMLImageElement>('[data-selection-photo]');
+      const source = card.querySelector<HTMLImageElement>('img');
+      if (name) name.textContent = card.querySelector('[data-card-name]')?.textContent ?? '';
+      if (meta) meta.textContent = `${card.dataset.qty ?? ''} left · ${card.dataset.expiry ?? ''}`;
+      if (photo && source) photo.src = source.src;
       syncToolbar();
-    });
+    },
   });
 
-  const setState = (label: string, tone: string) => {
-    const card = selected();
-    const chip = card?.querySelector<HTMLElement>('.foot .chip');
-    if (!chip) return;
-    chip.className = `chip ${tone}`;
+  const setState = async (button: HTMLButtonElement, status: 'sold' | 'withdrawn') => {
+    const card = selection.selected();
+    const chip = card?.querySelector<HTMLElement>('[data-state]');
+    if (!card || !chip) return;
+    const saved = await run(button, () => api.seller.setStatus(card.dataset.listing ?? '', status));
+    if (!saved) return;
+    const label = status === 'sold' ? 'Sold' : 'Withdrawn';
+    card.dataset.status = status;
+    chip.className = 'pill pill-neutral';
     chip.textContent = label;
+    announce(`${nameOf(card)} marked ${label.toLowerCase()}.`);
   };
 
-  document.querySelector<HTMLButtonElement>('[data-mark-sold]')?.addEventListener('click', () =>
-    setState('Sold', 'chip-tan'),
-  );
+  const markSold = document.querySelector<HTMLButtonElement>('[data-mark-sold]');
+  markSold?.addEventListener('click', () => setState(markSold, 'sold'));
 
-  document.querySelector<HTMLButtonElement>('[data-withdraw]')?.addEventListener('click', () =>
-    setState('Withdrawn', 'chip-tan'),
-  );
+  const withdraw = document.querySelector<HTMLButtonElement>('[data-withdraw]');
+  withdraw?.addEventListener('click', () => setState(withdraw, 'withdrawn'));
 
-  document.querySelector<HTMLButtonElement>('[data-confirm-delete]')?.addEventListener('click', () => {
-    const card = selected();
-    card?.remove();
-    cards = cards.filter((other) => other !== card);
+  const editForm = document.querySelector<HTMLFormElement>('[data-edit-form]');
+  editForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const card = selection.selected();
+    if (!card || !editForm.reportValidity()) return;
+    const name = editForm.querySelector<HTMLInputElement>('[name="name"]')?.value.trim() ?? '';
+    const saved = await run(editForm.querySelector<HTMLButtonElement>('[type="submit"]'), () =>
+      api.seller.updateListing(card.dataset.listing ?? '', { name }),
+    );
+    if (saved === undefined) return;
+    const title = card.querySelector<HTMLElement>('[data-card-name]');
+    if (title && name) title.textContent = name;
+    closeDialog();
+    announce('Changes saved.');
+  });
 
-    const scrim = document.querySelector<HTMLElement>('[data-dialog="delete-listing"]');
-    if (scrim) scrim.hidden = true;
+  document.querySelector<HTMLButtonElement>('[data-confirm-delete]')?.addEventListener('click', async (event) => {
+    const card = selection.selected();
+    const name = nameOf(card);
+    if (!card) return;
+    const done = await run(event.currentTarget as HTMLButtonElement, () =>
+      api.seller.deleteListing(card.dataset.listing ?? ''),
+    );
+    if (done === undefined) return;
+    closeDialog();
+    card.remove();
     syncToolbar();
+    // The opener was removed with nothing selected; keep focus in the grid.
+    document.querySelector<HTMLElement>('[data-select]')?.focus();
+    if (name) announce(`${name} deleted.`);
   });
 
   syncToolbar();
 </script>
 
 <style>
-  .toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 26px;
+
+  .rail-photo {
+    aspect-ratio: 4 / 3;
+    border-radius: var(--r-lg);
+    overflow: hidden;
   }
 
-  .grid {
+  .rail-name {
+    font-size: var(--fs-lg);
+    font-weight: 700;
+  }
+
+  .rail-actions {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 34px 30px;
+    gap: 12px;
   }
 
-  .add-tile {
+  .rail-pair {
     display: grid;
-    place-content: center;
-    justify-items: center;
-    gap: 6px;
-    text-align: center;
-    padding: 40px 28px;
-    min-height: 260px;
-  }
-
-  .add-tile:hover { border-color: var(--ink); }
-
-  .plus {
-    font-family: var(--display);
-    font-size: 40px;
-    line-height: 1;
-    color: var(--muted);
-  }
-
-  .add-title {
-    font-family: var(--display);
-    font-size: 22px;
-  }
-
-  .footnote {
-    margin-top: 32px;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
   }
 
   .edit {
     display: grid;
-    grid-template-columns: 260px minmax(0, 1fr);
-    gap: 26px;
-    margin-top: 10px;
-  }
-
-  .photo-frame {
-    border-radius: var(--r-md);
-    overflow: hidden;
-    background: var(--tan-deep);
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: 24px;
+    margin-top: 16px;
   }
 
   .photo-actions {
@@ -236,10 +263,6 @@ const first = sellerListings[0]!;
 
   .edit-actions {
     grid-column: 1 / -1;
-  }
-
-  @media (max-width: 1200px) {
-    .grid { grid-template-columns: repeat(2, 1fr); }
   }
 
   @media (max-width: 800px) {

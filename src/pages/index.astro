@@ -9,22 +9,31 @@ import { SERVER } from '../data/store';
   accent="a second chance."
   lede="Sellers list surplus products at a discount. Buyers find them, reserve them, and pick them up."
 >
-  <form class="connect" method="get" action="/login">
-    <h2>Connect to server</h2>
+  <form class="connect" method="post" action="/login" novalidate>
+    <h2 class="display-title">Connect to server</h2>
     <p class="hint">Enter the address of your SecondServe server to begin.</p>
 
     <div class="field">
       <label class="field-label" for="host">Server address</label>
-      <input class="input" id="host" name="host" value={SERVER.host} autocomplete="off" />
+      <input class="input" id="host" name="host" value={SERVER.host} autocomplete="off" required aria-describedby="connect-error" />
     </div>
 
     <div class="field">
       <label class="field-label" for="port">Port</label>
-      <input class="input" id="port" name="port" value={SERVER.port} inputmode="numeric" autocomplete="off" />
+      <input
+        class="input"
+        id="port"
+        name="port"
+        value={SERVER.port}
+        inputmode="numeric"
+        autocomplete="off"
+        required
+        aria-describedby="connect-error"
+      />
     </div>
 
-    <p class="notice notice-error" data-connect-error hidden>
-      <strong>Connection failed.</strong> Could not reach server. Check the address and port.
+    <p class="notice notice-error" id="connect-error" role="alert" data-connect-error hidden>
+      <span><strong>Connection failed.</strong> Could not reach server. Check the address and port.</span>
     </p>
 
     <button class="btn btn-primary btn-lg btn-block" type="submit">Connect</button>
@@ -37,26 +46,27 @@ import { SERVER } from '../data/store';
   const error = document.querySelector<HTMLElement>('[data-connect-error]');
 
   form?.addEventListener('submit', (event) => {
-    const host = form.querySelector<HTMLInputElement>('#host')?.value.trim();
-    const port = form.querySelector<HTMLInputElement>('#port')?.value.trim();
+    event.preventDefault();
 
-    if (!host || !port) {
-      event.preventDefault();
-      if (error) error.hidden = false;
+    const fields = Array.from(form.querySelectorAll<HTMLInputElement>('#host, #port'));
+    const missing = fields.filter((field) => field.value.trim() === '');
+
+    fields.forEach((field) => field.setAttribute('aria-invalid', String(missing.includes(field))));
+    if (error) error.hidden = missing.length === 0;
+
+    if (missing.length > 0) {
+      missing[0]?.focus();
+      return;
     }
+
+    // No server yet: a reachable address moves straight on to sign-in.
+    window.location.assign('/login');
   });
 </script>
 
 <style>
-  .connect h2 {
-    font-family: var(--display);
-    font-weight: 400;
-    font-size: 34px;
-    letter-spacing: -0.01em;
-  }
-
   .connect .hint {
-    margin: 6px 0 22px;
+    margin: 8px 0 24px;
   }
 
   .notice {
@@ -68,9 +78,9 @@ import { SERVER } from '../data/store';
   }
 
   .caption {
-    margin-top: 14px;
+    margin-top: 16px;
     text-align: center;
-    font-size: 12.5px;
+    font-size: var(--fs-sm);
     color: var(--muted);
   }
 </style>

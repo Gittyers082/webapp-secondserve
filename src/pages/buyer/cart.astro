@@ -1,8 +1,9 @@
 ---
 import AppLayout from '../../layouts/AppLayout.astro';
 import FoodArt from '../../components/FoodArt.astro';
+import Icon from '../../components/Icon.astro';
 import { buyer, cart, cartItemCount, cartShopCount, cartTotal } from '../../data/store';
-import { peso } from '../../data/types';
+import { discountPercent, peso } from '../../data/types';
 import type { CartLine } from '../../data/types';
 
 /** The cart groups by shop, because each shop is a separate pickup. */
@@ -19,138 +20,161 @@ const isEmpty = cart.length === 0;
   username={buyer.username}
   section="View Cart"
   heading="View Cart"
-  subtitle="Reserve now, collect from each shop before closing."
-  accent="before closing."
+  subtitle={`Reserve now, then collect from ${cartShopCount} shops before closing.`}
+  highlight={`${cartShopCount} shops`}
 >
+  <div class="empty" data-cart-empty hidden={!isEmpty}>
+    <h2>Your cart is empty.</h2>
+    <p>Browse the Shop to find discounted food.</p>
+    <a class="btn btn-primary" href="/buyer/shop">Browse the shop</a>
+  </div>
+
   {
-    isEmpty ? (
-      <div class="empty">
-        <h2>Your cart is empty.</h2>
-        <p>Browse the Shop to find discounted food.</p>
-        <a class="btn btn-dark" href="/buyer/shop">
-          Browse the shop
-        </a>
-      </div>
-    ) : (
-      <div class="cart" data-cart>
-        <div class="lines">
-          {Object.entries(shops).map(([shopName, lines]) => (
-            <section class="shop-group">
-              <header class="shop-head">
-                <h2>{shopName}</h2>
-                <p class="small muted">&middot; Pickup: {lines[0]!.pickupLocation}</p>
-              </header>
+    !isEmpty && (
+      <div class="lines" data-cart>
+        {Object.entries(shops).map(([shopName, lines]) => (
+          <section class="shop-group">
+            <header class="shop-head">
+              <span class="shop-icon">
+                <Icon name="store" size={18} />
+              </span>
+              <div>
+                <h2 class="shop-name">{shopName}</h2>
+                <p class="small muted">Pickup: {lines[0]!.pickupLocation}</p>
+              </div>
+            </header>
 
-              <table class="table">
-                <thead>
-                  <tr>
-                    <th>Item</th>
-                    <th>Quantity</th>
-                    <th>Price</th>
-                    <th>Expiry</th>
-                    <th><span class="sr-only">Actions</span></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lines.map((line) => (
-                    <tr data-line={line.listingId}>
-                      <td>
-                        <div class="item">
-                          <span class="item-art">
-                            <FoodArt art={line.art} />
-                          </span>
-                          <span class="item-name">{line.foodName}</span>
-                        </div>
-                      </td>
-                      <td class="tnum">&times; {line.quantity}</td>
-                      <td>
-                        <p class="line-total tnum">{peso(line.quantity * line.unitPrice)}</p>
-                        <p class="small muted tnum">{peso(line.unitPrice)} each</p>
-                      </td>
-                      <td>
-                        <p>{line.expiryLabel}</p>
-                        {line.expiringSoon && <span class="chip chip-lime expiry-chip">Expiring soon</span>}
-                      </td>
-                      <td>
-                        <div class="line-actions">
-                          <button class="btn btn-sm" type="button">
-                            Edit quantity
-                          </button>
-                          <button class="btn btn-sm btn-danger" type="button" data-remove={line.listingId}>
-                            Remove
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </section>
-          ))}
+            <ul class="items">
+              {lines.map((line) => (
+                <li class="item" data-line={line.listingId}>
+                  <span class="item-photo">
+                    <FoodArt art={line.art} ratio="1 / 1" />
+                  </span>
+                  <div class="item-copy">
+                    <p class="item-name" data-line-name>{line.foodName}</p>
+                    <p class="small muted line-price">
+                      <span class="price">
+                        <del><span class="sr-only">Was </span>{peso(line.originalUnitPrice)}</del>
+                        <span><span class="sr-only">Now </span>{peso(line.unitPrice)} each</span>
+                      </span>
+                      <span class="discount">{discountPercent({ originalPrice: line.originalUnitPrice, discountedPrice: line.unitPrice })}% off</span>
+                      <span class="tnum" data-qty={line.quantity}>&times; {line.quantity}</span>
+                    </p>
+                  </div>
+                  <div class="item-expiry">
+                    <p class="small soft">{line.expiryLabel}</p>
+                    {line.expiringSoon && <span class="pill pill-warn">Expiring soon</span>}
+                  </div>
+                  <p class="item-total tnum" data-line-total={line.quantity * line.unitPrice}>
+                    {peso(line.quantity * line.unitPrice)}
+                  </p>
+                  <div class="item-actions">
+                    <button class="btn btn-sm btn-light btn-icon" type="button" aria-label={`Edit quantity: ${line.foodName}`} title="Edit quantity">
+                      <Icon name="pencil" size={16} />
+                    </button>
+                    <button
+                      class="btn btn-sm btn-danger btn-icon"
+                      type="button"
+                      data-remove={line.listingId}
+                      aria-label={`Remove ${line.foodName}`}
+                      title="Remove"
+                    >
+                      <Icon name="trash" size={16} />
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+      </div>
+    )
+  }
+
+  {
+    !isEmpty && (
+      <Fragment slot="rail">
+        <div class="panel rail-panel summary" data-cart>
+          <div class="panel-inset">
+            <h2 class="summary-title">Pickups</h2>
+            <ul class="pickups">
+              {Object.entries(shops).map(([shopName, lines]) => (
+                <li class="pickup">
+                  <Icon name="pin" size={18} />
+                  <span>
+                    <strong>{shopName}</strong>
+                    <span class="small muted">Before {lines[0]!.expiryLabel.toLowerCase()}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div class="summary-body">
+            <div class="row-between">
+              <h2 class="summary-title">
+                <Icon name="cart" size={18} />
+                Order summary
+              </h2>
+            </div>
+
+            <dl class="totals">
+              <div class="row-between">
+                <dt class="soft">
+                  <span data-item-count>{cartItemCount}</span> items &middot; <span data-shop-count>{cartShopCount}</span> shops
+                </dt>
+                <dd class="tnum" data-subtotal>{peso(cartTotal)}</dd>
+              </div>
+              <div class="row-between grand">
+                <dt>Total</dt>
+                <dd class="tnum" data-total>{peso(cartTotal)}</dd>
+              </div>
+            </dl>
+
+            <p class="hint">Reserving holds the food for you. Collect each order from its shop before the expiry time.</p>
+
+            <a class="btn btn-primary btn-lg btn-block" href="/buyer/pending">Reserve and check out</a>
+          </div>
         </div>
-
-        <aside class="summary panel">
-          <p class="eyebrow">Order summary</p>
-
-          <div class="row-between summary-line">
-            <span>
-              <span data-item-count>{cartItemCount}</span> items &middot; {cartShopCount} shops
-            </span>
-            <span class="tnum" data-subtotal>
-              {peso(cartTotal)}
-            </span>
-          </div>
-
-          <div class="row-between total">
-            <span>Total</span>
-            <span class="tnum" data-total>
-              {peso(cartTotal)}
-            </span>
-          </div>
-
-          <p class="hint">
-            Reserving holds the food for you. Collect each order from its shop before the expiry time.
-          </p>
-
-          <a class="btn btn-primary btn-lg btn-block" href="/buyer/pending">
-            Checkout
-          </a>
-        </aside>
-      </div>
+      </Fragment>
     )
   }
 </AppLayout>
 
 <script>
   import { peso } from '../../data/types';
+  import { announce } from '../../scripts/announce';
 
-  const rows = () => Array.from(document.querySelectorAll<HTMLElement>('[data-line]'));
+  const rows = () => Array.from(document.querySelectorAll<HTMLElement>('[data-line]:not([hidden])'));
 
   const recalculate = () => {
     let total = 0;
     let items = 0;
 
     rows().forEach((row) => {
-      if (row.hidden) return;
-      const lineTotal = row.querySelector<HTMLElement>('.line-total')?.textContent ?? '0';
-      const quantity = row.querySelector<HTMLElement>('td.tnum')?.textContent ?? '0';
-      total += Number(lineTotal.replace(/[^\d.]/g, ''));
-      items += Number(quantity.replace(/[^\d.]/g, ''));
+      total += Number(row.querySelector<HTMLElement>('[data-line-total]')?.dataset.lineTotal ?? 0);
+      items += Number(row.querySelector<HTMLElement>('[data-qty]')?.dataset.qty ?? 0);
     });
 
-    const totalNode = document.querySelector<HTMLElement>('[data-total]');
-    const subtotalNode = document.querySelector<HTMLElement>('[data-subtotal]');
-    const countNode = document.querySelector<HTMLElement>('[data-item-count]');
+    const shops = document.querySelectorAll('.shop-group:not([hidden])').length;
+    const set = (selector: string, value: string) => {
+      const node = document.querySelector<HTMLElement>(selector);
+      if (node) node.textContent = value;
+    };
 
-    if (totalNode) totalNode.textContent = peso(total);
-    if (subtotalNode) subtotalNode.textContent = peso(total);
-    if (countNode) countNode.textContent = String(items);
+    set('[data-total]', peso(total));
+    set('[data-subtotal]', peso(total));
+    set('[data-item-count]', String(items));
+    set('[data-shop-count]', String(shops));
+
+    return { total, items };
   };
 
   document.querySelectorAll<HTMLButtonElement>('[data-remove]').forEach((button) => {
     button.addEventListener('click', () => {
       const row = button.closest<HTMLElement>('[data-line]');
       if (!row) return;
+      const name = row.querySelector<HTMLElement>('[data-line-name]')?.textContent ?? 'Item';
       row.hidden = true;
 
       // Drop the whole shop group once its last line is gone.
@@ -158,93 +182,195 @@ const isEmpty = cart.length === 0;
       const remaining = group?.querySelectorAll<HTMLElement>('[data-line]:not([hidden])').length ?? 0;
       if (group && remaining === 0) group.hidden = true;
 
-      recalculate();
+      const { total } = recalculate();
+
+      if (rows().length === 0) {
+        document.querySelectorAll<HTMLElement>('[data-cart]').forEach((node) => node.setAttribute('hidden', ''));
+        const empty = document.querySelector<HTMLElement>('[data-cart-empty]');
+        if (empty) empty.hidden = false;
+        empty?.querySelector<HTMLElement>('a')?.focus();
+        announce(`${name} removed. Your cart is empty.`);
+        return;
+      }
+
+      // Focus moves to the next remove button so keyboard users keep their place.
+      rows()[0]?.querySelector<HTMLButtonElement>('[data-remove]')?.focus();
+      announce(`${name} removed. Total is now ${peso(total)}.`);
     });
   });
 </script>
 
 <style>
-  .cart {
+  .lines {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 360px;
-    gap: 40px;
-    align-items: start;
-  }
-
-  .shop-group + .shop-group {
-    margin-top: 34px;
+    gap: 32px;
   }
 
   .shop-head {
     display: flex;
-    align-items: baseline;
-    gap: 10px;
-    margin-bottom: 14px;
-    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
   }
 
-  .shop-head h2 {
-    font-size: 14px;
+  .shop-icon {
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+  }
+
+  .shop-name {
+    font-size: var(--fs-h3);
     font-weight: 700;
-    letter-spacing: 0.09em;
-    text-transform: uppercase;
+  }
+
+  .items {
+    display: grid;
+    gap: 2px;
+    padding: 8px;
+    border-radius: var(--r-xl);
+    background: var(--s2);
+    -webkit-backdrop-filter: var(--blur);
+    backdrop-filter: var(--blur);
   }
 
   .item {
-    display: flex;
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr) 170px 100px auto;
     align-items: center;
-    gap: 14px;
+    gap: 16px;
+    padding: 12px 16px 12px 12px;
+    border-radius: var(--r-lg);
+    transition: background var(--dur-fast) var(--ease-out);
   }
 
-  .item-art {
-    width: 48px;
-    flex: none;
+  .item:hover {
+    background: var(--s3);
+  }
+
+  .item-photo :global(.food-photo) {
+    border-radius: var(--r-md);
   }
 
   .item-name {
-    font-weight: 600;
-    font-size: 14.5px;
-  }
-
-  .line-total {
     font-weight: 700;
-    font-size: 15px;
   }
 
-  .expiry-chip {
-    margin-top: 6px;
+  .line-price {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    margin-top: 4px;
   }
 
-  .line-actions {
+  .item-expiry {
+    display: grid;
+    gap: 8px;
+    justify-items: start;
+  }
+
+  .item-total {
+    text-align: right;
+    font-size: var(--fs-lg);
+    font-weight: 700;
+  }
+
+  .item-actions {
     display: flex;
     gap: 8px;
-    justify-content: flex-end;
   }
 
-  .summary-line {
-    margin-top: 16px;
-    font-size: 14px;
-  }
 
-  .total {
-    margin-top: 22px;
-    padding-top: 18px;
-    border-top: 1px solid var(--line-strong);
-    font-size: 20px;
+  .summary-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: var(--fs-h3);
     font-weight: 700;
   }
 
-  .total span:last-child {
-    font-size: 30px;
+  .pickups {
+    display: grid;
+    gap: 12px;
+    margin-top: 16px;
   }
 
-  .summary .hint {
-    margin: 16px 0 20px;
+  .pickup {
+    display: flex;
+    gap: 12px;
+    font-size: var(--fs-md);
   }
 
-  @media (max-width: 1100px) {
-    .cart {
-      grid-template-columns: 1fr;
+  .pickup :global(svg) {
+    flex: none;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .pickup > span {
+    display: grid;
+  }
+
+  .summary-body {
+    display: grid;
+    gap: 16px;
+    padding: 0 8px 4px;
+  }
+
+  .totals {
+    display: grid;
+    gap: 12px;
+    font-size: var(--fs-md);
+  }
+
+  .grand {
+    margin-top: 8px;
+    padding: 16px 16px;
+    border-radius: var(--r-md);
+    background: var(--s3);
+    font-size: var(--fs-h3);
+    font-weight: 700;
+  }
+
+  .grand dd {
+    font-size: 26px;
+  }
+
+  @media (max-width: 1279px) {
+    .item {
+      grid-template-columns: 60px minmax(0, 1fr) 100px auto;
     }
+
+    .item-expiry {
+      grid-column: 2;
+      grid-row: 2;
+      grid-auto-flow: column;
+      align-items: center;
+      justify-content: start;
+      gap: 12px;
+    }
+
+    .item-total { grid-column: 3; grid-row: 1; }
+    .item-actions { grid-column: 4; grid-row: 1; }
+    .item-photo { grid-row: span 2; }
+  }
+
+  @media (max-width: 599px) {
+    .item {
+      grid-template-columns: 56px minmax(0, 1fr);
+      gap: 8px 12px;
+    }
+
+    .item-photo { grid-row: span 1; }
+
+    .item-expiry,
+    .item-total,
+    .item-actions {
+      grid-column: 2;
+      grid-row: auto;
+    }
+
+    .item-total { text-align: left; }
   }
 </style>

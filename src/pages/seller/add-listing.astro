@@ -2,6 +2,7 @@
 import AppLayout from '../../layouts/AppLayout.astro';
 import FoodArt from '../../components/FoodArt.astro';
 import Dialog from '../../components/Dialog.astro';
+import Icon from '../../components/Icon.astro';
 import { seller, sellerListings } from '../../data/store';
 import { peso } from '../../data/types';
 
@@ -14,50 +15,81 @@ const draft = sellerListings[0]!;
   section="Add Listing"
   heading="Add Listing"
   subtitle="Turn tomorrow's surplus into today's sale."
-  accent="today's sale."
+  highlight="today's sale"
 >
   <div class="add">
     <!-- Listing details -------------------------------------------------- -->
-    <form class="form" method="get" action="/seller/listed-items">
+    <form class="form panel" method="post" data-listing-form novalidate>
       <div class="field">
         <label class="field-label" for="food-name">Food name</label>
-        <input class="input" id="food-name" name="name" value={draft.name} />
+        <input class="input" id="food-name" name="name" value={draft.name} required />
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="category">Category</label>
+        <select class="input" id="category" name="category" required>
+          <option value="bread" selected>Bread</option>
+          <option value="pastries">Pastries</option>
+          <option value="savory">Savory</option>
+          <option value="cakes">Cakes</option>
+          <option value="fruit-cups">Fruit cups</option>
+        </select>
       </div>
 
       <div class="field-row">
         <div>
           <label class="field-label" for="quantity">Quantity</label>
-          <input class="input" id="quantity" name="quantity" value={draft.quantity} inputmode="numeric" />
+          <input class="input" id="quantity" name="quantity" type="number" min="1" step="1" value={draft.quantity} required />
         </div>
         <div>
-          <label class="field-label" for="original-price">Original price</label>
-          <input class="input" id="original-price" name="originalPrice" value={peso(draft.originalPrice)} />
+          <label class="field-label" for="original-price">Original price (₱)</label>
+          <input
+            class="input"
+            id="original-price"
+            name="originalPrice"
+            type="number"
+            min="1"
+            step="0.01"
+            value={draft.originalPrice.toFixed(2)}
+            required
+          />
         </div>
       </div>
 
       <div class="field-row">
         <div>
-          <label class="field-label" for="discounted-price">Discounted price</label>
-          <input class="input" id="discounted-price" name="discountedPrice" value={peso(draft.discountedPrice)} />
+          <label class="field-label" for="discounted-price">Discounted price (₱)</label>
+          <input
+            class="input"
+            id="discounted-price"
+            name="discountedPrice"
+            type="number"
+            min="0"
+            step="0.01"
+            value={draft.discountedPrice.toFixed(2)}
+            aria-describedby="price-error eligibility"
+            required
+          />
+          <p class="field-error" id="price-error" hidden>Make the discounted price lower than the original price.</p>
         </div>
         <div>
           <label class="field-label" for="expiry-date">Expiry date</label>
-          <input class="input" id="expiry-date" name="expiryDate" value="Nov 5, 2026" />
+          <input class="input" id="expiry-date" name="expiryDate" type="date" value="2026-11-05" required />
         </div>
       </div>
 
       <div class="field-row">
         <div>
           <label class="field-label" for="expiry-time">Expiry time</label>
-          <input class="input" id="expiry-time" name="expiryTime" value="6:00 PM" />
+          <input class="input" id="expiry-time" name="expiryTime" type="time" value="18:00" required />
         </div>
         <div>
           <label class="field-label" for="pickup">Pickup location</label>
-          <input class="input" id="pickup" name="pickup" value={draft.pickupLocation} />
+          <input class="input" id="pickup" name="pickup" value={draft.pickupLocation} required />
         </div>
       </div>
 
-      <p class="hint eligibility">
+      <p class="hint eligibility" id="eligibility">
         Eligible products: surplus food that is still safe to eat and not yet expired. The discounted price must
         be lower than the original price.
       </p>
@@ -68,18 +100,21 @@ const draft = sellerListings[0]!;
       </div>
     </form>
 
+  </div>
+
+  <Fragment slot="rail">
     <!-- Product photo ---------------------------------------------------- -->
-    <aside class="photo">
+    <section class="panel rail-panel photo-panel" aria-labelledby="photo-title">
       <div class="row-between">
-        <p class="eyebrow">Product photo</p>
-        <span class="chip chip-mint" data-photo-state="added">Photo added</span>
-        <span class="chip chip-blush" data-photo-state="empty" hidden>Required</span>
+        <h2 class="panel-title" id="photo-title">Product photo</h2>
+        <span class="pill pill-ok" data-photo-state="added">Photo added</span>
+        <span class="pill pill-danger" data-photo-state="empty" hidden>Required</span>
       </div>
 
       <!-- With a photo -->
       <div data-photo-added>
         <div class="photo-frame">
-          <FoodArt art={draft.art} />
+          <FoodArt art={draft.art} ratio="4 / 3" />
         </div>
 
         <p class="photo-name">{draft.name}</p>
@@ -89,9 +124,17 @@ const draft = sellerListings[0]!;
         <p class="small muted file">ube-pandesal.jpg &middot; 1.2 MB &middot; taken with camera</p>
 
         <div class="photo-actions">
-          <button class="btn btn-sm btn-dark" type="button" data-dialog-open="camera">Retake with camera</button>
-          <button class="btn btn-sm" type="button">Replace from file</button>
-          <button class="btn btn-sm btn-danger" type="button" data-remove-photo>Remove</button>
+          <button class="btn btn-sm btn-light" type="button" data-dialog-open="camera" aria-haspopup="dialog">
+            <Icon name="camera" />
+            Retake
+          </button>
+          <button class="btn btn-sm" type="button">
+            <Icon name="upload" />
+            Replace
+          </button>
+          <button class="btn btn-sm btn-danger btn-icon" type="button" data-remove-photo aria-label="Remove photo" title="Remove photo">
+            <Icon name="trash" />
+          </button>
         </div>
 
         <p class="hint">Shoppers see this photo first. It is saved with the listing.</p>
@@ -103,14 +146,20 @@ const draft = sellerListings[0]!;
           <p class="empty-title">Show shoppers your food</p>
           <p class="hint">Take a photo with your computer&rsquo;s camera, or upload one you already have.</p>
           <div class="photo-actions center">
-            <button class="btn btn-sm btn-dark" type="button" data-dialog-open="camera">Take photo</button>
-            <button class="btn btn-sm" type="button" data-restore-photo>Upload from computer</button>
+            <button class="btn btn-sm btn-light" type="button" data-dialog-open="camera" aria-haspopup="dialog">
+              <Icon name="camera" />
+              Take photo
+            </button>
+            <button class="btn btn-sm" type="button" data-restore-photo>
+              <Icon name="upload" />
+              Upload
+            </button>
           </div>
         </div>
         <p class="hint">JPG or PNG, up to 5 MB. Saved with the listing.</p>
       </div>
-    </aside>
-  </div>
+    </section>
+  </Fragment>
 
   <!-- Camera dialogs ----------------------------------------------------- -->
   <Dialog id="camera" title="Take a product photo" wide>
@@ -124,8 +173,8 @@ const draft = sellerListings[0]!;
       </div>
 
       <div class="viewfinder">
-        <span class="chip chip-blush live">Live</span>
-        <FoodArt art={draft.art} />
+        <span class="pill pill-danger live">Live</span>
+        <FoodArt art={draft.art} ratio="16 / 10" />
       </div>
 
       <p class="hint">Camera access allowed. No camera? Use Upload from Computer.</p>
@@ -145,8 +194,8 @@ const draft = sellerListings[0]!;
     wide
   >
     <div class="viewfinder captured">
-      <span class="chip chip-mint live">Captured</span>
-      <FoodArt art={draft.art} />
+      <span class="pill pill-ok live">Captured</span>
+      <FoodArt art={draft.art} ratio="16 / 10" />
     </div>
 
     <div class="dialog-actions">
@@ -157,6 +206,54 @@ const draft = sellerListings[0]!;
 </AppLayout>
 
 <script>
+  import { announce } from '../../scripts/announce';
+  import { closeDialog, openDialog } from '../../scripts/dialog';
+  import { run } from '../../scripts/request';
+  import { api } from '../../api/client';
+
+  // Publishing goes through the API client; the discounted price must be
+  // lower than the original, and the error sits beside that field.
+  const form = document.querySelector<HTMLFormElement>('[data-listing-form]');
+  const priceError = document.getElementById('price-error');
+  const discounted = document.getElementById('discounted-price') as HTMLInputElement | null;
+
+  const checkPrices = () => {
+    const data = form ? new FormData(form) : null;
+    const original = Number(data?.get('originalPrice'));
+    const sale = Number(data?.get('discountedPrice'));
+    const ok = !(original > 0 && sale >= original);
+    if (priceError) priceError.hidden = ok;
+    discounted?.setAttribute('aria-invalid', String(!ok));
+    return ok;
+  };
+
+  form?.addEventListener('input', checkPrices);
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!form.reportValidity()) return;
+    if (!checkPrices()) {
+      discounted?.focus();
+      return;
+    }
+    const data = new FormData(form);
+    const created = await run(form.querySelector<HTMLButtonElement>('[type="submit"]'), () =>
+      api.seller.createListing({
+        name: String(data.get('name')).trim(),
+        category: String(data.get('category')) as 'bread' | 'pastries' | 'savory' | 'cakes' | 'fruit-cups',
+        quantity: Number(data.get('quantity')),
+        originalPrice: Number(data.get('originalPrice')),
+        discountedPrice: Number(data.get('discountedPrice')),
+        expiresAt: `${data.get('expiryDate')}T${data.get('expiryTime')}`,
+        pickupLocation: String(data.get('pickup')).trim(),
+      }),
+    );
+    if (created) {
+      announce('Listing published.');
+      window.location.assign('/seller/listed-items');
+    }
+  });
+
   const added = document.querySelector<HTMLElement>('[data-photo-added]');
   const empty = document.querySelector<HTMLElement>('[data-photo-empty]');
   const stateAdded = document.querySelector<HTMLElement>('[data-photo-state="added"]');
@@ -167,85 +264,64 @@ const draft = sellerListings[0]!;
     if (empty) empty.hidden = hasPhoto;
     if (stateAdded) stateAdded.hidden = !hasPhoto;
     if (stateEmpty) stateEmpty.hidden = hasPhoto;
-  };
 
-  const show = (id: string) => {
-    const node = document.querySelector<HTMLElement>(`[data-dialog="${id}"]`);
-    if (node) node.hidden = false;
-  };
-
-  const hide = (id: string) => {
-    const node = document.querySelector<HTMLElement>(`[data-dialog="${id}"]`);
-    if (node) node.hidden = true;
+    // Whichever panel is now showing, put focus on its first action.
+    (hasPhoto ? added : empty)?.querySelector<HTMLButtonElement>('button')?.focus();
+    announce(hasPhoto ? 'Photo added.' : 'Photo removed. A photo is required to publish.');
   };
 
   document.querySelector<HTMLButtonElement>('[data-remove-photo]')?.addEventListener('click', () => setPhoto(false));
   document.querySelector<HTMLButtonElement>('[data-restore-photo]')?.addEventListener('click', () => setPhoto(true));
 
-  document.querySelector<HTMLButtonElement>('[data-capture]')?.addEventListener('click', () => {
-    hide('camera');
-    show('confirm-photo');
-  });
-
-  document.querySelector<HTMLButtonElement>('[data-retake]')?.addEventListener('click', () => {
-    hide('confirm-photo');
-    show('camera');
-  });
+  document.querySelector<HTMLButtonElement>('[data-capture]')?.addEventListener('click', () => openDialog('confirm-photo'));
+  document.querySelector<HTMLButtonElement>('[data-retake]')?.addEventListener('click', () => openDialog('camera'));
 
   document.querySelector<HTMLButtonElement>('[data-use-photo]')?.addEventListener('click', () => {
-    hide('confirm-photo');
+    closeDialog();
     setPhoto(true);
   });
 </script>
 
 <style>
   .add {
-    display: grid;
-    grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
-    gap: 60px;
-    align-items: start;
+    max-width: 860px;
   }
 
   .eligibility {
-    margin-top: 18px;
+    margin-top: 16px;
     max-width: 64ch;
   }
 
   .form-actions {
     display: flex;
     gap: 12px;
-    margin-top: 22px;
+    margin-top: 24px;
   }
+
 
   .photo-frame {
-    margin-top: 12px;
-    border-radius: var(--r-md);
-    overflow: hidden;
-    background: var(--tan-deep);
-  }
-
-  .photo-frame :global(svg) {
-    padding: 22px 0;
+    margin-top: 2px;
   }
 
   .empty-frame {
     display: grid;
     place-content: center;
     text-align: center;
-    gap: 10px;
-    padding: 48px 32px;
-    background: var(--tan);
-    border: 1px dashed var(--line-strong);
+    gap: 12px;
+    min-height: 240px;
+    padding: 32px 24px;
+    background: var(--s3);
+    border-radius: var(--r-lg);
   }
 
   .empty-title {
-    font-family: var(--display);
-    font-size: 22px;
+    font-size: var(--fs-lg);
+    font-weight: 700;
   }
 
   .photo-name {
     margin-top: 16px;
-    font-size: 16px;
+    font-size: var(--fs-lg);
     font-weight: 700;
   }
 
@@ -267,14 +343,12 @@ const draft = sellerListings[0]!;
 
   .camera-select {
     max-width: 280px;
+    margin-top: 16px;
   }
 
   .viewfinder {
     position: relative;
     margin-top: 16px;
-    border-radius: var(--r-md);
-    overflow: hidden;
-    background: var(--tan-deep);
   }
 
   .viewfinder .live {
@@ -284,18 +358,7 @@ const draft = sellerListings[0]!;
     z-index: 2;
   }
 
-  .viewfinder :global(svg) {
-    padding: 24px 0;
-  }
-
   .captured {
     margin-bottom: 4px;
-  }
-
-  @media (max-width: 1100px) {
-    .add {
-      grid-template-columns: 1fr;
-      gap: 34px;
-    }
   }
 </style>

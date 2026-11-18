@@ -1,0 +1,380 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import { salesLog, seller } from '../../data/store';
+import { peso } from '../../data/types';
+import type { FoodCategory } from '../../data/types';
+
+/* Every figure here is computed from the sales records, so they add up. */
+const revenue = salesLog.reduce((sum, sale) => sum + sale.total, 0);
+const fullValue = salesLog.reduce((sum, sale) => sum + sale.fullPrice, 0);
+const itemsSold = salesLog.reduce((sum, sale) => sum + sale.quantity, 0);
+const buyerSavings = fullValue - revenue;
+const averageDiscount = Math.round((buyerSavings / fullValue) * 100);
+
+const days = Array.from(new Set(salesLog.map((sale) => sale.day)));
+const daily = days.map((day) => {
+  const sales = salesLog.filter((sale) => sale.day === day);
+  return {
+    day,
+    total: sales.reduce((sum, sale) => sum + sale.total, 0),
+    items: sales.reduce((sum, sale) => sum + sale.quantity, 0),
+  };
+});
+const peak = Math.max(...daily.map((entry) => entry.total));
+const best = daily.find((entry) => entry.total === peak)!;
+
+const byItem = Object.values(
+  salesLog.reduce<Record<string, { name: string; quantity: number; total: number }>>((acc, sale) => {
+    const entry = (acc[sale.listingName] ??= { name: sale.listingName, quantity: 0, total: 0 });
+    entry.quantity += sale.quantity;
+    entry.total += sale.total;
+    return acc;
+  }, {}),
+).sort((a, b) => b.total - a.total);
+
+const categoryLabel: Partial<Record<FoodCategory, string>> = { bread: 'Bread', pastries: 'Pastries' };
+const byCategory = Object.entries(
+  salesLog.reduce<Record<string, number>>((acc, sale) => {
+    acc[sale.category] = (acc[sale.category] ?? 0) + sale.total;
+    return acc;
+  }, {}),
+)
+  .map(([category, total]) => ({
+    label: categoryLabel[category as FoodCategory] ?? category,
+    total,
+    share: Math.round((total / revenue) * 100),
+  }))
+  .sort((a, b) => b.total - a.total);
+
+/* Chart geometry */
+const chartW = 1000;
+const chartH = 280;
+const padTop = 28;
+const padBottom = 32;
+const slot = chartW / daily.length;
+const barW = Math.min(64, slot * 0.5);
+const scale = (value: number) => ((chartH - padTop - padBottom) * value) / peak;
+const ticks = [0, 0.5, 1].map((fraction) => Math.round((peak * fraction) / 10) * 10);
+---
+
+<AppLayout
+  role="seller"
+  username={seller.username}
+  section="Analytics"
+  heading="Analytics"
+  subtitle={`${seller.shopName} rescued ${itemsSold} items in the last 7 days.`}
+  highlight={`${itemsSold} items`}
+>
+  <section class="kpis" aria-label="Last 7 days at a glance">
+    <div class="kpi">
+      <p class="kpi-value tnum">{peso(revenue)}</p>
+      <p class="label">Revenue from rescued food</p>
+    </div>
+    <div class="kpi">
+      <p class="kpi-value tnum">{itemsSold}</p>
+      <p class="label">Items sold instead of thrown out</p>
+    </div>
+    <div class="kpi">
+      <p class="kpi-value tnum">{peso(buyerSavings)}</p>
+      <p class="label">Saved by your buyers</p>
+    </div>
+    <div class="kpi">
+      <p class="kpi-value tnum">{averageDiscount}%</p>
+      <p class="label">Average discount given</p>
+    </div>
+  </section>
+
+  <section class="section panel chart-panel" aria-labelledby="daily-title">
+    <div class="section-head">
+      <div>
+        <h2 class="section-title" id="daily-title">Revenue by day</h2>
+        <p class="section-sub">
+          Best day: <span class="hl">{best.day}</span>, {peso(best.total)} from {best.items} items.
+        </p>
+      </div>
+    </div>
+
+    <div class="chart-scroll">
+    <svg
+      class="chart"
+      viewBox={`0 0 ${chartW} ${chartH}`}
+      role="img"
+      aria-label={`Bar chart of revenue by day. ${daily.map((entry) => `${entry.day}: ${peso(entry.total)}`).join('; ')}.`}
+    >
+      {
+        ticks.map((tick) => {
+          const y = chartH - padBottom - scale(tick);
+          return (
+            <g class="tick">
+              <line x1="0" x2={chartW} y1={y} y2={y} />
+              <text x="0" y={y - 6}>{peso(tick).replace(/\.00$/, '')}</text>
+            </g>
+          );
+        })
+      }
+      {
+        daily.map((entry, index) => {
+          const h = scale(entry.total);
+          const x = index * slot + (slot - barW) / 2;
+          const y = chartH - padBottom - h;
+          return (
+            <g class:list={['bar', { peak: entry.total === peak }]}>
+              <rect x={x} y={y} width={barW} height={h} rx="8" />
+              <text class="bar-value" x={x + barW / 2} y={y - 8} text-anchor="middle">
+                {peso(entry.total).replace(/\.00$/, '')}
+              </text>
+              <text class="bar-day" x={x + barW / 2} y={chartH - 10} text-anchor="middle">
+                {entry.day}
+              </text>
+            </g>
+          );
+        })
+      }
+    </svg>
+    </div>
+
+    <details class="as-table">
+      <summary>Show as a table</summary>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Day</th>
+              <th class="num">Items</th>
+              <th class="num">Revenue</th>
+            </tr>
+          </thead>
+          <tbody>
+            {
+              daily.map((entry) => (
+                <tr>
+                  <td>{entry.day}</td>
+                  <td class="num">{entry.items}</td>
+                  <td class="num">{peso(entry.total)}</td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+    </details>
+  </section>
+
+  <div class="split">
+    <section class="section" aria-labelledby="top-title">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title" id="top-title">Top items</h2>
+          <p class="section-sub">By revenue over the same 7 days.</p>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="table top-items">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th class="num">Sold</th>
+              <th class="num">Revenue</th>
+            </tr>
+          </thead>
+          <tbody>
+            {
+              byItem.map((item) => (
+                <tr>
+                  <td class="name">{item.name}</td>
+                  <td class="num">{item.quantity}</td>
+                  <td class="num">{peso(item.total)}</td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="category-title">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title" id="category-title">By category</h2>
+          <p class="section-sub">Share of revenue.</p>
+        </div>
+      </div>
+      <ul class="shares panel">
+        {
+          byCategory.map((entry) => (
+            <li class="share">
+              <div class="row-between">
+                <span class="share-label">{entry.label}</span>
+                <span class="tnum">
+                  {peso(entry.total)} <span class="muted">&middot; {entry.share}%</span>
+                </span>
+              </div>
+              <span class="share-track" aria-hidden="true">
+                <span class="share-fill" style={`width:${entry.share}%`}></span>
+              </span>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+  </div>
+</AppLayout>
+
+<style>
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    border-radius: var(--r-xl);
+    background: var(--s2);
+    -webkit-backdrop-filter: var(--blur);
+    backdrop-filter: var(--blur);
+  }
+
+  .kpi {
+    padding: var(--sp-5) var(--sp-6);
+  }
+
+  .kpi-value {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+  }
+
+  .kpi .label {
+    margin-top: 4px;
+  }
+
+  .chart-panel {
+    padding: var(--sp-6);
+  }
+
+  /* The chart keeps a readable size and scrolls sideways on narrow screens
+     instead of shrinking its labels. */
+  .chart-scroll {
+    overflow-x: auto;
+  }
+
+  .chart {
+    width: 100%;
+    min-width: 720px;
+    height: auto;
+    overflow: visible;
+  }
+
+  .tick line {
+    stroke: var(--s4);
+    stroke-dasharray: 4 6;
+  }
+
+  .tick text,
+  .bar-day {
+    fill: var(--muted);
+    font-size: 15px;
+  }
+
+  .bar rect {
+    fill: var(--s4);
+    transition: fill var(--dur) var(--ease-out);
+  }
+
+  .bar.peak rect {
+    fill: var(--brick);
+  }
+
+  .bar:hover rect {
+    fill: var(--brick-text);
+  }
+
+  .bar-value {
+    fill: var(--text);
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .as-table {
+    margin-top: var(--sp-4);
+  }
+
+  .as-table summary {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--target);
+    padding: 0 var(--sp-4);
+    border-radius: var(--r-pill);
+    background: var(--s3);
+    font-size: var(--fs-md);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .as-table .table-wrap {
+    margin-top: var(--sp-4);
+  }
+
+  .as-table .table {
+    min-width: 0;
+  }
+
+  .split {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    gap: var(--gutter);
+  }
+
+  .top-items {
+    min-width: 0;
+  }
+
+  .shares {
+    display: grid;
+    gap: var(--sp-5);
+  }
+
+  .share {
+    display: grid;
+    gap: 8px;
+  }
+
+  .share-label {
+    font-weight: 600;
+  }
+
+  .share-track {
+    height: 10px;
+    border-radius: var(--r-pill);
+    background: var(--s3);
+    overflow: hidden;
+  }
+
+  .share-fill {
+    display: block;
+    height: 100%;
+    border-radius: var(--r-pill);
+    background: var(--brick);
+  }
+
+  @media (max-width: 1279px) {
+    .kpis {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .split {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 599px) {
+    .kpis {
+      grid-template-columns: 1fr;
+    }
+
+    .kpi {
+      padding: var(--sp-4) var(--sp-5);
+    }
+
+    .chart-panel {
+      padding: var(--sp-4);
+    }
+  }
+</style>

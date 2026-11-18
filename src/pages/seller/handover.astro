@@ -1,5 +1,7 @@
 ---
 import AppLayout from '../../layouts/AppLayout.astro';
+import FoodArt from '../../components/FoodArt.astro';
+import Icon from '../../components/Icon.astro';
 import { handoverQueue, handoverRecord, seller } from '../../data/store';
 import { peso } from '../../data/types';
 ---
@@ -9,18 +11,21 @@ import { peso } from '../../data/types';
   username={seller.username}
   section="Reserved / Handover"
   heading="Reserved / Handover"
-  subtitle="Hand food to buyers, one pickup at a time."
+  subtitle={`${handoverQueue.length} reservations to hand over, one pickup at a time.`}
+  highlight={`${handoverQueue.length} reservations`}
 >
   <p class="notice notice-info banner">
-    Mark Ready for Pickup updates the buyer&rsquo;s My Pending Orders (the chip turns green).
+    <Icon name="info" />
+    Mark ready for pickup updates the buyer&rsquo;s My Pending Orders (its status turns green).
   </p>
 
+  <div class="table-wrap">
   <table class="table">
     <thead>
       <tr>
         <th>Food</th>
         <th>Buyer</th>
-        <th>Qty</th>
+        <th class="num">Qty</th>
         <th>Status</th>
         <th>Pickup location</th>
         <th><span class="sr-only">Actions</span></th>
@@ -30,12 +35,22 @@ import { peso } from '../../data/types';
       {
         handoverQueue.map((order) => (
           <tr data-order={order.id}>
-            <td class="food">{order.foodName}</td>
-            <td>{order.buyerUsername}</td>
-            <td class="tnum">{order.quantity}</td>
+            <td class="name">
+              <span class="food-cell">
+                <span class="food-thumb"><FoodArt art={order.art} ratio="1 / 1" /></span>
+                {order.foodName}
+              </span>
+            </td>
+            <td>
+              <span class="who">
+                <span class="avatar" aria-hidden="true">{order.buyerUsername.charAt(0)}</span>
+                {order.buyerUsername}
+              </span>
+            </td>
+            <td class="num">{order.quantity}</td>
             <td>
               <span
-                class:list={['chip', order.status === 'ready' ? 'chip-mint' : 'chip-tan']}
+                class:list={['pill', order.status === 'ready' ? 'pill-ok' : 'pill-neutral']}
                 data-status-chip
               >
                 {order.status === 'ready' ? 'Ready for pickup' : 'Reserved'}
@@ -48,7 +63,7 @@ import { peso } from '../../data/types';
                   Waiting for buyer
                 </span>
               ) : (
-                <button class="btn btn-sm btn-dark" type="button" data-ready={order.id}>
+                <button class="btn btn-sm btn-light" type="button" data-ready={order.id} aria-label={`Mark ready for pickup: ${order.foodName} for ${order.buyerUsername}`}>
                   Mark ready for pickup
                 </button>
               )}
@@ -58,18 +73,24 @@ import { peso } from '../../data/types';
       }
     </tbody>
   </table>
+  </div>
 
-  <section class="record">
-    <h2 class="section-title">Order record</h2>
-    <p class="hint">Completed orders are saved for you and the buyer.</p>
+  <section class="section record" aria-labelledby="record-title">
+    <div class="section-head">
+      <div>
+        <h2 class="section-title" id="record-title">Order record</h2>
+        <p class="section-sub"><span class="hl">{handoverRecord.length} completed</span> orders, saved for you and the buyer.</p>
+      </div>
+    </div>
 
+    <div class="table-wrap">
     <table class="table">
       <thead>
         <tr>
           <th>Food</th>
           <th>Buyer</th>
-          <th>Qty</th>
-          <th>Total</th>
+          <th class="num">Qty</th>
+          <th class="num">Total</th>
           <th>Status</th>
           <th>Completed</th>
         </tr>
@@ -78,12 +99,22 @@ import { peso } from '../../data/types';
         {
           handoverRecord.map((order) => (
             <tr>
-              <td class="food">{order.foodName}</td>
-              <td>{order.buyerUsername}</td>
-              <td class="tnum">{order.quantity}</td>
-              <td class="tnum">{peso(order.total)}</td>
+              <td class="name">
+                <span class="food-cell">
+                  <span class="food-thumb"><FoodArt art={order.art} ratio="1 / 1" /></span>
+                  {order.foodName}
+                </span>
+              </td>
               <td>
-                <span class="chip chip-mint">Picked up</span>
+                <span class="who">
+                  <span class="avatar" aria-hidden="true">{order.buyerUsername.charAt(0)}</span>
+                  {order.buyerUsername}
+                </span>
+              </td>
+              <td class="num">{order.quantity}</td>
+              <td class="num">{peso(order.total)}</td>
+              <td>
+                <span class="pill pill-ok">Picked up</span>
               </td>
               <td class="muted">{order.pickedUpAt}</td>
             </tr>
@@ -91,47 +122,45 @@ import { peso } from '../../data/types';
         }
       </tbody>
     </table>
+    </div>
   </section>
 </AppLayout>
 
 <script>
+  import { announce } from '../../scripts/announce';
+  import { run } from '../../scripts/request';
+  import { api } from '../../api/client';
+
   document.querySelectorAll<HTMLButtonElement>('[data-ready]').forEach((button) => {
-    button.addEventListener('click', () => {
+    button.addEventListener('click', async () => {
       const row = button.closest<HTMLElement>('[data-order]');
       const chip = row?.querySelector<HTMLElement>('[data-status-chip]');
       const cell = button.parentElement;
       if (!chip || !cell) return;
 
-      chip.className = 'chip chip-mint';
+      const order = await run(button, () => api.seller.markReady(button.dataset.ready ?? ''));
+      if (!order) return;
+
+      chip.className = 'pill pill-ok';
       chip.textContent = 'Ready for pickup';
 
       const waiting = document.createElement('span');
       waiting.className = 'small muted';
       waiting.textContent = 'Waiting for buyer';
       cell.replaceChildren(waiting);
+
+      // The button is gone; move to the next order to hand over.
+      const next = document.querySelector<HTMLElement>('[data-ready]');
+      if (next) {
+        next.focus();
+      } else {
+        waiting.tabIndex = -1;
+        waiting.focus();
+      }
+
+      const food = row?.querySelector<HTMLElement>('.name')?.textContent?.trim() ?? 'Order';
+      announce(`${food} is ready for pickup. The buyer can see it now.`);
     });
   });
 </script>
 
-<style>
-  .banner {
-    margin-bottom: 26px;
-  }
-
-  .food {
-    font-weight: 600;
-    font-size: 14.5px;
-  }
-
-  .actions {
-    text-align: right;
-  }
-
-  .record {
-    margin-top: 54px;
-  }
-
-  .record .hint {
-    margin: 4px 0 18px;
-  }
-</style>

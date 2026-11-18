@@ -1,8 +1,13 @@
 ---
 import AppLayout from '../../layouts/AppLayout.astro';
 import Dialog from '../../components/Dialog.astro';
-import { buyer, historyTotal, orderHistory } from '../../data/store';
+import FoodArt from '../../components/FoodArt.astro';
+import Icon from '../../components/Icon.astro';
+import Stars from '../../components/Stars.astro';
+import { buyer, historyTotal, orderHistory, reviews } from '../../data/store';
 import { peso } from '../../data/types';
+
+const reviewFor = (orderId: string) => reviews.find((review) => review.orderId === orderId);
 ---
 
 <AppLayout
@@ -10,39 +15,69 @@ import { peso } from '../../data/types';
   username={buyer.username}
   section="My Order History"
   heading="My Order History"
-  subtitle="Every purchase you have given a second chance."
+  subtitle={`${orderHistory.length} purchases given a second chance.`}
+  highlight={`${orderHistory.length} purchases`}
 >
-  <div class="history-head">
-    <button class="btn btn-sm btn-danger" type="button" data-dialog-open="clear-history">Clear history</button>
+  <div class="history-head" slot="actions">
+    <button class="btn btn-danger" type="button" data-dialog-open="clear-history" aria-haspopup="dialog">
+      <Icon name="trash" />
+      Clear history
+    </button>
   </div>
 
   <div data-history>
+    <div class="table-wrap">
     <table class="table">
       <thead>
         <tr>
           <th>Food</th>
-          <th>Qty</th>
-          <th>Price</th>
+          <th class="num">Qty</th>
+          <th class="num">Price</th>
           <th>Shop</th>
           <th>Pickup location</th>
           <th>Picked up</th>
+          <th class="actions">Review</th>
         </tr>
       </thead>
       <tbody>
         {
           orderHistory.map((order) => (
             <tr>
-              <td class="food">{order.foodName}</td>
-              <td class="tnum">{order.quantity}</td>
-              <td class="tnum">{peso(order.total)}</td>
+              <td class="name">
+                <span class="food-cell">
+                  <span class="food-thumb"><FoodArt art={order.art} ratio="1 / 1" /></span>
+                  {order.foodName}
+                </span>
+              </td>
+              <td class="num">{order.quantity}</td>
+              <td class="num">{peso(order.total)}</td>
               <td>{order.shopName}</td>
               <td class="muted">{order.pickupLocation}</td>
               <td class="muted">{order.pickedUpAt}</td>
+              <td class="actions" data-review-cell={order.id}>
+                {reviewFor(order.id) ? (
+                  <span class="reviewed">
+                    <Stars rating={reviewFor(order.id)!.rating} size={14} />
+                  </span>
+                ) : (
+                  <button
+                    class="btn btn-sm"
+                    type="button"
+                    data-write-review={order.id}
+                    data-food={order.foodName}
+                    data-shop={order.shopName}
+                    aria-label={`Write a review of ${order.foodName}`}
+                  >
+                    Write a review
+                  </button>
+                )}
+              </td>
             </tr>
           ))
         }
       </tbody>
     </table>
+    </div>
 
     <p class="totals">
       {orderHistory.length} completed orders &middot; <span class="tnum">{peso(historyTotal)}</span> total
@@ -52,8 +87,40 @@ import { peso } from '../../data/types';
   <div class="empty" data-history-empty hidden>
     <h2>No past orders yet.</h2>
     <p>Collected orders show up here with their pickup details.</p>
-    <a class="btn btn-dark" href="/buyer/shop">Browse the shop</a>
+    <a class="btn btn-primary" href="/buyer/shop">Browse the shop</a>
   </div>
+
+  <Dialog id="write-review" title="Rate your order" message="">
+    <form class="review-form" method="post" data-review-form>
+      <fieldset class="rating-field">
+        <legend class="field-label">Your rating</legend>
+        <div class="rating-options">
+          {
+            [1, 2, 3, 4, 5].map((value) => (
+              <label class="rating-option">
+                <input type="radio" name="rating" value={value} required checked={value === 5} data-autofocus={value === 5 ? '' : undefined} />
+                <span class="rating-star" aria-hidden="true"><Icon name="star" size={26} /></span>
+                <span class="sr-only">{value} {value === 1 ? 'star' : 'stars'}</span>
+              </label>
+            ))
+          }
+        </div>
+      </fieldset>
+
+      <div class="field">
+        <label class="field-label" for="review-comment">What was it like?</label>
+        <textarea class="input" id="review-comment" name="comment" maxlength="400" required aria-describedby="review-hint"></textarea>
+        <p class="hint" id="review-hint">Freshness, pickup, value. Up to 400 characters; the shop and other buyers can read it.</p>
+      </div>
+
+      <p class="notice notice-error" data-review-error hidden role="alert"></p>
+
+      <div class="dialog-actions">
+        <button class="btn" type="button" data-dialog-close>Cancel</button>
+        <button class="btn btn-primary" type="submit">Post review</button>
+      </div>
+    </form>
+  </Dialog>
 
   <Dialog
     id="clear-history"
@@ -61,42 +128,149 @@ import { peso } from '../../data/types';
     message={`This removes all ${orderHistory.length} past orders from your history. This cannot be undone.`}
   >
     <div class="dialog-actions">
-      <button class="btn" type="button" data-dialog-close>Cancel</button>
+      <button class="btn" type="button" data-dialog-close data-autofocus>Cancel</button>
       <button class="btn btn-primary" type="button" data-clear-history>Clear history</button>
     </div>
   </Dialog>
 </AppLayout>
 
 <script>
+  import { announce } from '../../scripts/announce';
+  import { closeDialog, openDialog } from '../../scripts/dialog';
+  import { api, errorMessage } from '../../api/client';
+
+  // Reviews: one per collected order, through the API client.
+  let reviewing: HTMLButtonElement | null = null;
+  const form = document.querySelector<HTMLFormElement>('[data-review-form]');
+  const reviewTitle = document.querySelector<HTMLElement>('[data-dialog="write-review"] [data-dialog-title]');
+  const reviewMessage = document.querySelector<HTMLElement>('[data-dialog="write-review"] [data-dialog-message]');
+  const reviewError = document.querySelector<HTMLElement>('[data-review-error]');
+
+  document.querySelectorAll<HTMLButtonElement>('[data-write-review]').forEach((button) => {
+    button.addEventListener('click', () => {
+      reviewing = button;
+      form?.reset();
+      if (reviewError) reviewError.hidden = true;
+      if (reviewTitle) reviewTitle.textContent = `Rate ${button.dataset.food}`;
+      if (reviewMessage) reviewMessage.textContent = `From ${button.dataset.shop}. Your review helps other buyers choose.`;
+      openDialog('write-review', button);
+    });
+  });
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!reviewing || !form.reportValidity()) return;
+    const data = new FormData(form);
+    const rating = Number(data.get('rating'));
+    const submit = form.querySelector<HTMLButtonElement>('[type="submit"]');
+    if (submit) submit.disabled = true;
+
+    try {
+      await api.buyer.review({
+        orderId: reviewing.dataset.writeReview ?? '',
+        rating,
+        comment: String(data.get('comment') ?? ''),
+      });
+      const cell = reviewing.closest<HTMLElement>('[data-review-cell]');
+      const done = document.createElement('span');
+      done.className = 'reviewed small';
+      done.textContent = `Posted · ${rating} of 5`;
+      cell?.replaceChildren(done);
+      closeDialog();
+      // The button is gone; move to the next order still waiting for a review.
+      const next = document.querySelector<HTMLElement>('[data-write-review]');
+      if (next) {
+        next.focus();
+      } else {
+        done.tabIndex = -1;
+        done.focus();
+      }
+      announce(`Review posted: ${rating} out of 5 stars.`);
+      reviewing = null;
+    } catch (error) {
+      if (reviewError) {
+        reviewError.textContent = errorMessage(error);
+        reviewError.hidden = false;
+      }
+    } finally {
+      if (submit) submit.disabled = false;
+    }
+  });
+
   document.querySelector<HTMLButtonElement>('[data-clear-history]')?.addEventListener('click', () => {
     const history = document.querySelector<HTMLElement>('[data-history]');
     const empty = document.querySelector<HTMLElement>('[data-history-empty]');
-    const scrim = document.querySelector<HTMLElement>('[data-dialog="clear-history"]');
     const head = document.querySelector<HTMLElement>('.history-head');
 
+    closeDialog();
     if (history) history.hidden = true;
     if (head) head.hidden = true;
     if (empty) empty.hidden = false;
-    if (scrim) scrim.hidden = true;
+    empty?.querySelector<HTMLElement>('a')?.focus();
+    announce('Order history cleared.');
   });
 </script>
 
 <style>
-  .history-head {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 14px;
+  .reviewed {
+    display: inline-flex;
+    color: var(--star);
   }
 
-  .food {
-    font-weight: 600;
-    font-size: 14.5px;
+  .review-form {
+    margin-top: 16px;
+  }
+
+  .rating-field {
+    margin: 0 0 16px;
+    padding: 0;
+    border: 0;
+  }
+
+  .rating-options {
+    display: flex;
+    gap: 4px;
+  }
+
+  .rating-option {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: var(--target);
+    height: var(--target);
+    border-radius: 50%;
+    cursor: pointer;
+    color: var(--star);
+  }
+
+  .rating-option input {
+    position: absolute;
+    opacity: 0;
+    inset: 0;
+    margin: 0;
+    cursor: pointer;
+  }
+
+  .rating-star :global(svg) {
+    fill: currentColor;
+    stroke: none;
+  }
+
+  /* Stars after the chosen one dim, so the row reads as a score. */
+  .rating-options:has(input:checked) .rating-option:has(input:checked) ~ .rating-option {
+    color: var(--s4);
+  }
+
+  .rating-option:has(input:focus-visible) {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
   }
 
   .totals {
     margin-top: 20px;
+    padding-right: 24px;
     text-align: right;
-    font-size: 13px;
-    color: var(--muted);
+    font-size: var(--fs-md);
+    color: var(--text-soft);
   }
 </style>

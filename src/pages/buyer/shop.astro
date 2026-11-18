@@ -2,21 +2,25 @@
 import AppLayout from '../../layouts/AppLayout.astro';
 import ListingCard from '../../components/ListingCard.astro';
 import FoodArt from '../../components/FoodArt.astro';
+import Icon from '../../components/Icon.astro';
 import QuantityStepper from '../../components/QuantityStepper.astro';
-import Dialog from '../../components/Dialog.astro';
-import { buyer, listings } from '../../data/store';
+import { buyer, cart, cartItemCount, cartTotal, listings } from '../../data/store';
 import { peso, discountPercent } from '../../data/types';
+import type { FoodArt as FoodArtKey } from '../../data/types';
 
 const featured = listings[0]!;
+const available = listings.filter((listing) => listing.status !== 'expired').length;
 
-const categories = [
-  { id: 'all', label: 'All' },
-  { id: 'bread', label: 'Bread' },
-  { id: 'pastries', label: 'Pastries' },
-  { id: 'savory', label: 'Savory' },
-  { id: 'cakes', label: 'Cakes' },
-  { id: 'fruit-cups', label: 'Fruit cups' },
-].map((category) => ({
+const categories: { id: string; label: string; art: FoodArtKey }[] = [
+  { id: 'all', label: 'All', art: 'mystery' },
+  { id: 'bread', label: 'Bread', art: 'pandesal-plain' },
+  { id: 'pastries', label: 'Pastries', art: 'croissant' },
+  { id: 'savory', label: 'Savory', art: 'empanada' },
+  { id: 'cakes', label: 'Cakes', art: 'cake-slice' },
+  { id: 'fruit-cups', label: 'Fruit cups', art: 'strawberry-cup' },
+];
+
+const counted = categories.map((category) => ({
   ...category,
   count:
     category.id === 'all'
@@ -30,398 +34,476 @@ const categories = [
   username={buyer.username}
   section="Shop"
   heading="Shop"
-  subtitle="Discounted food from Baguio shops, before it expires."
-  accent="before it expires."
+  subtitle={`${available} listings from Baguio shops, discounted before they expire.`}
+  highlight={`${available} listings`}
 >
-  <!-- Today's pick ------------------------------------------------------- -->
-  <section class="feature">
-    <div class="feature-art">
-      <FoodArt art={featured.art} />
-      <span class="chip chip-lime badge">Expiring soon</span>
-      <span class="sun" aria-hidden="true"></span>
+  <div class="search">
+    <label class="sr-only" for="shop-search">Search shop or food</label>
+    <input class="input" id="shop-search" type="search" placeholder="Search a shop or a food" data-search />
+    <span class="search-button" aria-hidden="true"><Icon name="search" /></span>
+  </div>
+
+  <!-- Categories --------------------------------------------------------- -->
+  <section class="section" aria-labelledby="categories-title">
+    <div class="section-head">
+      <div>
+        <h2 class="section-title" id="categories-title">Categories</h2>
+        <p class="section-sub"><span class="hl">{counted.length - 1} categories</span> on the shelves today</p>
+      </div>
     </div>
 
-    <div class="feature-copy">
-      <div>
-        <p class="eyebrow">Today&rsquo;s pick &middot; {featured.shopName}</p>
-        <h2 class="feature-head">
-          Soft ube pandesal with melted cheese, <em>half price</em> tonight.
-        </h2>
-        <div class="feature-cta">
-          <a class="btn btn-dark" href="#shelves">Get it &rarr;</a>
-          <p class="feature-price tnum">
-            {peso(featured.originalPrice)} &rarr; <strong>{peso(featured.discountedPrice)}</strong> &middot;{' '}
-            {featured.quantity} left
+    <div class="categories" role="group" aria-label="Filter by category">
+      {
+        counted.map((category) => (
+          <button class="category" type="button" data-filter={category.id} aria-pressed={category.id === 'all'}>
+            <span class="category-photo">
+              <FoodArt art={category.art} ratio="1 / 1" eager />
+            </span>
+            <span class="category-label">{category.label}</span>
+            <span class="category-count tnum">{category.count}</span>
+          </button>
+        ))
+      }
+    </div>
+  </section>
+
+  <!-- Today's pick ------------------------------------------------------- -->
+  <section class="section" aria-labelledby="pick-title">
+    <article class="pick">
+      <div class="pick-photo">
+        <FoodArt art={featured.art} ratio="4 / 3" eager />
+        <span class="pill pill-lime pick-badge">Expiring soon</span>
+      </div>
+      <div class="pick-copy">
+        <p class="label">Today&rsquo;s pick from {featured.shopName}</p>
+        <h2 class="pick-title" id="pick-title">Soft ube pandesal with melted cheese, half price tonight.</h2>
+        <p class="pick-blurb">
+          Baked this morning and still fresh. Collect it from Session Road before 6:00 PM tomorrow, then give your
+          name at the counter.
+        </p>
+        <div class="pick-foot">
+          <p class="price">
+            <del><span class="sr-only">Was </span>{peso(featured.originalPrice)}</del>
+            <ins><span class="sr-only">Now </span>{peso(featured.discountedPrice)}</ins>
           </p>
+          <span class="discount">{discountPercent(featured)}% off</span>
+          <span class="soft small tnum">{featured.quantity} left</span>
+          <a class="btn btn-primary" href={`/buyer/listing/${featured.id}`}>See details</a>
         </div>
       </div>
-
-      <p class="feature-blurb">
-        Baked this morning and still fresh. Collect it from Session Road, Baguio before 6:00 PM tomorrow.
-        Reserve through the cart, then show your name at the counter.
-      </p>
-    </div>
+    </article>
   </section>
 
   <!-- Shelves ------------------------------------------------------------ -->
-  <section id="shelves" class="shelves">
-    <div class="shelves-head">
-      <h2 class="section-title">Fresh from today&rsquo;s shelves</h2>
-      <div class="filters">
-        {
-          categories.map((category) => (
-            <button class="filter" type="button" data-filter={category.id} aria-pressed={category.id === 'all'}>
-              {category.label} <span>{category.count}</span>
-            </button>
-          ))
-        }
+  <section id="shelves" class="section" aria-labelledby="shelves-title">
+    <div class="section-head">
+      <div>
+        <h2 class="section-title" id="shelves-title">Fresh from today&rsquo;s shelves</h2>
+        <p class="section-sub">Select a photo to choose it, then add it to your cart from the panel.</p>
       </div>
     </div>
 
-    <div class="search">
-      <label class="sr-only" for="shop-search">Search shop or food</label>
-      <input class="input" id="shop-search" type="search" placeholder="Search shop or food" data-search />
-      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M16.5 16.5L21 21"></path></svg>
-    </div>
-
-    <div class="grid" data-grid>
+    <div class="listing-grid" data-grid>
       {listings.map((listing) => <ListingCard listing={listing} selectable selected={listing.id === featured.id} />)}
     </div>
 
-    <p class="no-results" data-no-results hidden>Nothing matches that search. Try another shop or food name.</p>
+    <p class="no-results" data-no-results hidden>
+      Nothing matches that search. Try a shop name such as &ldquo;Mang Ben&rsquo;s&rdquo;, or choose All.
+    </p>
   </section>
 
-  <!-- Selection bar ------------------------------------------------------ -->
-  <div class="selection" data-selection>
-    <div class="selection-art"><FoodArt art={featured.art} /></div>
-    <div class="selection-copy">
-      <p class="selection-name" data-selection-name>{featured.name}</p>
-      <p class="small muted" data-selection-meta>
-        Selected &middot; {featured.shopName} &middot; {featured.quantity} in stock
-      </p>
-    </div>
-    <QuantityStepper value={2} max={featured.quantity} name="shop" />
-    <button class="btn btn-primary" type="button" data-add-to-cart>Add to cart</button>
-  </div>
-
-  <!-- Details dialog ----------------------------------------------------- -->
-  <Dialog id="details" title="Listing details" wide>
-    <div class="details">
-      <div class="details-art">
-        <FoodArt art={featured.art} />
-      </div>
-      <div class="details-copy">
-        <div class="row wrap">
-          <span class="chip chip-lime">Expiring soon</span>
-          <span class="chip chip-tan">{discountPercent(featured)}% off</span>
-          <span class="chip chip-ghost">{featured.quantity} in stock</span>
-        </div>
-
-        <h3 class="details-name">{featured.name}</h3>
-        <p class="small muted">{featured.shopName} &middot; Session Road, Baguio</p>
-
-        <p class="price details-price">
-          <del class="tnum">{peso(featured.originalPrice)}</del>
-          <ins class="tnum">{peso(featured.discountedPrice)}</ins>
+  <!-- Rail --------------------------------------------------------------- -->
+  <Fragment slot="rail">
+    <div class="panel rail-panel">
+      <div class="panel-inset pickup">
+        <h2 class="rail-title">Pickup</h2>
+        <p class="pickup-line">
+          <Icon name="pin" size={18} />
+          <span data-selection-pickup>{featured.pickupLocation}</span>
         </p>
+        <p class="pickup-line">
+          <Icon name="clock" size={18} />
+          <span>Collect before <span data-selection-expiry>{featured.expiryLabel.toLowerCase()}</span></span>
+        </p>
+      </div>
 
-        <p class="hint">{featured.description}</p>
-
-        <dl class="details-meta">
-          <div>
-            <dt class="field-label">Expires</dt>
-            <dd>{featured.expiryLabel}</dd>
+      <div class="selected" data-selection>
+        <h2 class="rail-subtitle">Selected</h2>
+        <div class="selected-item">
+          <span class="selected-photo">
+            <img class="photo" src={`/photos/${featured.art}.jpg`} alt="" data-selection-photo />
+          </span>
+          <div class="selected-copy">
+            <p class="selected-name" data-selection-name>{featured.name}</p>
+            <p class="small muted" data-selection-meta>{featured.shopName} &middot; {featured.quantity} in stock</p>
+            <p class="selected-price tnum" data-selection-price>{peso(featured.discountedPrice)}</p>
           </div>
-          <div>
-            <dt class="field-label">Pickup location</dt>
-            <dd>{featured.pickupLocation}</dd>
-          </div>
-        </dl>
-
-        <div class="details-actions">
-          <QuantityStepper value={2} max={featured.quantity} name="details" />
-          <button class="btn btn-primary" type="button" data-dialog-close>Add to cart</button>
-          <button class="btn" type="button" data-dialog-close>Close</button>
         </div>
+        <QuantityStepper value={2} max={featured.quantity} name="shop" />
+        <button class="btn btn-primary btn-block btn-lg" type="button" data-add-to-cart>Add to cart</button>
+        <a class="btn btn-block" href={`/buyer/listing/${featured.id}`} data-selection-link>View details</a>
+      </div>
+
+      <div class="cart-summary">
+        <div class="row-between">
+          <h2 class="rail-subtitle">
+            <Icon name="cart" size={18} />
+            Your cart
+          </h2>
+          <span class="small muted tnum">{cartItemCount} items</span>
+        </div>
+        <ul class="cart-lines">
+          {
+            cart.map((line) => (
+              <li class="cart-line">
+                <span class="cart-line-photo">
+                  <FoodArt art={line.art} ratio="1 / 1" />
+                </span>
+                <span class="cart-line-name">
+                  {line.foodName}
+                  <span class="small muted tnum">&times; {line.quantity}</span>
+                </span>
+                <span class="tnum">{peso(line.quantity * line.unitPrice)}</span>
+              </li>
+            ))
+          }
+        </ul>
+        <div class="row-between cart-total">
+          <span>Total</span>
+          <span class="tnum">{peso(cartTotal)}</span>
+        </div>
+        <a class="btn btn-dark btn-block btn-lg" href="/buyer/cart">View cart</a>
       </div>
     </div>
-  </Dialog>
+  </Fragment>
+
 </AppLayout>
 
 <script>
-  const grid = document.querySelector<HTMLElement>('[data-grid]');
-  const cards = Array.from(document.querySelectorAll<HTMLElement>('article[data-listing]'));
-  const noResults = document.querySelector<HTMLElement>('[data-no-results]');
-  const search = document.querySelector<HTMLInputElement>('[data-search]');
-  const selectionName = document.querySelector<HTMLElement>('[data-selection-name]');
-  const selectionMeta = document.querySelector<HTMLElement>('[data-selection-meta]');
+  import { savedListingIds } from '../../data/store';
+  import { initWishlist } from '../../scripts/wishlist';
+  import { setupFilters } from '../../scripts/filters';
+  import { setupSelection } from '../../scripts/selection';
 
-  let category = 'all';
+  initWishlist(savedListingIds);
 
-  const applyFilters = () => {
-    const term = (search?.value ?? '').trim().toLowerCase();
-    let visible = 0;
+  const cards = () => Array.from(document.querySelectorAll<HTMLElement>('article[data-listing]'));
+  const field = (name: string) => document.querySelector<HTMLElement>(`[data-selection-${name}]`);
 
-    cards.forEach((card) => {
-      const matchesCategory = category === 'all' || card.dataset.category === category;
-      const matchesTerm =
-        term === '' ||
-        (card.dataset.name ?? '').includes(term) ||
-        (card.dataset.shop ?? '').includes(term);
-      const show = matchesCategory && matchesTerm;
-      card.hidden = !show;
-      if (show) visible += 1;
-    });
+  setupFilters({
+    items: cards,
+    noun: 'listing',
+    container: document.querySelector<HTMLElement>('[data-grid]'),
+    matches: (card, category, term) => {
+      const inCategory = category === 'all' || card.dataset.category === category;
+      const inSearch =
+        term === '' || (card.dataset.name ?? '').includes(term) || (card.dataset.shop ?? '').includes(term);
+      return inCategory && inSearch;
+    },
+  });
 
-    if (noResults) noResults.hidden = visible > 0;
-    if (grid) grid.hidden = visible === 0;
-  };
+  setupSelection({
+    cards,
+    canSelect: (card) => card.dataset.status !== 'expired',
+    onSelect: (card) => {
+      const name = card.querySelector<HTMLElement>('[data-card-name]')?.textContent ?? '';
+      const shop = card.querySelector<HTMLElement>('[data-card-shop]')?.textContent ?? '';
+      const source = card.querySelector<HTMLImageElement>('img');
 
-  document.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach((button) => {
+      const set = (key: string, value: string) => {
+        const node = field(key);
+        if (node) node.textContent = value;
+      };
+
+      set('name', name);
+      set('meta', `${shop} · ${card.dataset.qty ?? ''} in stock`);
+      set('price', card.dataset.price ?? '');
+      set('expiry', (card.dataset.expiry ?? '').toLowerCase());
+      set('pickup', shop);
+
+      const photo = document.querySelector<HTMLImageElement>('[data-selection-photo]');
+      if (photo && source) photo.src = source.src;
+
+      const link = document.querySelector<HTMLAnchorElement>('[data-selection-link]');
+      if (link) link.href = `/buyer/listing/${card.dataset.listing}`;
+    },
+  });
+
+  document.querySelectorAll<HTMLButtonElement>('[data-add-to-cart]').forEach((button) => {
     button.addEventListener('click', () => {
-      category = button.dataset.filter ?? 'all';
-      document.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach((other) => {
-        other.setAttribute('aria-pressed', String(other === button));
-      });
-      applyFilters();
+      window.location.href = '/buyer/cart';
     });
-  });
-
-  search?.addEventListener('input', applyFilters);
-
-  cards.forEach((card) => {
-    const thumb = card.querySelector<HTMLElement>('.thumb');
-    thumb?.addEventListener('click', () => {
-      if (card.dataset.status === 'expired') return;
-      cards.forEach((other) => other.classList.toggle('is-selected', other === card));
-
-      const name = card.querySelector<HTMLElement>('h3')?.textContent ?? '';
-      const shop = card.querySelector<HTMLElement>('.shop')?.textContent ?? '';
-      const left = card.querySelector<HTMLElement>('.meta dd')?.textContent ?? '';
-
-      if (selectionName) selectionName.textContent = name;
-      if (selectionMeta) selectionMeta.textContent = `Selected · ${shop} · ${left} in stock`;
-    });
-  });
-
-  document.querySelectorAll<HTMLButtonElement>('.js-details').forEach((button) => {
-    button.addEventListener('click', () => {
-      const dialog = document.querySelector<HTMLElement>('[data-dialog="details"]');
-      if (dialog) dialog.hidden = false;
-    });
-  });
-
-  document.querySelector<HTMLButtonElement>('[data-add-to-cart]')?.addEventListener('click', () => {
-    window.location.href = '/buyer/cart';
   });
 </script>
 
 <style>
+  /* Categories ------------------------------------------------------------ */
+
+  .categories {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    padding: 4px 4px 8px;
+    margin: -4px;
+  }
+
+  .category {
+    display: grid;
+    justify-items: center;
+    gap: 8px;
+    flex: none;
+    width: 92px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--text-soft);
+  }
+
+  .category-photo {
+    width: 84px;
+    height: 84px;
+    border-radius: 50%;
+    overflow: hidden;
+    opacity: 0.62;
+    filter: saturate(0.7);
+    transition: opacity var(--dur) var(--ease-out), filter var(--dur) var(--ease-out),
+      transform var(--dur) var(--ease-out);
+  }
+
+  .category-photo :global(.food-photo) {
+    border-radius: 50%;
+  }
+
+  .category:hover .category-photo {
+    opacity: 0.9;
+    transform: translateY(-2px);
+  }
+
+  /* The chosen category comes forward: full colour, a touch larger. */
+  .category[aria-pressed='true'] .category-photo {
+    opacity: 1;
+    filter: none;
+    transform: scale(1.06);
+  }
+
+  .category-label {
+    font-size: var(--fs-md);
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .category[aria-pressed='true'] .category-label {
+    color: var(--brick-text);
+  }
+
+  .category-count {
+    margin-top: -6px;
+    font-size: var(--fs-xs);
+    color: var(--muted);
+  }
+
   /* Today's pick ---------------------------------------------------------- */
 
-  .feature-art {
+  .pick {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    gap: 32px;
+    align-items: center;
+    padding: 12px;
+    border-radius: var(--r-xl);
+    background: var(--s2);
+    -webkit-backdrop-filter: var(--blur);
+    backdrop-filter: var(--blur);
+  }
+
+  .pick-photo {
     position: relative;
+  }
+
+  .pick-photo :global(.food-photo) {
     border-radius: var(--r-lg);
-    overflow: hidden;
-    background: var(--tan-deep);
   }
 
-  .feature-art :global(.art) {
-    border-radius: 0;
-    background: transparent;
-  }
-
-  .feature-art :global(svg) {
-    max-height: 360px;
-    padding: 30px 0;
-  }
-
-  .feature-art .badge {
+  .pick-badge {
     position: absolute;
-    top: 16px;
-    left: 16px;
-    z-index: 2;
+    top: 14px;
+    left: 14px;
   }
 
-  .sun {
-    position: absolute;
-    right: -70px;
-    top: -10px;
-    width: 300px;
-    height: 300px;
-    border-radius: 50%;
-    background: var(--lime);
-    opacity: 0.85;
-    z-index: 0;
+  .pick-copy {
+    padding: 12px 20px 12px 0;
   }
 
-  .feature-art :global(.art) {
-    position: relative;
-    z-index: 1;
-  }
-
-  .feature-copy {
-    display: grid;
-    grid-template-columns: 1.35fr 1fr;
-    gap: 48px;
-    align-items: start;
-    margin-top: 20px;
-  }
-
-  .feature-head {
-    margin-top: 6px;
-    font-family: var(--display);
-    font-weight: 400;
-    font-size: 32px;
-    line-height: 1.18;
-    letter-spacing: -0.01em;
-    max-width: 22ch;
-  }
-
-  .feature-head em {
-    font-style: italic;
-    color: var(--brick);
-  }
-
-  .feature-cta {
-    display: flex;
-    align-items: center;
-    gap: 18px;
-    margin-top: 20px;
-    flex-wrap: wrap;
-  }
-
-  .feature-price {
-    font-size: 13.5px;
-    color: var(--muted);
-  }
-
-  .feature-price strong {
-    color: var(--price);
-    font-size: 15px;
-  }
-
-  .feature-blurb {
-    color: var(--ink-soft);
-    font-size: 13.5px;
-    line-height: 1.6;
-    padding-top: 18px;
-  }
-
-  /* Shelves --------------------------------------------------------------- */
-
-  .shelves {
-    margin-top: 46px;
-  }
-
-  .shelves-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 24px;
-    flex-wrap: wrap;
-  }
-
-  .shelves .search {
-    margin-top: 18px;
-  }
-
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 34px 30px;
-    margin-top: 28px;
-  }
-
-  .no-results {
-    padding: 70px 0;
-    text-align: center;
-    color: var(--muted);
-  }
-
-  /* Selection bar --------------------------------------------------------- */
-
-  .selection {
-    position: sticky;
-    bottom: 12px;
-    z-index: 20;
-    display: flex;
-    align-items: center;
-    gap: 22px;
-    margin-top: 42px;
-    padding: 14px 18px;
-    background: var(--tan);
-    border-radius: var(--r-lg);
-    box-shadow: 0 10px 30px rgba(23, 21, 15, 0.08);
-  }
-
-  .selection-art {
-    width: 56px;
-    flex: none;
-  }
-
-  .selection-art :global(.art) {
-    background: var(--tan-deep);
-  }
-
-  .selection-copy {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .selection-name {
-    font-size: 15px;
-    font-weight: 600;
-  }
-
-  /* Details dialog -------------------------------------------------------- */
-
-  .details {
-    display: grid;
-    grid-template-columns: 0.9fr 1.1fr;
-    gap: 28px;
-    margin-top: 6px;
-  }
-
-  .details-name {
-    margin-top: 12px;
-    font-family: var(--display);
-    font-weight: 400;
-    font-size: 27px;
-    line-height: 1.15;
-  }
-
-  .details-price {
-    margin: 12px 0;
-  }
-
-  .details-price ins {
+  .pick-title {
+    margin-top: 8px;
     font-size: 24px;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
   }
 
-  .details-meta {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 18px;
-    margin: 20px 0 0;
+  .pick-blurb {
+    margin-top: 12px;
+    color: var(--text-soft);
+    font-size: var(--fs-md);
+    line-height: 1.6;
+    max-width: 52ch;
   }
 
-  .details-meta dd {
-    margin: 0;
-    font-size: 14px;
+  .pick-foot {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 24px;
   }
 
-  .details-actions {
+  .pick-foot .price ins {
+    font-size: var(--fs-h2);
+  }
+
+  .pick-foot .btn {
+    margin-left: auto;
+  }
+
+  /* Rail ------------------------------------------------------------------ */
+
+
+  .rail-title {
+    font-size: var(--fs-h3);
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+
+  .rail-subtitle {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-top: 24px;
-    flex-wrap: wrap;
+    font-size: var(--fs-lg);
+    font-weight: 700;
   }
 
-  @media (max-width: 1100px) {
-    .grid { grid-template-columns: repeat(2, 1fr); }
-    .feature-copy { grid-template-columns: 1fr; gap: 22px; }
-    .details { grid-template-columns: 1fr; }
+  .pickup-line {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    color: var(--text-soft);
+    font-size: var(--fs-md);
+    font-weight: 600;
+  }
+
+  .pickup-line + .pickup-line {
+    margin-top: 8px;
+  }
+
+  .pickup-line :global(svg) {
+    flex: none;
+    margin-top: 1px;
+    color: var(--muted);
+  }
+
+  .selected {
+    display: grid;
+    gap: 16px;
+    padding: 0 8px;
+  }
+
+  .selected-item {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+  }
+
+  .selected-photo {
+    width: 76px;
+    height: 76px;
+    flex: none;
+    border-radius: var(--r-md);
+    overflow: hidden;
+  }
+
+  .selected-copy {
+    min-width: 0;
+  }
+
+  .selected-name {
+    font-weight: 700;
+  }
+
+  .selected-price {
+    margin-top: 4px;
+    font-size: var(--fs-lg);
+    font-weight: 700;
+  }
+
+  .cart-summary {
+    display: grid;
+    gap: 16px;
+    padding: 16px 8px 4px;
+  }
+
+  .cart-lines {
+    display: grid;
+    gap: 12px;
+  }
+
+  .cart-line {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    font-size: var(--fs-md);
+  }
+
+  .cart-line-photo :global(.food-photo) {
+    border-radius: var(--r-sm);
+  }
+
+  .cart-line-name {
+    display: grid;
+    line-height: 1.3;
+  }
+
+  .cart-total {
+    padding: 12px 16px;
+    border-radius: var(--r-md);
+    background: var(--s3);
+    font-size: var(--fs-h3);
+    font-weight: 700;
+  }
+
+  @media (max-width: 1279px) {
+    .pick {
+      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+      gap: 20px;
+    }
+
+    .pick-title {
+      font-size: var(--fs-h2);
+    }
+
+    .pick-blurb {
+      display: none;
+    }
+
+    .pick-foot .btn {
+      margin-left: 0;
+    }
+  }
+
+
+  @media (max-width: 699px) {
+    .pick {
+      grid-template-columns: 1fr;
+    }
+
+    .pick-copy {
+      padding: 4px 8px 8px;
+    }
+
+    .pick-blurb {
+      display: block;
+    }
   }
 </style>

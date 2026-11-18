@@ -1,0 +1,348 @@
+---
+import Logo from './Logo.astro';
+import Icon from './Icon.astro';
+import ThemeToggle from './ThemeToggle.astro';
+import type { NavItem } from '../data/nav';
+import { roleLabel } from '../data/nav';
+import { serverAddress } from '../data/store';
+import type { Role } from '../data/types';
+
+interface Props {
+  role: Role;
+  username: string;
+  nav: NavItem[];
+  /** Pathname of the item that should read as current. */
+  current: string;
+}
+
+const { role, username, nav, current } = Astro.props;
+const initial = role === 'seller' ? 'B' : username.charAt(0).toUpperCase();
+---
+
+<aside class="sidebar" id="app-nav" aria-label="Main menu">
+  <button class="drawer-close" type="button" data-nav-close aria-label="Close menu">
+    <Icon name="close" />
+  </button>
+
+  <a class="brand" href={nav[0]!.href} aria-label="SecondServe home">
+    <Logo size={22} class="brand-lockup" />
+    <Logo size={22} variant="mark" class="brand-mark" />
+  </a>
+
+  <nav class="nav" aria-label={`${roleLabel[role]} sections`}>
+    <ul>
+      {
+        nav.map((item) => {
+          const active = item.href === current;
+          return (
+            <li>
+              <a
+                class:list={['nav-item', { 'is-active': active }]}
+                href={item.href}
+                aria-current={active ? 'page' : undefined}
+                title={item.label}
+              >
+                <span class="nav-icon">
+                  <Icon name={item.icon} />
+                </span>
+                <span class="nav-label">{item.label}</span>
+                {item.count ? (
+                  <span
+                    class="count nav-count"
+                    aria-label={`${item.count} ${item.countNoun ?? 'waiting'}`}
+                    data-wishlist-count={item.href === '/buyer/wishlist' ? '' : undefined}
+                    data-unread-count={item.icon === 'bell' ? '' : undefined}
+                  >
+                    {item.count}
+                  </span>
+                ) : null}
+              </a>
+            </li>
+          );
+        })
+      }
+    </ul>
+  </nav>
+
+  <div class="account">
+    <div class="who">
+      <span class="avatar" aria-hidden="true">{initial}</span>
+      <div class="account-copy">
+        <p class="account-name">{username}</p>
+        <p class="account-role">{roleLabel[role]}</p>
+      </div>
+      <ThemeToggle class="sidebar-theme" />
+    </div>
+
+    <p class="connection" title={`Connected to ${serverAddress}`}>
+      <span class="dot" aria-hidden="true"></span>
+      <span class="connection-label">Connected &middot; {serverAddress}</span>
+    </p>
+
+    <a class="nav-item logout" href="/login" title="Log out">
+      <span class="nav-icon"><Icon name="logout" /></span>
+      <span class="nav-label">Log out</span>
+    </a>
+  </div>
+</aside>
+
+<style>
+  .sidebar {
+    position: sticky;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    height: calc(100vh - var(--chrome-h));
+    padding: 32px 16px 20px;
+    background: var(--s2);
+    -webkit-backdrop-filter: var(--blur);
+    backdrop-filter: var(--blur);
+    border-radius: 0 var(--r-xl) var(--r-xl) 0;
+    overflow-y: auto;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    border-radius: var(--r-sm);
+  }
+
+  .brand :global(.brand-mark) {
+    display: none;
+  }
+
+  .nav {
+    flex: 1;
+  }
+
+  .nav ul {
+    display: grid;
+    gap: 4px;
+  }
+
+  .nav-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-height: 46px;
+    padding: 0 12px;
+    border-radius: var(--r-md);
+    color: var(--text-soft);
+    font-size: var(--fs-md);
+    font-weight: 500;
+    transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+  }
+
+  .nav-item:hover {
+    background: var(--s3);
+    color: var(--text);
+  }
+
+  .nav-icon {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--r-sm);
+    transition: background var(--dur) var(--ease-out), color var(--dur) var(--ease-out);
+  }
+
+  .nav-label {
+    flex: 1;
+    min-width: 0;
+    line-height: 1.25;
+  }
+
+  .nav-item.is-active {
+    color: var(--brick-text);
+    font-weight: 700;
+  }
+
+  .nav-item.is-active .nav-icon {
+    background: var(--brick);
+    color: #fff;
+  }
+
+  /* The marker the reference puts beside the active item */
+  .nav-item.is-active::before {
+    content: '';
+    position: absolute;
+    left: -16px;
+    top: 50%;
+    width: 4px;
+    height: 22px;
+    margin-top: -11px;
+    border-radius: 0 4px 4px 0;
+    background: var(--brick);
+  }
+
+  .account {
+    display: grid;
+    gap: var(--sp-2);
+    padding: var(--sp-3);
+    border-radius: var(--r-lg);
+    background: var(--s3);
+  }
+
+  .who {
+    padding: 0;
+  }
+
+  .account-copy {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .account-name {
+    color: var(--text);
+    font-size: var(--fs-md);
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .account-role {
+    color: var(--muted);
+    font-size: var(--fs-sm);
+  }
+
+  .connection {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 12px;
+    color: var(--muted);
+    font-size: var(--fs-xs);
+  }
+
+  .dot {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--online);
+    box-shadow: 0 0 0 3px rgba(124, 196, 106, 0.18);
+  }
+
+  .logout {
+    color: var(--muted);
+  }
+
+  /* Compact sidebar: icons only, labels kept for assistive tech and tooltips. */
+  .drawer-close {
+    display: none;
+  }
+
+  /* 1000-1279px: a narrow rail of icons. Labels stay for screen readers and
+     appear as tooltips. */
+  @media (max-width: 1279px) and (min-width: 1000px) {
+    .sidebar {
+      padding: 24px 12px 16px;
+      align-items: center;
+    }
+
+    .brand {
+      padding: 0;
+    }
+
+    .brand :global(.brand-lockup) {
+      display: none;
+    }
+
+    .brand :global(.brand-mark) {
+      display: inline-flex;
+    }
+
+    .nav-item {
+      justify-content: center;
+      width: 56px;
+      padding: 0;
+    }
+
+    .nav-item.is-active::before {
+      left: -12px;
+    }
+
+    .nav-label,
+    .account-copy,
+    .connection-label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+
+    .nav-count {
+      position: absolute;
+      top: 2px;
+      right: 0;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 4px;
+      font-size: 11px;
+    }
+
+    .who,
+    .connection {
+      justify-content: center;
+      padding: 0;
+    }
+
+    .account {
+      padding: var(--sp-2) 0;
+      justify-items: center;
+    }
+
+    .who {
+      flex-direction: column;
+      gap: var(--sp-2);
+    }
+  }
+
+  /* Below 1000px the sidebar is a drawer, opened from the top bar. */
+  @media (max-width: 999px) {
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      z-index: 80;
+      width: min(300px, 86vw);
+      height: 100vh;
+      height: 100dvh;
+      padding-top: 72px;
+      background: var(--glass-strong);
+      transform: translateX(-105%);
+      visibility: hidden;
+      transition:
+        transform var(--dur-slow) var(--ease-out),
+        visibility 0s linear var(--dur-slow);
+    }
+
+    :global(html[data-nav='open']) .sidebar {
+      transform: none;
+      visibility: visible;
+      transition: transform var(--dur-slow) var(--ease-out);
+    }
+
+    .drawer-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      display: grid;
+      place-items: center;
+      width: var(--target);
+      height: var(--target);
+      border: 0;
+      border-radius: 50%;
+      background: var(--s3);
+    }
+  }
+</style>

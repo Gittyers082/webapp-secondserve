@@ -11,10 +11,20 @@ const { title, description = 'Good products deserve a second chance.' } = Astro.
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script is:inline>
+      // Apply the saved theme before the first paint so a reload never flashes.
+      (function () {
+        var theme = 'dark';
+        try {
+          if (localStorage.getItem('secondserve-theme') === 'light') theme = 'light';
+        } catch (error) {}
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
     <title>SecondServe &mdash; {title}</title>
     <meta name="description" content={description} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -30,11 +40,20 @@ const { title, description = 'Good products deserve a second chance.' } = Astro.
     <meta property="og:image" content="/brand/secondserve-logo.png" />
   </head>
   <body>
-    <div class="window-chrome">
-      <span class="lights" aria-hidden="true"><i></i><i></i><i></i></span>
-      <span class="window-title">SecondServe &mdash; {title}</span>
+    <a class="skip-link" href="#main">Skip to main content</a>
+    <div data-app-root>
+      <div class="window-chrome" aria-hidden="true">
+        <span class="lights"><i></i><i></i><i></i></span>
+        <span class="window-title">SecondServe &mdash; {title}</span>
+      </div>
+      <slot />
     </div>
-    <slot />
+    <p class="sr-only" role="status" aria-live="polite" aria-atomic="true" data-announcer></p>
+    <p class="toast" data-toast hidden></p>
+    <script>
+      import { initThemeToggles } from '../scripts/theme';
+      initThemeToggles();
+    </script>
   </body>
 </html>
 
@@ -44,10 +63,11 @@ const { title, description = 'Good products deserve a second chance.' } = Astro.
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 44px;
+    height: var(--chrome-h);
     padding: 0 20px;
-    background: var(--paper-soft);
-    border-bottom: 1px solid var(--line);
+    background: var(--glass-strong);
+    -webkit-backdrop-filter: var(--blur);
+    backdrop-filter: var(--blur);
   }
 
   .lights {
@@ -61,11 +81,11 @@ const { title, description = 'Good products deserve a second chance.' } = Astro.
     width: 11px;
     height: 11px;
     border-radius: 50%;
-    background: var(--line-strong);
+    background: var(--s4);
   }
 
   .window-title {
-    font-size: 12.5px;
+    font-size: var(--fs-sm);
     color: var(--muted);
   }
 </style>

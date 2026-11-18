@@ -1,6 +1,7 @@
 ---
 import FoodArt from './FoodArt.astro';
-import { peso } from '../data/types';
+import Icon from './Icon.astro';
+import { discountPercent, peso } from '../data/types';
 import type { Listing } from '../data/types';
 
 interface Props {
@@ -21,15 +22,15 @@ const expiringSoon =
 const stateChip = (() => {
   switch (listing.status) {
     case 'sold':
-      return { label: 'Sold', tone: 'chip-tan' };
+      return { label: 'Sold', tone: 'pill-neutral' };
     case 'withdrawn':
-      return { label: 'Withdrawn', tone: 'chip-tan' };
+      return { label: 'Withdrawn', tone: 'pill-neutral' };
     case 'expired':
-      return { label: 'Expired', tone: 'chip-blush' };
+      return { label: 'Expired', tone: 'pill-danger' };
     default:
       return {
         label: listing.reserved ? `Active · ${listing.reserved} reserved` : 'Active',
-        tone: 'chip-mint',
+        tone: 'pill-ok',
       };
   }
 })();
@@ -37,7 +38,7 @@ const stateChip = (() => {
 const quantityLabel =
   listing.status === 'sold' && listing.originalQuantity
     ? `0 of ${listing.originalQuantity} left`
-    : String(listing.quantity);
+    : `${listing.quantity} left`;
 ---
 
 <article
@@ -47,106 +48,153 @@ const quantityLabel =
   data-status={listing.status}
   data-name={listing.name.toLowerCase()}
   data-shop={listing.shopName.toLowerCase()}
+  data-qty={listing.quantity}
+  data-expiry={listing.expiryLabel}
+  data-price={peso(listing.discountedPrice)}
 >
-  <div class="thumb">
+  <div
+    class="thumb"
+    data-select={selectable ? '' : undefined}
+    role={selectable ? 'button' : undefined}
+    tabindex={selectable ? 0 : undefined}
+    aria-pressed={selectable ? (selected ? 'true' : 'false') : undefined}
+    aria-label={selectable ? `Select ${listing.name}` : undefined}
+    aria-disabled={selectable && variant === 'shop' && expired ? true : undefined}
+  >
     <FoodArt art={listing.art} muted={expired} />
 
-    {listing.flagged && <span class="chip chip-blush badge">Flagged</span>}
-    {!listing.flagged && expired && <span class="chip chip-blush badge">Expired</span>}
-    {!listing.flagged && expiringSoon && <span class="chip chip-lime badge">Expiring soon</span>}
+    {listing.flagged && <span class="pill pill-danger badge">Flagged</span>}
+    {!listing.flagged && expired && <span class="pill pill-danger badge">Expired</span>}
+    {!listing.flagged && expiringSoon && <span class="pill pill-lime badge">Expiring soon</span>}
 
     {
       selectable && (
         <span class="tick" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
-            <path d="M4 12.5l5.5 5.5L20 6" />
-          </svg>
+          <Icon name="check" size={16} />
         </span>
       )
     }
   </div>
 
-  <div class="head">
-    <h3>{listing.name}</h3>
-    <span class="price">
+  <div class="body">
+    <h3 data-card-name>{listing.name}</h3>
+    {variant !== 'seller' && <p class="shop" data-card-shop>{listing.shopName}</p>}
+
+    <div class="price-row">
+      <span class="price">
+        {
+          listing.originalPrice > listing.discountedPrice && (
+            <del>
+              <span class="sr-only">Was </span>
+              {peso(listing.originalPrice)}
+            </del>
+          )
+        }
+        <ins>
+          <span class="sr-only">Now </span>
+          {peso(listing.discountedPrice)}
+        </ins>
+      </span>
       {
-        listing.originalPrice !== listing.discountedPrice && (
-          <del class="tnum">{peso(listing.originalPrice)}</del>
+        listing.originalPrice > listing.discountedPrice && (
+          <span class="discount">{discountPercent(listing)}% off</span>
         )
       }
-      <ins class="tnum">{peso(listing.discountedPrice)}</ins>
-    </span>
+    </div>
+
+    <p class="meta">
+      <span class="left tnum">{variant === 'shop' ? `${listing.quantity} left` : quantityLabel}</span>
+      <span class="expires">
+        <Icon name="clock" size={15} />
+        <span><span class="sr-only">Expires </span>{listing.expiryLabel}</span>
+      </span>
+    </p>
+
+    {
+      variant === 'shop' && (
+        <div class="foot foot-shop">
+          {expired ? (
+            <span class="btn btn-sm btn-block" aria-disabled="true">
+              Unavailable
+            </span>
+          ) : (
+            <a class="btn btn-sm btn-block" href={`/buyer/listing/${listing.id}`} aria-label={`Details: ${listing.name}`}>
+              Details
+            </a>
+          )}
+          <button
+            class="btn btn-sm btn-icon wish"
+            type="button"
+            aria-pressed="false"
+            aria-label={`Save ${listing.name} to wishlist`}
+            data-wishlist-toggle={listing.id}
+            data-wishlist-name={listing.name}
+          >
+            <Icon name="heart" size={18} />
+          </button>
+        </div>
+      )
+    }
+
+    {
+      variant !== 'shop' && (
+        <div class="foot">
+          <span
+            class:list={['pill', variant === 'moderation' && listing.flagged ? 'pill-danger' : stateChip.tone]}
+            data-state
+          >
+            {variant === 'moderation' && listing.flagged ? 'Flagged' : stateChip.label}
+          </span>
+        </div>
+      )
+    }
   </div>
-
-  {variant !== 'seller' && <p class="shop">{listing.shopName}</p>}
-
-  <dl class="meta">
-    <div>
-      <dd class="tnum">{variant === 'shop' ? listing.quantity : quantityLabel}</dd>
-      <dt>{variant === 'shop' ? 'Left' : 'Qty'}</dt>
-    </div>
-    <div>
-      <dd>{listing.expiryLabel}</dd>
-      <dt>Expires</dt>
-    </div>
-  </dl>
-
-  {
-    variant === 'shop' && (
-      <div class="foot">
-        {expired ? (
-          <button class="btn btn-sm" type="button" disabled>
-            Unavailable
-          </button>
-        ) : (
-          <button class="btn btn-sm js-details" type="button" data-details-for={listing.id}>
-            Details
-          </button>
-        )}
-      </div>
-    )
-  }
-
-  {
-    variant === 'seller' && (
-      <div class="foot">
-        <span class:list={['chip', stateChip.tone]}>{stateChip.label}</span>
-      </div>
-    )
-  }
-
-  {
-    variant === 'moderation' && (
-      <div class="foot">
-        <span class:list={['chip', listing.flagged ? 'chip-blush' : stateChip.tone]}>
-          {listing.flagged ? 'Flagged' : stateChip.label}
-        </span>
-      </div>
-    )
-  }
 </article>
 
 <style>
   .card {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    padding: 12px;
+    border-radius: var(--r-lg);
+    background: var(--s2);
+    -webkit-backdrop-filter: var(--blur);
+    backdrop-filter: var(--blur);
+    transition: background var(--dur) var(--ease-out), transform var(--dur) var(--ease-out);
+  }
+
+  .card:hover {
+    background: var(--glass-strong);
+    transform: translateY(-2px);
+  }
+
+  .card:hover :global(.photo) {
+    transform: scale(1.04);
   }
 
   .thumb {
     position: relative;
     border-radius: var(--r-md);
-    overflow: hidden;
   }
 
   .is-selectable .thumb {
-    border: 2px solid transparent;
     cursor: pointer;
-    transition: border-color 0.15s ease;
   }
 
-  .is-selectable:hover .thumb { border-color: var(--line-strong); }
-  .is-selected .thumb { border-color: var(--ink); }
+  .is-selectable .thumb[aria-disabled='true'] {
+    cursor: not-allowed;
+  }
+
+  .is-selectable .thumb:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 3px;
+  }
+
+  /* Selected: the glass takes on the brick, and the tick appears. */
+  .is-selected,
+  .is-selected:hover {
+    background: rgba(193, 61, 31, 0.24);
+  }
 
   .badge {
     position: absolute;
@@ -160,62 +208,106 @@ const quantityLabel =
     right: 10px;
     display: grid;
     place-items: center;
-    width: 24px;
-    height: 24px;
-    color: var(--ink);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--brick);
+    color: #fff;
     opacity: 0;
-    transition: opacity 0.15s ease;
+    transform: scale(0.6);
+    transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur) var(--ease-out);
   }
 
-  .is-selected .tick { opacity: 1; }
+  .is-selected .tick {
+    opacity: 1;
+    transform: none;
+  }
 
-  .head {
+  .body {
     display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 14px;
+    flex-direction: column;
+    flex: 1;
+    padding: 16px 8px 8px;
   }
 
-  .head h3 {
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.055em;
-    text-transform: uppercase;
-    line-height: 1.35;
+  h3 {
+    font-size: var(--fs-body);
+    font-weight: 700;
+    line-height: 1.3;
   }
 
   .shop {
-    margin-top: -4px;
-    color: var(--ink-soft);
-    font-size: 13.5px;
+    margin-top: 2px;
+    color: var(--muted);
+    font-size: var(--fs-sm);
+  }
+
+  .price-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
   }
 
   .meta {
     display: flex;
-    gap: 34px;
-    margin: 2px 0 0;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    margin-top: 8px;
   }
 
-  .meta dd {
-    margin: 0;
-    font-size: 14px;
+  .left {
+    color: var(--text-soft);
+    font-size: var(--fs-sm);
+    white-space: nowrap;
   }
 
-  .meta dt {
-    margin-top: 1px;
-    font-size: 9.5px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
+  .expires {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     color: var(--muted);
-    font-weight: 600;
+    font-size: var(--fs-sm);
+  }
+
+  .expires :global(svg) {
+    flex: none;
   }
 
   .foot {
-    margin-top: 4px;
+    margin-top: auto;
+    padding-top: 16px;
   }
 
-  .is-expired .head h3,
-  .is-expired .shop {
+  .foot-shop {
+    display: flex;
+    gap: 8px;
+  }
+
+  .foot-shop .wish {
+    flex: none;
+  }
+
+  .wish[aria-pressed='true'] {
+    background: var(--danger-bg);
+    color: var(--danger);
+  }
+
+  .wish[aria-pressed='true'] :global(svg) {
+    fill: currentColor;
+  }
+
+  .is-expired h3,
+  .is-expired .price ins {
     color: var(--muted);
+  }
+
+  .is-expired .discount {
+    background: var(--s4);
+    color: var(--text-soft);
   }
 </style>
