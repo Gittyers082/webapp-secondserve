@@ -8,7 +8,8 @@ import { accountDecisions, admin } from '../../data/store';
   username={admin.username}
   section="Approved/Declined Users"
   heading="Approved/Declined Users"
-  subtitle="A record of every past decision."
+  subtitle={`A record of all ${accountDecisions.length} past decisions.`}
+  highlight={`${accountDecisions.length} past decisions`}
 >
   <div class="table-wrap">
   <table class="table">
@@ -25,11 +26,16 @@ import { accountDecisions, admin } from '../../data/store';
       {
         accountDecisions.map((entry) => (
           <tr>
-            <td class="name">{entry.username}</td>
+            <td class="name">
+              <span class="who">
+                <span class="avatar" aria-hidden="true">{entry.username.charAt(0)}</span>
+                {entry.username}
+              </span>
+            </td>
             <td>{entry.role === 'seller' ? 'Seller' : 'Buyer'}</td>
             <td class="muted">{entry.shopName ?? '—'}</td>
             <td>
-              <span class:list={['chip', entry.decision === 'approved' ? 'chip-mint' : 'chip-blush']}>
+              <span class:list={['pill', entry.decision === 'approved' ? 'pill-ok' : 'pill-danger']}>
                 {entry.decision === 'approved' ? 'Approved' : 'Declined'}
               </span>
             </td>

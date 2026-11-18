@@ -1,5 +1,7 @@
 ---
 import AppLayout from '../../layouts/AppLayout.astro';
+import FoodArt from '../../components/FoodArt.astro';
+import Icon from '../../components/Icon.astro';
 import { buyer, pendingOrders } from '../../data/store';
 import { peso } from '../../data/types';
 
@@ -12,13 +14,17 @@ const readyShop = pendingOrders.find((order) => order.status === 'ready');
   username={buyer.username}
   section="My Pending Orders"
   heading="My Pending Orders"
-  subtitle="Track what you reserved and collect it in person."
+  subtitle={`${pendingOrders.length} orders reserved. Collect each one in person.`}
+  highlight={`${pendingOrders.length} orders`}
 >
   {
     readyCount > 0 && readyShop && (
       <p class="notice notice-lime banner">
+        <Icon name="check" />
+        <span>
         {readyCount} order{readyCount === 1 ? ' is' : 's are'} ready for pickup at {readyShop.shopName} &middot;
         collect before {readyShop.expiryLabel.toLowerCase()}
+        </span>
       </p>
     )
   }
@@ -39,20 +45,25 @@ const readyShop = pendingOrders.find((order) => order.status === 'ready');
       {
         pendingOrders.map((order) => (
           <tr data-order={order.id}>
-            <td class="name">{order.foodName}</td>
+            <td class="name">
+              <span class="food-cell">
+                <span class="food-thumb"><FoodArt art={order.art} ratio="1 / 1" /></span>
+                {order.foodName}
+              </span>
+            </td>
             <td class="num">{order.quantity}</td>
             <td class="num">{peso(order.total)}</td>
             <td class="muted">{order.pickupLocation}</td>
             <td>
               {order.status === 'ready' ? (
-                <span class="chip chip-mint">Ready for pickup</span>
+                <span class="pill pill-ok">Ready for pickup</span>
               ) : (
-                <span class="chip chip-tan">Reserved</span>
+                <span class="pill pill-neutral">Reserved</span>
               )}
             </td>
             <td class="actions">
               {order.status === 'ready' ? (
-                <button class="btn btn-sm btn-dark" type="button" data-collect={order.id} aria-label={`Already picked up: ${order.foodName}`}>
+                <button class="btn btn-sm btn-light" type="button" data-collect={order.id} aria-label={`Already picked up: ${order.foodName}`}>
                   Already picked up
                 </button>
               ) : (
@@ -66,8 +77,8 @@ const readyShop = pendingOrders.find((order) => order.status === 'ready');
   </table>
   </div>
 
-  <p class="hint footnote">
-    Tap Already Picked Up only after you have collected your food. The order then moves to My Order History.
+  <p class="hint page-note">
+    Choose Already picked up only after you have collected your food. The order then moves to My Order History.
   </p>
 
   <p class="no-results" data-empty hidden>Nothing pending. Everything you reserved has been collected.</p>
@@ -88,7 +99,7 @@ const readyShop = pendingOrders.find((order) => order.status === 'ready');
       if (remaining === 0) {
         document.querySelector<HTMLElement>('.orders')?.setAttribute('hidden', '');
         document.querySelector<HTMLElement>('.banner')?.setAttribute('hidden', '');
-        document.querySelector<HTMLElement>('.footnote')?.setAttribute('hidden', '');
+        document.querySelector<HTMLElement>('.page-note')?.setAttribute('hidden', '');
         const empty = document.querySelector<HTMLElement>('[data-empty]');
         if (empty) empty.hidden = false;
       }
@@ -96,8 +107,3 @@ const readyShop = pendingOrders.find((order) => order.status === 'ready');
   });
 </script>
 
-<style>
-  .banner {
-    margin-bottom: 26px;
-  }
-</style>

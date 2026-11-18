@@ -2,6 +2,7 @@
 import AppLayout from '../../layouts/AppLayout.astro';
 import FoodArt from '../../components/FoodArt.astro';
 import Dialog from '../../components/Dialog.astro';
+import Icon from '../../components/Icon.astro';
 import { seller, sellerListings } from '../../data/store';
 import { peso } from '../../data/types';
 
@@ -14,11 +15,11 @@ const draft = sellerListings[0]!;
   section="Add Listing"
   heading="Add Listing"
   subtitle="Turn tomorrow's surplus into today's sale."
-  accent="today's sale."
+  highlight="today's sale"
 >
   <div class="add">
     <!-- Listing details -------------------------------------------------- -->
-    <form class="form" method="post" data-demo-form data-next="/seller/listed-items">
+    <form class="form panel" method="post" data-demo-form data-next="/seller/listed-items">
       <div class="field">
         <label class="field-label" for="food-name">Food name</label>
         <input class="input" id="food-name" name="name" value={draft.name} required />
@@ -75,18 +76,21 @@ const draft = sellerListings[0]!;
       </div>
     </form>
 
+  </div>
+
+  <Fragment slot="rail">
     <!-- Product photo ---------------------------------------------------- -->
-    <aside class="photo">
+    <section class="panel photo-panel" aria-labelledby="photo-title">
       <div class="row-between">
-        <p class="eyebrow">Product photo</p>
-        <span class="chip chip-mint" data-photo-state="added">Photo added</span>
-        <span class="chip chip-blush" data-photo-state="empty" hidden>Required</span>
+        <h2 class="panel-title" id="photo-title">Product photo</h2>
+        <span class="pill pill-ok" data-photo-state="added">Photo added</span>
+        <span class="pill pill-danger" data-photo-state="empty" hidden>Required</span>
       </div>
 
       <!-- With a photo -->
       <div data-photo-added>
         <div class="photo-frame">
-          <FoodArt art={draft.art} />
+          <FoodArt art={draft.art} ratio="4 / 3" />
         </div>
 
         <p class="photo-name">{draft.name}</p>
@@ -96,9 +100,17 @@ const draft = sellerListings[0]!;
         <p class="small muted file">ube-pandesal.jpg &middot; 1.2 MB &middot; taken with camera</p>
 
         <div class="photo-actions">
-          <button class="btn btn-sm btn-dark" type="button" data-dialog-open="camera" aria-haspopup="dialog">Retake with camera</button>
-          <button class="btn btn-sm" type="button">Replace from file</button>
-          <button class="btn btn-sm btn-danger" type="button" data-remove-photo>Remove</button>
+          <button class="btn btn-sm btn-light" type="button" data-dialog-open="camera" aria-haspopup="dialog">
+            <Icon name="camera" />
+            Retake
+          </button>
+          <button class="btn btn-sm" type="button">
+            <Icon name="upload" />
+            Replace
+          </button>
+          <button class="btn btn-sm btn-danger btn-icon" type="button" data-remove-photo aria-label="Remove photo" title="Remove photo">
+            <Icon name="trash" />
+          </button>
         </div>
 
         <p class="hint">Shoppers see this photo first. It is saved with the listing.</p>
@@ -110,14 +122,20 @@ const draft = sellerListings[0]!;
           <p class="empty-title">Show shoppers your food</p>
           <p class="hint">Take a photo with your computer&rsquo;s camera, or upload one you already have.</p>
           <div class="photo-actions center">
-            <button class="btn btn-sm btn-dark" type="button" data-dialog-open="camera" aria-haspopup="dialog">Take photo</button>
-            <button class="btn btn-sm" type="button" data-restore-photo>Upload from computer</button>
+            <button class="btn btn-sm btn-light" type="button" data-dialog-open="camera" aria-haspopup="dialog">
+              <Icon name="camera" />
+              Take photo
+            </button>
+            <button class="btn btn-sm" type="button" data-restore-photo>
+              <Icon name="upload" />
+              Upload
+            </button>
           </div>
         </div>
         <p class="hint">JPG or PNG, up to 5 MB. Saved with the listing.</p>
       </div>
-    </aside>
-  </div>
+    </section>
+  </Fragment>
 
   <!-- Camera dialogs ----------------------------------------------------- -->
   <Dialog id="camera" title="Take a product photo" wide>
@@ -131,8 +149,8 @@ const draft = sellerListings[0]!;
       </div>
 
       <div class="viewfinder">
-        <span class="chip chip-blush live">Live</span>
-        <FoodArt art={draft.art} />
+        <span class="pill pill-danger live">Live</span>
+        <FoodArt art={draft.art} ratio="16 / 10" />
       </div>
 
       <p class="hint">Camera access allowed. No camera? Use Upload from Computer.</p>
@@ -152,8 +170,8 @@ const draft = sellerListings[0]!;
     wide
   >
     <div class="viewfinder captured">
-      <span class="chip chip-mint live">Captured</span>
-      <FoodArt art={draft.art} />
+      <span class="pill pill-ok live">Captured</span>
+      <FoodArt art={draft.art} ratio="16 / 10" />
     </div>
 
     <div class="dialog-actions">
@@ -200,10 +218,7 @@ const draft = sellerListings[0]!;
 
 <style>
   .add {
-    display: grid;
-    grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
-    gap: 60px;
-    align-items: start;
+    max-width: 860px;
   }
 
   .eligibility {
@@ -214,18 +229,17 @@ const draft = sellerListings[0]!;
   .form-actions {
     display: flex;
     gap: 12px;
-    margin-top: 22px;
+    margin-top: 24px;
+  }
+
+  .photo-panel {
+    display: grid;
+    gap: 14px;
+    padding: 20px;
   }
 
   .photo-frame {
-    margin-top: 12px;
-    border-radius: var(--r-md);
-    overflow: hidden;
-    background: var(--tan-deep);
-  }
-
-  .photo-frame :global(svg) {
-    padding: 22px 0;
+    margin-top: 2px;
   }
 
   .empty-frame {
@@ -233,24 +247,25 @@ const draft = sellerListings[0]!;
     place-content: center;
     text-align: center;
     gap: 10px;
-    padding: 48px 32px;
-    background: var(--tan);
-    border: 1px dashed var(--line-control);
+    min-height: 240px;
+    padding: 32px 24px;
+    border: 1.5px dashed var(--line-control);
+    border-radius: var(--r-lg);
   }
 
   .empty-title {
-    font-family: var(--display);
-    font-size: var(--fs-display-s);
+    font-size: var(--fs-lg);
+    font-weight: 700;
   }
 
   .photo-name {
-    margin-top: 16px;
-    font-size: var(--fs-lead);
+    margin-top: 14px;
+    font-size: var(--fs-lg);
     font-weight: 700;
   }
 
   .file {
-    margin-top: 8px;
+    margin-top: 6px;
   }
 
   .photo-actions {
@@ -267,14 +282,12 @@ const draft = sellerListings[0]!;
 
   .camera-select {
     max-width: 280px;
+    margin-top: 16px;
   }
 
   .viewfinder {
     position: relative;
     margin-top: 16px;
-    border-radius: var(--r-md);
-    overflow: hidden;
-    background: var(--tan-deep);
   }
 
   .viewfinder .live {
@@ -284,28 +297,7 @@ const draft = sellerListings[0]!;
     z-index: 2;
   }
 
-  .viewfinder :global(svg) {
-    padding: 24px 0;
-  }
-
   .captured {
     margin-bottom: 4px;
-  }
-
-  @media (max-width: 1200px) {
-    .add {
-      gap: 36px;
-    }
-  }
-
-  @media (max-width: 1100px) {
-    .add {
-      grid-template-columns: 1fr;
-      gap: 34px;
-    }
-
-    .photo {
-      max-width: 560px;
-    }
   }
 </style>

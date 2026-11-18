@@ -1,6 +1,8 @@
 ---
 import AppLayout from '../../layouts/AppLayout.astro';
 import Dialog from '../../components/Dialog.astro';
+import FoodArt from '../../components/FoodArt.astro';
+import Icon from '../../components/Icon.astro';
 import { buyer, historyTotal, orderHistory } from '../../data/store';
 import { peso } from '../../data/types';
 ---
@@ -10,10 +12,14 @@ import { peso } from '../../data/types';
   username={buyer.username}
   section="My Order History"
   heading="My Order History"
-  subtitle="Every purchase you have given a second chance."
+  subtitle={`${orderHistory.length} purchases given a second chance.`}
+  highlight={`${orderHistory.length} purchases`}
 >
-  <div class="history-head">
-    <button class="btn btn-sm btn-danger" type="button" data-dialog-open="clear-history" aria-haspopup="dialog">Clear history</button>
+  <div class="history-head" slot="actions">
+    <button class="btn btn-danger" type="button" data-dialog-open="clear-history" aria-haspopup="dialog">
+      <Icon name="trash" />
+      Clear history
+    </button>
   </div>
 
   <div data-history>
@@ -33,7 +39,12 @@ import { peso } from '../../data/types';
         {
           orderHistory.map((order) => (
             <tr>
-              <td class="name">{order.foodName}</td>
+              <td class="name">
+                <span class="food-cell">
+                  <span class="food-thumb"><FoodArt art={order.art} ratio="1 / 1" /></span>
+                  {order.foodName}
+                </span>
+              </td>
               <td class="num">{order.quantity}</td>
               <td class="num">{peso(order.total)}</td>
               <td>{order.shopName}</td>
@@ -54,7 +65,7 @@ import { peso } from '../../data/types';
   <div class="empty" data-history-empty hidden>
     <h2>No past orders yet.</h2>
     <p>Collected orders show up here with their pickup details.</p>
-    <a class="btn btn-dark" href="/buyer/shop">Browse the shop</a>
+    <a class="btn btn-primary" href="/buyer/shop">Browse the shop</a>
   </div>
 
   <Dialog
@@ -88,16 +99,11 @@ import { peso } from '../../data/types';
 </script>
 
 <style>
-  .history-head {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 14px;
-  }
-
   .totals {
     margin-top: 20px;
+    padding-right: 24px;
     text-align: right;
-    font-size: var(--fs-small);
-    color: var(--muted);
+    font-size: var(--fs-md);
+    color: var(--text-soft);
   }
 </style>

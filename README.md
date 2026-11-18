@@ -73,12 +73,15 @@ The dev server prints a local address, usually <http://localhost:4321>.
 public/
   brand/        secondserve-logo.png (full square lockup),
                 secondserve-mark.png (tray-and-hand tile, rounded)
+  photos/       Food photographs, one per listing type, with CREDITS.md
 src/
-  components/   Logo, FoodArt, TopBar, StatusBar, ListingCard,
+  components/   Logo, Icon, Sidebar, FoodArt (listing photo), ListingCard,
                 QuantityStepper, Dialog, ProfilePanel
-  data/         types.ts (domain model), store.ts (seed data), nav.ts (tab bars)
-  layouts/      BaseLayout (window chrome), AppLayout (signed-in shell),
-                AuthLayout (split hero for connect, sign-in, register)
+  data/         types.ts (domain model), store.ts (seed data), nav.ts (sidebar
+                items and their icons), icons.ts (icon names)
+  layouts/      BaseLayout (window chrome), AppLayout (sidebar, main column and
+                an optional summary rail), AuthLayout (split screen for connect,
+                sign-in and register)
   pages/        One file per screen, grouped by role
   scripts/      Shared client behaviour: dialog (focus trap and restore),
                 filters, selection, announce (screen-reader status),
@@ -104,9 +107,21 @@ src/
   small TypeScript modules in `src/scripts/`, imported by each page's `<script>`
   block, so pages ship almost no JavaScript.
 - **Breakpoints.** Screens are laid out for 1440px and checked down to 1024px.
-  Below 1200px listing grids go to two columns; below 1100px side panels stack.
-- **Illustrations are inline SVG** in `FoodArt.astro`, keyed by the `FoodArt`
-  union, so there are no image assets to keep in sync.
+  Below 1280px the sidebar folds to icons (labels stay available to screen
+  readers and as tooltips) and the rail narrows; below 1000px the rail moves
+  under the main column.
+- **The look.** A dark working surface built from the brand's near-black ink,
+  brick on actions and the active place, lime on counts and items that need
+  attention, and the cream paper colour for text. Every signed-in screen has the
+  same three parts: a sidebar with the role's sections, the main column, and,
+  where a screen acts on one thing at a time, a summary rail on the right (the
+  selected listing and cart on Shop, the order summary on View Cart, the
+  selected listing's actions on Manage Listings and Item Moderation).
+- **Photos, not drawings.** `FoodArt.astro` shows an openly licensed photograph
+  for each `FoodArt` key from `public/photos/`. They stand in for sellers' own
+  uploads; `public/photos/CREDITS.md` lists each one's author and licence.
+- **Icons** are drawn once in `Icon.astro` on a 24px grid with one stroke
+  weight.
 - **Branding** lives in `public/brand/`. `Logo.astro` takes a `variant`:
   `lockup` (mark plus wordmark — the app chrome and the sign-in screens),
   `mark` (the tile alone) or `full` (the square logo, wordmark included). The

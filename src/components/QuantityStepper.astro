@@ -54,6 +54,7 @@ const { value = 1, min = 1, max = 99, label = 'Quantity', name = 'quantity' } = 
   .stepper {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 14px;
   }
 
@@ -64,41 +65,35 @@ const { value = 1, min = 1, max = 99, label = 'Quantity', name = 'quantity' } = 
   .controls {
     display: inline-flex;
     align-items: center;
-    gap: 2px;
-    height: 38px;
-    padding: 0 6px;
-    border: 1px solid var(--line-control);
-    border-radius: var(--r-pill);
-    background: var(--field);
+    gap: 10px;
   }
 
   .step {
-    width: 30px;
-    height: 30px;
-    border: 0;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--line-control);
     border-radius: 50%;
     background: transparent;
-    font-size: 16px;
+    color: var(--text);
+    font-size: 17px;
     line-height: 1;
-    color: var(--ink);
+    transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
   }
 
-  .step {
-    transition: background var(--dur-fast) var(--ease-out);
-  }
-
-  .step:hover:not(:disabled) { background: var(--ink-hover); }
-  .step:active:not(:disabled) { background: var(--ink-press); }
+  .step:hover:not(:disabled) { background: var(--hover); border-color: var(--text); }
+  .step:active:not(:disabled) { background: var(--press); }
 
   .step:disabled {
-    color: var(--placeholder);
+    opacity: 0.4;
     cursor: not-allowed;
   }
 
   .value {
-    min-width: 26px;
+    min-width: 22px;
     text-align: center;
     font-size: var(--fs-body);
-    font-weight: 600;
+    font-weight: 700;
   }
 </style>

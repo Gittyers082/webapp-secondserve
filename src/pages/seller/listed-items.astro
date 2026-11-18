@@ -1,6 +1,7 @@
 ---
 import AppLayout from '../../layouts/AppLayout.astro';
 import ListingCard from '../../components/ListingCard.astro';
+import Icon from '../../components/Icon.astro';
 import { seller, sellerListings } from '../../data/store';
 ---
 
@@ -9,17 +10,18 @@ import { seller, sellerListings } from '../../data/store';
   username={seller.username}
   section="My Listed Items"
   heading="My Listed Items"
-  subtitle="A read-only look at everything on the shelf."
+  subtitle={`${sellerListings.length} listings on the shelf, read-only.`}
+  highlight={`${sellerListings.length} listings`}
 >
   <div class="listing-grid">
     {sellerListings.map((listing) => <ListingCard listing={listing} variant="seller" />)}
 
     <a class="grid-tile" href="/seller/add-listing">
-      <span class="grid-tile-plus" aria-hidden="true">+</span>
+      <span class="grid-tile-icon" aria-hidden="true"><Icon name="plus" /></span>
       <span class="grid-tile-title">Add a new listing</span>
       <span class="small muted">Open the Add Listing tab</span>
     </a>
   </div>
 
-  <p class="hint footnote">Read-only. To change or remove a listing, open Manage Listings.</p>
+  <p class="hint page-note">Read-only. To change or remove a listing, open Manage Listings.</p>
 </AppLayout>

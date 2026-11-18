@@ -12,9 +12,9 @@ const initial = role === 'seller' ? 'B' : username.charAt(0).toUpperCase();
 
 <div class="profile">
   <aside class="identity panel">
-    <span class="avatar" aria-hidden="true">{initial}</span>
+    <span class="avatar avatar-lg" aria-hidden="true">{initial}</span>
     <p class="username">{username}</p>
-    <p class="chip chip-tan">{role === 'seller' ? 'Seller account' : 'Buyer account'}</p>
+    <p class="pill pill-neutral">{role === 'seller' ? 'Seller account' : 'Buyer account'}</p>
     <p class="hint note">
       {role === 'seller'
         ? 'Buyers see your shop name on every listing.'
@@ -23,7 +23,7 @@ const initial = role === 'seller' ? 'B' : username.charAt(0).toUpperCase();
   </aside>
 
   <div class="forms">
-    <form class="block" method="post" data-demo-form data-success="Username updated.">
+    <form class="block panel" method="post" data-demo-form data-success="Username updated.">
       <div class="field">
         <label class="field-label" for="username-field">Update username</label>
         <input class="input" id="username-field" name="username" value={username} autocomplete="username" required />
@@ -34,7 +34,7 @@ const initial = role === 'seller' ? 'B' : username.charAt(0).toUpperCase();
       </div>
     </form>
 
-    <form class="block" method="post" data-demo-form data-success="Password changed.">
+    <form class="block panel" method="post" data-demo-form data-success="Password changed.">
       <div class="field">
         <label class="field-label" for="current-password">Current password</label>
         <input class="input" id="current-password" name="currentPassword" type="password" value="password" autocomplete="current-password" required />
@@ -57,7 +57,7 @@ const initial = role === 'seller' ? 'B' : username.charAt(0).toUpperCase();
       </div>
     </form>
 
-    <a class="btn btn-danger logout" href="/login">Log out</a>
+    <a class="btn btn-danger logout" href="/login">Log out of SecondServe</a>
   </div>
 </div>
 
@@ -69,77 +69,62 @@ const initial = role === 'seller' ? 'B' : username.charAt(0).toUpperCase();
 <style>
   .profile {
     display: grid;
-    grid-template-columns: 330px minmax(0, 1fr);
-    gap: 40px;
+    grid-template-columns: 300px minmax(0, 1fr);
+    gap: 24px;
     align-items: start;
   }
 
   .identity {
+    display: grid;
+    justify-items: center;
+    gap: 10px;
     text-align: center;
+    padding: 32px 24px;
   }
 
-  .avatar {
-    display: grid;
-    place-items: center;
-    width: 72px;
-    height: 72px;
-    margin: 6px auto 16px;
-    border-radius: 50%;
-    background: var(--ink);
-    color: var(--paper);
-    font-size: 28px;
-    font-weight: 700;
+  .avatar-lg {
+    width: 84px;
+    height: 84px;
+    margin-bottom: 6px;
+    background: var(--brick);
+    color: #fff;
+    font-size: 32px;
   }
 
   .username {
-    font-family: var(--display);
-    font-size: var(--fs-display-m);
-    line-height: 1.1;
-  }
-
-  .identity .chip {
-    margin-top: 10px;
+    font-size: var(--fs-h2);
+    font-weight: 700;
+    line-height: 1.2;
   }
 
   .note {
-    margin-top: 16px;
-  }
-
-  .block {
-    background: var(--tan);
-    border-radius: var(--r-lg);
-    padding: 24px;
+    margin-top: 6px;
   }
 
   .block + .block {
-    margin-top: 18px;
+    margin-top: 16px;
   }
 
   .form-foot {
     display: flex;
     align-items: center;
     gap: 16px;
-    margin-top: 18px;
+    margin-top: 20px;
   }
 
   .form-status {
-    color: var(--mint-ink);
-    font-size: var(--fs-small);
+    color: var(--ok);
+    font-size: var(--fs-sm);
     font-weight: 600;
   }
 
   .logout {
-    margin-top: 18px;
-  }
-
-  .block .field-row {
     margin-top: 16px;
   }
 
-  @media (max-width: 1100px) {
+  @media (max-width: 1279px) {
     .profile {
-      grid-template-columns: 280px minmax(0, 1fr);
-      gap: 28px;
+      grid-template-columns: 240px minmax(0, 1fr);
     }
   }
 </style>

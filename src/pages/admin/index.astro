@@ -1,6 +1,7 @@
 ---
 import AppLayout from '../../layouts/AppLayout.astro';
 import Dialog from '../../components/Dialog.astro';
+import Icon from '../../components/Icon.astro';
 import { admin, users } from '../../data/store';
 
 const filters = [
@@ -16,14 +17,14 @@ const filters = [
   username={admin.username}
   section="User Management"
   heading="User Management"
-  subtitle="Keep the community safe and active."
-  accent="safe and active."
+  subtitle={`${users.length} accounts. Keep the community safe and active.`}
+  highlight={`${users.length} accounts`}
 >
   <div class="toolbar">
     <div class="search">
       <label class="sr-only" for="user-search">Search username</label>
       <input class="input" id="user-search" type="search" placeholder="Search username&hellip;" data-search />
-      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M16.5 16.5L21 21"></path></svg>
+      <span class="search-button" aria-hidden="true"><Icon name="search" /></span>
     </div>
 
     <div class="filters" role="group" aria-label="Filter users">
@@ -51,11 +52,16 @@ const filters = [
       {
         users.map((user) => (
           <tr data-user={user.username} data-role={user.role} data-status={user.status}>
-            <td class="name">{user.username}</td>
+            <td class="name">
+              <span class="who">
+                <span class="avatar" aria-hidden="true">{user.username.charAt(0)}</span>
+                {user.username}
+              </span>
+            </td>
             <td>{user.role === 'seller' ? 'Seller' : 'Buyer'}</td>
             <td>
               <span
-                class:list={['chip', user.status === 'banned' ? 'chip-blush' : 'chip-mint']}
+                class:list={['pill', user.status === 'banned' ? 'pill-danger' : 'pill-ok']}
                 data-status-chip
               >
                 {user.status === 'banned' ? 'Banned' : 'Active'}
@@ -117,7 +123,7 @@ const filters = [
 
     const user = row.dataset.user ?? 'User';
     row.dataset.status = banned ? 'banned' : 'active';
-    chip.className = `chip ${banned ? 'chip-blush' : 'chip-mint'}`;
+    chip.className = `pill ${banned ? 'pill-danger' : 'pill-ok'}`;
     chip.textContent = banned ? 'Banned' : 'Active';
     button.className = `btn btn-sm${banned ? '' : ' btn-danger'}`;
     button.textContent = banned ? 'Unban' : 'Ban user';
@@ -153,8 +159,17 @@ const filters = [
 </script>
 
 <style>
+  .toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px 20px;
+    margin-bottom: 24px;
+  }
 
   .toolbar .search {
-    width: min(340px, 100%);
+    flex: 1;
+    min-width: 260px;
+    max-width: 420px;
   }
 </style>

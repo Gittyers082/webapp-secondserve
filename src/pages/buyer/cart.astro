@@ -1,6 +1,7 @@
 ---
 import AppLayout from '../../layouts/AppLayout.astro';
 import FoodArt from '../../components/FoodArt.astro';
+import Icon from '../../components/Icon.astro';
 import { buyer, cart, cartItemCount, cartShopCount, cartTotal } from '../../data/store';
 import { peso } from '../../data/types';
 import type { CartLine } from '../../data/types';
@@ -19,113 +20,118 @@ const isEmpty = cart.length === 0;
   username={buyer.username}
   section="View Cart"
   heading="View Cart"
-  subtitle="Reserve now, collect from each shop before closing."
-  accent="before closing."
+  subtitle={`Reserve now, then collect from ${cartShopCount} shops before closing.`}
+  highlight={`${cartShopCount} shops`}
 >
   <div class="empty" data-cart-empty hidden={!isEmpty}>
     <h2>Your cart is empty.</h2>
     <p>Browse the Shop to find discounted food.</p>
-    <a class="btn btn-dark" href="/buyer/shop">
-      Browse the shop
-    </a>
+    <a class="btn btn-primary" href="/buyer/shop">Browse the shop</a>
   </div>
 
   {
     !isEmpty && (
-      <div class="cart" data-cart>
-        <div class="lines">
-      {Object.entries(shops).map(([shopName, lines]) => (
-        <section class="shop-group">
-          <header class="shop-head">
-            <h2>{shopName}</h2>
-            <p class="small muted">&middot; Pickup: {lines[0]!.pickupLocation}</p>
-          </header>
+      <div class="lines" data-cart>
+        {Object.entries(shops).map(([shopName, lines]) => (
+          <section class="shop-group">
+            <header class="shop-head">
+              <span class="shop-icon">
+                <Icon name="store" size={18} />
+              </span>
+              <div>
+                <h2 class="shop-name">{shopName}</h2>
+                <p class="small muted">Pickup: {lines[0]!.pickupLocation}</p>
+              </div>
+            </header>
 
-          <div class="table-wrap">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Item</th>
-                <th class="num">Quantity</th>
-                <th class="num">Price</th>
-                <th>Expiry</th>
-                <th><span class="sr-only">Actions</span></th>
-              </tr>
-            </thead>
-            <tbody>
+            <ul class="items">
               {lines.map((line) => (
-                <tr data-line={line.listingId}>
-                  <td>
-                    <div class="item">
-                      <span class="item-art">
-                        <FoodArt art={line.art} />
-                      </span>
-                      <span class="item-name" data-line-name>{line.foodName}</span>
-                    </div>
-                  </td>
-                  <td class="num" data-qty={line.quantity}>&times; {line.quantity}</td>
-                  <td class="num">
-                    <p class="line-total" data-line-total={line.quantity * line.unitPrice}>
-                      {peso(line.quantity * line.unitPrice)}
+                <li class="item" data-line={line.listingId}>
+                  <span class="item-photo">
+                    <FoodArt art={line.art} ratio="1 / 1" />
+                  </span>
+                  <div class="item-copy">
+                    <p class="item-name" data-line-name>{line.foodName}</p>
+                    <p class="small muted">
+                      {peso(line.unitPrice)} each &middot; <span class="tnum" data-qty={line.quantity}>&times; {line.quantity}</span>
                     </p>
-                    <p class="small muted">{peso(line.unitPrice)} each</p>
-                  </td>
-                  <td>
-                    <p>{line.expiryLabel}</p>
-                    {line.expiringSoon && <span class="chip chip-lime expiry-chip">Expiring soon</span>}
-                  </td>
-                  <td class="actions">
-                    <div class="line-actions">
-                      <button class="btn btn-sm" type="button" aria-label={`Edit quantity: ${line.foodName}`}>
-                        Edit quantity
-                      </button>
-                      <button
-                        class="btn btn-sm btn-danger"
-                        type="button"
-                        data-remove={line.listingId}
-                        aria-label={`Remove ${line.foodName}`}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                  </div>
+                  <div class="item-expiry">
+                    <p class="small soft">{line.expiryLabel}</p>
+                    {line.expiringSoon && <span class="pill pill-warn">Expiring soon</span>}
+                  </div>
+                  <p class="item-total tnum" data-line-total={line.quantity * line.unitPrice}>
+                    {peso(line.quantity * line.unitPrice)}
+                  </p>
+                  <div class="item-actions">
+                    <button class="btn btn-sm btn-light btn-icon" type="button" aria-label={`Edit quantity: ${line.foodName}`} title="Edit quantity">
+                      <Icon name="pencil" size={16} />
+                    </button>
+                    <button
+                      class="btn btn-sm btn-danger btn-icon"
+                      type="button"
+                      data-remove={line.listingId}
+                      aria-label={`Remove ${line.foodName}`}
+                      title="Remove"
+                    >
+                      <Icon name="trash" size={16} />
+                    </button>
+                  </div>
+                </li>
               ))}
-            </tbody>
-          </table>
+            </ul>
+          </section>
+        ))}
+      </div>
+    )
+  }
+
+  {
+    !isEmpty && (
+      <Fragment slot="rail">
+        <div class="panel summary" data-cart>
+          <div class="panel-inset">
+            <h2 class="summary-title">Pickups</h2>
+            <ul class="pickups">
+              {Object.entries(shops).map(([shopName, lines]) => (
+                <li class="pickup">
+                  <Icon name="pin" size={18} />
+                  <span>
+                    <strong>{shopName}</strong>
+                    <span class="small muted">Before {lines[0]!.expiryLabel.toLowerCase()}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
-        </section>
-      ))}
-    </div>
 
-    <aside class="summary panel">
-      <p class="eyebrow">Order summary</p>
+          <div class="summary-body">
+            <div class="row-between">
+              <h2 class="summary-title">
+                <Icon name="cart" size={18} />
+                Order summary
+              </h2>
+            </div>
 
-      <div class="row-between summary-line">
-        <span>
-          <span data-item-count>{cartItemCount}</span> items &middot; <span data-shop-count>{cartShopCount}</span> shops
-        </span>
-        <span class="tnum" data-subtotal>
-          {peso(cartTotal)}
-        </span>
-      </div>
+            <dl class="totals">
+              <div class="row-between">
+                <dt class="soft">
+                  <span data-item-count>{cartItemCount}</span> items &middot; <span data-shop-count>{cartShopCount}</span> shops
+                </dt>
+                <dd class="tnum" data-subtotal>{peso(cartTotal)}</dd>
+              </div>
+              <div class="row-between grand">
+                <dt>Total</dt>
+                <dd class="tnum" data-total>{peso(cartTotal)}</dd>
+              </div>
+            </dl>
 
-      <div class="row-between total">
-        <span>Total</span>
-        <span class="tnum" data-total>
-          {peso(cartTotal)}
-        </span>
-      </div>
+            <p class="hint">Reserving holds the food for you. Collect each order from its shop before the expiry time.</p>
 
-      <p class="hint">
-        Reserving holds the food for you. Collect each order from its shop before the expiry time.
-      </p>
-
-      <a class="btn btn-primary btn-lg btn-block" href="/buyer/pending">
-        Checkout
-      </a>
-    </aside>
-  </div>
+            <a class="btn btn-primary btn-lg btn-block" href="/buyer/pending">Reserve and check out</a>
+          </div>
+        </div>
+      </Fragment>
     )
   }
 </AppLayout>
@@ -174,7 +180,7 @@ const isEmpty = cart.length === 0;
       const { total } = recalculate();
 
       if (rows().length === 0) {
-        document.querySelector<HTMLElement>('[data-cart]')?.setAttribute('hidden', '');
+        document.querySelectorAll<HTMLElement>('[data-cart]').forEach((node) => node.setAttribute('hidden', ''));
         const empty = document.querySelector<HTMLElement>('[data-cart-empty]');
         if (empty) empty.hidden = false;
         empty?.querySelector<HTMLElement>('a')?.focus();
@@ -190,108 +196,157 @@ const isEmpty = cart.length === 0;
 </script>
 
 <style>
-  .cart {
+  .lines {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 340px;
-    gap: 40px;
-    align-items: start;
-  }
-
-  .shop-group + .shop-group {
-    margin-top: 34px;
+    gap: 28px;
   }
 
   .shop-head {
     display: flex;
-    align-items: baseline;
-    gap: 10px;
-    margin-bottom: 14px;
-    flex-wrap: wrap;
-  }
-
-  .shop-head h2 {
-    font-size: var(--fs-data);
-    font-weight: 700;
-    letter-spacing: var(--track-caps);
-    text-transform: uppercase;
-  }
-
-  /* Both shop groups share one set of column widths so they line up. */
-  .lines .table {
-    table-layout: fixed;
-  }
-
-  .lines .table th:nth-child(2) { width: 96px; }
-  .lines .table th:nth-child(3) { width: 120px; }
-  .lines .table th:nth-child(4) { width: 170px; }
-  .lines .table th:nth-child(5) { width: 250px; }
-
-  .item {
-    display: flex;
     align-items: center;
     gap: 14px;
+    margin-bottom: 14px;
   }
 
-  .item-art {
-    width: 48px;
-    flex: none;
+  .shop-icon {
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+  }
+
+  .shop-name {
+    font-size: var(--fs-h3);
+    font-weight: 700;
+  }
+
+  .items {
+    display: grid;
+    gap: 2px;
+    padding: 8px;
+    border-radius: var(--r-xl);
+    background: var(--s2);
+  }
+
+  .item {
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr) 170px 100px auto;
+    align-items: center;
+    gap: 18px;
+    padding: 10px 14px 10px 10px;
+    border-radius: var(--r-lg);
+    transition: background var(--dur-fast) var(--ease-out);
+  }
+
+  .item + .item {
+    border-top: 1px solid var(--line);
+    border-radius: 0 0 var(--r-lg) var(--r-lg);
+  }
+
+  .item:hover {
+    background: var(--hover);
+  }
+
+  .item-photo :global(.food-photo) {
+    border-radius: var(--r-md);
   }
 
   .item-name {
-    font-weight: 600;
-  }
-
-  .line-total {
     font-weight: 700;
-    font-size: var(--fs-body);
   }
 
-  .expiry-chip {
-    margin-top: 6px;
+  .item-expiry {
+    display: grid;
+    gap: 6px;
+    justify-items: start;
   }
 
-  .line-actions {
+  .item-total {
+    text-align: right;
+    font-size: var(--fs-lg);
+    font-weight: 700;
+  }
+
+  .item-actions {
     display: flex;
     gap: 8px;
-    justify-content: flex-end;
-  }
-
-  .summary-line {
-    margin-top: 16px;
-    font-size: var(--fs-data);
-  }
-
-  .total {
-    margin-top: 22px;
-    padding-top: 18px;
-    border-top: 1px solid var(--line-strong);
-    font-size: var(--fs-title-s);
-    font-weight: 700;
-  }
-
-  .total span:last-child {
-    font-size: var(--fs-display-m);
-    font-variant-numeric: tabular-nums;
   }
 
   .summary {
-    position: sticky;
-    top: calc(var(--topbar-h) + 16px);
+    display: grid;
+    gap: 22px;
+    padding: 16px;
   }
 
-  .summary .hint {
-    margin: 16px 0 20px;
+  .summary-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: var(--fs-h3);
+    font-weight: 700;
   }
 
-  @media (max-width: 1100px) {
-    .cart {
-      grid-template-columns: 1fr;
+  .pickups {
+    display: grid;
+    gap: 12px;
+    margin-top: 14px;
+  }
+
+  .pickup {
+    display: flex;
+    gap: 10px;
+    font-size: var(--fs-md);
+  }
+
+  .pickup :global(svg) {
+    flex: none;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .pickup > span {
+    display: grid;
+  }
+
+  .summary-body {
+    display: grid;
+    gap: 18px;
+    padding: 0 6px 4px;
+  }
+
+  .totals {
+    display: grid;
+    gap: 10px;
+    font-size: var(--fs-md);
+  }
+
+  .grand {
+    margin-top: 6px;
+    padding-top: 16px;
+    border-top: 1.5px dashed var(--line-strong);
+    font-size: var(--fs-h3);
+    font-weight: 700;
+  }
+
+  .grand dd {
+    font-size: 26px;
+  }
+
+  @media (max-width: 1279px) {
+    .item {
+      grid-template-columns: 60px minmax(0, 1fr) 100px auto;
     }
 
-    .summary {
-      position: static;
-      max-width: 480px;
-      margin-left: auto;
+    .item-expiry {
+      grid-column: 2;
+      grid-row: 2;
+      grid-auto-flow: column;
+      align-items: center;
+      justify-content: start;
+      gap: 10px;
     }
+
+    .item-total { grid-column: 3; grid-row: 1; }
+    .item-actions { grid-column: 4; grid-row: 1; }
+    .item-photo { grid-row: span 2; }
   }
 </style>

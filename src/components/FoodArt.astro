@@ -3,279 +3,66 @@ import type { FoodArt } from '../data/types';
 
 interface Props {
   art: FoodArt;
-  /** Greys the illustration out, used for expired listings. */
+  /** Greys the photo out, used for expired listings. */
   muted?: boolean;
+  /** Width and height ratio of the frame, e.g. "4 / 3" or "1 / 1". */
+  ratio?: string;
+  /** Load straight away instead of when scrolled near. */
+  eager?: boolean;
   class?: string;
 }
 
-const { art, muted = false, class: className } = Astro.props;
+const { art, muted = false, ratio = '4 / 3', eager = false, class: className } = Astro.props;
 
 /*
- * Flat illustrations, drawn in layers: a base fill, a shade along the lower
- * edge, a soft highlight, then the detail that makes each food read as itself.
- * No gradients; every tone is a flat step of the same hue.
+ * Openly licensed photographs from Wikimedia Commons, stored in
+ * public/photos/ and credited in public/photos/CREDITS.md. They stand in for
+ * the sellers' own photos until listings carry real uploads.
  */
+const photos: Record<FoodArt, { alt: string; width: number; height: number }> = {
+  'pandesal-ube': { alt: 'Ube pandesal: purple bread rolls dusted with crumbs', width: 960, height: 715 },
+  'pandesal-plain': { alt: 'Pandesal: small golden bread rolls in a paper bag', width: 960, height: 720 },
+  croissant: { alt: 'Butter croissants stacked on a tray', width: 960, height: 1280 },
+  empanada: { alt: 'Vigan empanadas with a dipping sauce', width: 960, height: 640 },
+  'strawberry-cup': { alt: 'A handful of fresh strawberries', width: 960, height: 636 },
+  'cake-slice': { alt: 'A slice of carrot cake with cream cheese frosting', width: 960, height: 723 },
+  'cheese-roll': { alt: 'Cheese bread rolls in a basket', width: 960, height: 638 },
+  monay: { alt: 'Monay: two split white bread rolls on a plate', width: 960, height: 632 },
+  ensaymada: { alt: 'Ensaymada: coiled sweet buns dusted with sugar', width: 960, height: 732 },
+  mystery: { alt: 'An assortment of bread rolls in a basket', width: 960, height: 640 },
+};
 
-/** Deterministic scatter so crumbs land in the same place on every render. */
-function scatter(count: number, seed: number, rx: number, ry: number) {
-  let state = seed;
-  const next = () => {
-    state = (state * 9301 + 49297) % 233280;
-    return state / 233280;
-  };
-  return Array.from({ length: count }, () => {
-    const angle = next() * Math.PI * 2;
-    const radius = Math.sqrt(next()) * 0.82;
-    return {
-      x: Math.cos(angle) * rx * radius,
-      y: Math.sin(angle) * ry * radius - ry * 0.12,
-      r: 1.3 + next() * 1.1,
-    };
-  });
-}
-
-/** Bun positions for the pandesal stacks: two at the front, one behind. */
-const buns = [
-  { x: 120, y: 58 },
-  { x: 92, y: 88 },
-  { x: 148, y: 88 },
-];
-
-const crumbs = scatter(16, 7, 30, 22);
-
-/** Crimped edge of the empanada: bumps along the upper arc of the pastry. */
-const crimps = Array.from({ length: 13 }, (_, index) => {
-  const t = Math.PI + (Math.PI * index) / 12;
-  return { x: 120 + 74 * Math.cos(t), y: 108 + 56 * Math.sin(t) };
-});
-
-/** Grated cheese on the ensaymada. */
-const shreds = scatter(12, 3, 40, 12).map((point, index) => ({
-  ...point,
-  rotate: (index * 47) % 180,
-}));
-
-const label = `Illustration of ${art === 'mystery' ? 'a surprise bag' : art.replace(/-/g, ' ')}`;
+const photo = photos[art];
 ---
 
-<figure class:list={['art', { 'is-muted': muted }, className]}>
-  <svg viewBox="0 0 240 150" role="img" aria-label={label}>
-    <ellipse class="shadow" cx="120" cy="126" rx="60" ry="8"></ellipse>
-
-    {
-      (art === 'pandesal-ube' || art === 'pandesal-plain') && (
-        <g>
-          {buns.map((bun) => (
-            <g transform={`translate(${bun.x} ${bun.y})`}>
-              <ellipse rx="34" ry="26" fill={art === 'pandesal-ube' ? '#a98bd0' : '#d9ae74'} />
-              <path
-                d="M-34 0A34 26 0 0 0 34 0A34 15 0 0 1 -34 0Z"
-                fill={art === 'pandesal-ube' ? '#8f71bd' : '#bf9157'}
-              />
-              <ellipse
-                cx="-11"
-                cy="-12"
-                rx="14"
-                ry="6"
-                fill="#ffffff"
-                opacity="0.26"
-                transform="rotate(-14 -11 -12)"
-              />
-              {crumbs.map((crumb) => (
-                <circle
-                  cx={crumb.x}
-                  cy={crumb.y}
-                  r={crumb.r}
-                  fill={art === 'pandesal-ube' ? '#c7b0e6' : '#f0d6a6'}
-                  opacity="0.9"
-                />
-              ))}
-              {art === 'pandesal-ube' && (
-                <path
-                  d="M-13 -21c5-6 21-6 26 0 2 3-1 6-4 5 0 5-4 9-6 2-3 3-8 3-9-1-5 1-9-2-7-6z"
-                  fill="#f2cf4a"
-                />
-              )}
-            </g>
-          ))}
-        </g>
-      )
-    }
-
-    {
-      art === 'croissant' && (
-        <g stroke="#c27424" stroke-width="2" stroke-linejoin="round">
-          <ellipse cx="64" cy="100" rx="12" ry="17" fill="#e7a54a" transform="rotate(-52 64 100)" />
-          <ellipse cx="176" cy="100" rx="12" ry="17" fill="#e7a54a" transform="rotate(52 176 100)" />
-          <ellipse cx="88" cy="86" rx="20" ry="26" fill="#e39b3c" transform="rotate(-30 88 86)" />
-          <ellipse cx="152" cy="86" rx="20" ry="26" fill="#e39b3c" transform="rotate(30 152 86)" />
-          <ellipse cx="120" cy="78" rx="27" ry="32" fill="#df9434" />
-          <path d="M100 66c12-6 28-6 40 0M98 84c14-5 30-5 44 0M102 101c11-4 25-4 36 0" fill="none" opacity="0.8" />
-          <path d="M80 72c5 8 8 18 8 28M160 72c-5 8-8 18-8 28" fill="none" opacity="0.7" />
-          <ellipse cx="110" cy="60" rx="10" ry="4" fill="#f6c779" stroke="none" transform="rotate(-10 110 60)" />
-        </g>
-      )
-    }
-
-    {
-      art === 'empanada' && (
-        <g>
-          {crimps.map((point) => (
-            <circle cx={point.x} cy={point.y} r="7" fill="#c47f22" />
-          ))}
-          <path d="M46 108A74 56 0 0 1 194 108Z" fill="#e0a03c" />
-          <path d="M46 108A74 56 0 0 1 194 108" fill="none" stroke="#c47f22" stroke-width="2" />
-          <rect x="46" y="104" width="148" height="7" rx="3.5" fill="#c47f22" />
-          <path d="M78 82c14-16 38-24 62-20" stroke="#f5cd84" stroke-width="6" stroke-linecap="round" fill="none" />
-          <circle cx="104" cy="90" r="2" fill="#9a5f17" />
-          <circle cx="128" cy="84" r="2" fill="#9a5f17" />
-          <circle cx="150" cy="92" r="2" fill="#9a5f17" />
-        </g>
-      )
-    }
-
-    {
-      art === 'strawberry-cup' && (
-        <g>
-          <path d="M74 50h92l-11 64a8 8 0 0 1-8 7H93a8 8 0 0 1-8-7z" fill="#fbf8ef" stroke="#d9cfb6" stroke-width="2" />
-          <path d="M79 82h82l-5 32a8 8 0 0 1-8 7H92a8 8 0 0 1-8-7z" fill="#f4e3d6" />
-          <path d="M86 98h68" stroke="#e9b8ae" stroke-width="5" stroke-linecap="round" />
-          {[
-            { x: 98, y: 56, r: -14 },
-            { x: 122, y: 48, r: 6 },
-            { x: 144, y: 58, r: 18 },
-            { x: 110, y: 72, r: -4 },
-            { x: 134, y: 74, r: 10 },
-          ].map((berry) => (
-            <g transform={`translate(${berry.x} ${berry.y}) rotate(${berry.r})`}>
-              <path d="M0-12c9-2 15 6 11 15-3 6-7 11-11 13-4-2-8-7-11-13-4-9 2-17 11-15z" fill="#d6402f" />
-              <path d="M-7-6c-1 6 1 12 4 16" stroke="#b9301f" stroke-width="2" fill="none" stroke-linecap="round" />
-              <circle cx="-4" cy="-3" r="1" fill="#f6d86a" />
-              <circle cx="4" cy="-2" r="1" fill="#f6d86a" />
-              <circle cx="0" cy="4" r="1" fill="#f6d86a" />
-              <circle cx="5" cy="7" r="1" fill="#f6d86a" />
-              <path d="M0-12l-6-4 4 0-1-4 3 3 3-3-1 4 4 0z" fill="#4d8a3f" />
-            </g>
-          ))}
-          <ellipse cx="120" cy="50" rx="46" ry="4" fill="none" stroke="#d9cfb6" stroke-width="2" />
-          <path d="M84 60l6 52" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="0.7" />
-        </g>
-      )
-    }
-
-    {
-      art === 'cake-slice' && (
-        <g stroke-linejoin="round">
-          <polygon points="172,52 200,70 200,108 172,90" fill="#b86a24" />
-          <polygon points="172,64 200,82 200,86 172,68" fill="#f7ead5" />
-          <polygon points="60,82 200,70 200,110 60,120" fill="#d98a3a" />
-          <polygon points="60,99 200,88 200,94 60,105" fill="#f7ead5" />
-          <polygon points="60,82 172,52 200,70" fill="#fbf3e3" />
-          <path d="M60 82l140-12" stroke="#e8d7bb" stroke-width="2" />
-          <circle cx="92" cy="104" r="1.6" fill="#a8621f" />
-          <circle cx="130" cy="112" r="1.6" fill="#a8621f" />
-          <circle cx="168" cy="99" r="1.6" fill="#a8621f" />
-          <circle cx="110" cy="91" r="1.6" fill="#a8621f" />
-          <circle cx="182" cy="108" r="1.6" fill="#a8621f" />
-          <path d="M146 60l20-5-14 12z" fill="#ec8a2a" />
-          <path d="M166 55l6-6M166 55l8-1M166 55l4-7" stroke="#4d8a3f" stroke-width="2" stroke-linecap="round" />
-          <path d="M112 70l5-3 4 3-3 4-5-1z" fill="#8a5a28" />
-          <path d="M128 66l4-2 3 3-3 3-4-1z" fill="#8a5a28" />
-        </g>
-      )
-    }
-
-    {
-      art === 'cheese-roll' && (
-        <g>
-          <rect x="62" y="56" width="128" height="54" rx="27" fill="#eeb94f" />
-          <path d="M62 92a27 27 0 0 0 27 18h74a27 27 0 0 0 27-18z" fill="#d99a35" />
-          <path d="M98 58c-8 16-8 34 0 50M126 58c-8 16-8 34 0 50M154 58c-8 16-8 34 0 50" stroke="#cf8828" stroke-width="3" fill="none" />
-          <circle cx="89" cy="83" r="27" fill="#f2c766" />
-          <path d="M89 83m-4 0a4 4 0 1 1 8 0a9 9 0 1 1-17 0a14 14 0 1 1 27 0a19 19 0 1 1-37 0" stroke="#cf8828" stroke-width="2.5" fill="none" stroke-linecap="round" />
-          <circle cx="96" cy="77" r="3" fill="#fff3c2" />
-          {scatter(14, 11, 46, 16).map((grain) => (
-            <rect x={140 + grain.x} y={74 + grain.y} width="2.4" height="2.4" rx="0.6" fill="#fbf8ef" />
-          ))}
-        </g>
-      )
-    }
-
-    {
-      art === 'monay' && (
-        <g>
-          <ellipse cx="96" cy="84" rx="38" ry="30" fill="#e7c48f" />
-          <ellipse cx="144" cy="84" rx="38" ry="30" fill="#e7c48f" />
-          <path d="M58 86a38 30 0 0 0 76 0a38 16 0 0 1-76 0zM106 86a38 30 0 0 0 76 0a38 16 0 0 1-76 0z" fill="#cfa76c" />
-          <path d="M120 58c-5 10-5 42 0 52" stroke="#a97f45" stroke-width="4" stroke-linecap="round" fill="none" />
-          <ellipse cx="86" cy="70" rx="14" ry="6" fill="#ffffff" opacity="0.3" transform="rotate(-12 86 70)" />
-          <ellipse cx="136" cy="70" rx="14" ry="6" fill="#ffffff" opacity="0.3" transform="rotate(-12 136 70)" />
-        </g>
-      )
-    }
-
-    {
-      art === 'ensaymada' && (
-        <g>
-          <ellipse cx="120" cy="92" rx="62" ry="28" fill="#e9a944" />
-          <path d="M58 92c4 14 30 24 62 24s58-10 62-24" fill="none" stroke="#c98426" stroke-width="3" />
-          <path d="M64 100c18 8 38 11 56 11M176 100c-18 8-38 11-56 11" fill="none" stroke="#c98426" stroke-width="2" opacity="0.7" />
-          <path
-            d="M62 86c0-16 26-30 58-30s58 14 58 30c-6 4-12 0-18 3s-12-2-18 1-12-1-18 2-12-2-18 1-12-1-18 1-12-3-18 0-6-4-8-8z"
-            fill="#fbf3e3"
-          />
-          {shreds.map((shred) => (
-            <rect
-              x={120 + shred.x - 4}
-              y={74 + shred.y}
-              width="8"
-              height="2.6"
-              rx="1.3"
-              fill="#f2c63a"
-              transform={`rotate(${shred.rotate} ${120 + shred.x} ${74 + shred.y})`}
-            />
-          ))}
-        </g>
-      )
-    }
-
-    {
-      art === 'mystery' && (
-        <g>
-          <path d="M80 50h80l6 66a6 6 0 0 1-6 6H80a6 6 0 0 1-6-6z" fill="#d4b483" />
-          <path d="M80 50h80l2 14H78z" fill="#c09d68" />
-          <path d="M80 50l6-10h68l6 10" fill="#e0c597" />
-          <path d="M100 50v-6M140 50v-6" stroke="#a9875a" stroke-width="2" />
-          <circle cx="120" cy="92" r="17" fill="#e4ee4c" />
-          <text x="120" y="102" text-anchor="middle" font-family="Georgia, serif" font-size="28" fill="#17150f">?</text>
-        </g>
-      )
-    }
-  </svg>
+<figure class:list={['food-photo', { 'is-muted': muted }, className]} style={`--ratio:${ratio}`}>
+  <img
+    class="photo"
+    src={`/photos/${art}.jpg`}
+    alt={photo.alt}
+    width={photo.width}
+    height={photo.height}
+    loading={eager ? 'eager' : 'lazy'}
+    decoding="async"
+  />
 </figure>
 
 <style>
-  .art {
+  .food-photo {
+    position: relative;
     margin: 0;
     width: 100%;
-    background: var(--tan-deep);
-    border-radius: var(--r-md);
-    display: grid;
-    place-items: center;
+    aspect-ratio: var(--ratio);
     overflow: hidden;
+    border-radius: var(--r-md);
+    background: var(--s3);
   }
 
-  .art svg {
-    width: 100%;
-    height: auto;
+  .photo {
+    transition: transform var(--dur-slow) var(--ease-out), filter var(--dur) var(--ease-out);
   }
 
-  .shadow {
-    fill: rgba(23, 21, 15, 0.12);
-  }
-
-  .is-muted svg {
-    filter: grayscale(1);
-    opacity: 0.45;
+  .is-muted .photo {
+    filter: grayscale(1) brightness(0.6);
   }
 </style>

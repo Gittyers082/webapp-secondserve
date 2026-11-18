@@ -3,6 +3,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
 import ListingCard from '../../components/ListingCard.astro';
 import FoodArt from '../../components/FoodArt.astro';
 import Dialog from '../../components/Dialog.astro';
+import Icon from '../../components/Icon.astro';
 import { seller, sellerListings } from '../../data/store';
 import { peso } from '../../data/types';
 
@@ -14,19 +15,9 @@ const first = sellerListings[0]!;
   username={seller.username}
   section="Manage Listings"
   heading="Manage Listings"
-  subtitle="Edit what you listed or take it down."
+  subtitle={`${sellerListings.length} listings. Edit what you listed or take it down.`}
+  highlight={`${sellerListings.length} listings`}
 >
-  <div class="toolbar" role="toolbar" aria-label="Selected listing">
-    <button class="btn btn-sm" type="button" data-dialog-open="edit-listing" aria-haspopup="dialog" data-needs-selection>
-      Edit selected
-    </button>
-    <button class="btn btn-sm" type="button" data-mark-sold data-needs-selection>Mark as sold</button>
-    <button class="btn btn-sm" type="button" data-withdraw data-needs-selection>Withdraw</button>
-    <button class="btn btn-sm btn-danger" type="button" data-dialog-open="delete-listing" aria-haspopup="dialog" data-needs-selection>
-      Delete selected
-    </button>
-  </div>
-
   <div class="listing-grid">
     {
       sellerListings.map((listing, index) => (
@@ -35,24 +26,48 @@ const first = sellerListings[0]!;
     }
 
     <a class="grid-tile" href="/seller/add-listing">
-      <span class="grid-tile-plus" aria-hidden="true">+</span>
+      <span class="grid-tile-icon" aria-hidden="true"><Icon name="plus" /></span>
       <span class="grid-tile-title">Add a new listing</span>
       <span class="small muted">Open the Add Listing tab</span>
     </a>
   </div>
 
-  <p class="hint footnote">
-    Select a photo, then edit it, mark it sold, withdraw it from the marketplace, or delete it.
-  </p>
+  <Fragment slot="rail">
+    <div class="panel rail-panel" role="toolbar" aria-label="Selected listing" data-selection>
+      <h2 class="panel-title">Selected listing</h2>
+      <div class="rail-photo">
+        <img class="photo" src={`/photos/${first.art}.jpg`} alt="" data-selection-photo />
+      </div>
+      <div>
+        <p class="rail-name" data-selection-name>{first.name}</p>
+        <p class="small muted" data-selection-meta>{first.quantity} left &middot; {first.expiryLabel}</p>
+      </div>
+      <div class="rail-actions">
+        <button class="btn btn-light btn-block" type="button" data-dialog-open="edit-listing" aria-haspopup="dialog" data-needs-selection>
+          <Icon name="pencil" />
+          Edit listing
+        </button>
+        <div class="rail-pair">
+          <button class="btn" type="button" data-mark-sold data-needs-selection>Mark as sold</button>
+          <button class="btn" type="button" data-withdraw data-needs-selection>Withdraw</button>
+        </div>
+        <button class="btn btn-danger btn-block" type="button" data-dialog-open="delete-listing" aria-haspopup="dialog" data-needs-selection>
+          <Icon name="trash" />
+          Delete listing
+        </button>
+      </div>
+      <p class="hint">Select a photo in the grid to choose which listing these act on.</p>
+    </div>
+  </Fragment>
 
   <!-- Edit ------------------------------------------------------------- -->
   <Dialog id="edit-listing" title="Edit listing" wide>
     <form class="edit" method="post" data-edit-form>
       <div class="edit-photo">
         <span class="field-label">Product photo</span>
-        <div class="photo-frame"><FoodArt art={first.art} /></div>
+        <div class="photo-frame"><FoodArt art={first.art} ratio="1 / 1" /></div>
         <div class="photo-actions">
-          <button class="btn btn-sm btn-dark" type="button">Retake with camera</button>
+          <button class="btn btn-sm btn-light" type="button">Retake with camera</button>
           <button class="btn btn-sm" type="button">Replace from file</button>
         </div>
       </div>
@@ -139,23 +154,35 @@ const first = sellerListings[0]!;
     if (deleteTitle) deleteTitle.textContent = card ? `Delete ${nameOf(card)}?` : 'Delete this listing?';
   };
 
-  const selection = setupSelection({ cards, onSelect: syncToolbar });
+  const selection = setupSelection({
+    cards,
+    onSelect: (card) => {
+      const name = document.querySelector<HTMLElement>('[data-selection-name]');
+      const meta = document.querySelector<HTMLElement>('[data-selection-meta]');
+      const photo = document.querySelector<HTMLImageElement>('[data-selection-photo]');
+      const source = card.querySelector<HTMLImageElement>('img');
+      if (name) name.textContent = card.querySelector('[data-card-name]')?.textContent ?? '';
+      if (meta) meta.textContent = `${card.dataset.qty ?? ''} left · ${card.dataset.expiry ?? ''}`;
+      if (photo && source) photo.src = source.src;
+      syncToolbar();
+    },
+  });
 
   const setState = (label: string, tone: string) => {
     const card = selection.selected();
-    const chip = card?.querySelector<HTMLElement>('.foot .chip');
+    const chip = card?.querySelector<HTMLElement>('[data-state]');
     if (!card || !chip) return;
-    chip.className = `chip ${tone}`;
+    chip.className = `pill ${tone}`;
     chip.textContent = label;
     announce(`${nameOf(card)} marked ${label.toLowerCase()}.`);
   };
 
   document.querySelector<HTMLButtonElement>('[data-mark-sold]')?.addEventListener('click', () =>
-    setState('Sold', 'chip-tan'),
+    setState('Sold', 'pill-neutral'),
   );
 
   document.querySelector<HTMLButtonElement>('[data-withdraw]')?.addEventListener('click', () =>
-    setState('Withdrawn', 'chip-tan'),
+    setState('Withdrawn', 'pill-neutral'),
   );
 
   document.querySelector<HTMLFormElement>('[data-edit-form]')?.addEventListener('submit', (event) => {
@@ -179,17 +206,38 @@ const first = sellerListings[0]!;
 </script>
 
 <style>
-  .edit {
+  .rail-panel {
     display: grid;
-    grid-template-columns: 260px minmax(0, 1fr);
-    gap: 26px;
-    margin-top: 10px;
+    gap: 16px;
   }
 
-  .photo-frame {
-    border-radius: var(--r-md);
+  .rail-photo {
+    aspect-ratio: 4 / 3;
+    border-radius: var(--r-lg);
     overflow: hidden;
-    background: var(--tan-deep);
+  }
+
+  .rail-name {
+    font-size: var(--fs-lg);
+    font-weight: 700;
+  }
+
+  .rail-actions {
+    display: grid;
+    gap: 10px;
+  }
+
+  .rail-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .edit {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: 26px;
+    margin-top: 16px;
   }
 
   .photo-actions {

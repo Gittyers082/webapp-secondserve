@@ -1,96 +1,90 @@
 /* ==========================================================================
    SecondServe — design tokens and base styles
+
+   A dark working surface built from the brand's near-black ink, with the
+   brand's brick on actions and the active place, lime on counts and things
+   that need attention, and the cream paper colour for text.
    ========================================================================== */
 
 :root {
-  /* Surfaces */
-  --paper: #f2efe4;
-  --paper-soft: #efebdd;
-  --tan: #e8dfcc;
-  --tan-deep: #e0d5bd;
-  --field: #fcfaf4;
+  color-scheme: dark;
 
-  /* Ink. Every tier that carries words holds 4.5:1 on --tan-deep, the
-     darkest surface text sits on. */
-  --ink: #17150f;
-  --ink-soft: #3d3831;
-  --muted: #5f584d;
-  --placeholder: #787062;
+  /* Surfaces, darkest to lightest. --s1 is the brand ink. */
+  --bg: #0f0d0a;
+  --s1: #17150f;
+  --s2: #211e17;
+  --s3: #2c281f;
+  --s4: #38332a;
 
-  /* Accent. Brick holds 4.5:1 on --tan, so links and danger text stay
-     legible inside panels; white on brick is 5.9:1. */
-  --brick: #b03619;
-  --brick-dark: #922c13;
-  --price: #b0361d;
+  /* Text. Every tier holds 4.5:1 on --s3, the lightest surface text sits on. */
+  --text: #f2efe4;
+  --text-soft: #cfc8b8;
+  --muted: #a39b8b;
 
-  /* Status */
+  /* Brand */
+  --brick: #c13d1f;        /* fills: white on it is 5.3:1 */
+  --brick-hover: #a53217;
+  --brick-text: #f07a5c;   /* brick as text on dark: 5.3:1 on --s3 */
   --lime: #e4ee4c;
-  --lime-deep: #d4de3c;
-  --mint: #dbe9d0;
-  --mint-ink: #3f6b35;
-  --blush: #f7dcdc;
-  --blush-soft: #fbe4e4;
-  --blush-ink: #ad2f2f;
-  --online: #3f8f43;
+  --lime-ink: #17150f;
+  --paper: #f2efe4;
 
-  /* Lines. --line-control is for borders that mark an input or a control
-     and holds 3:1 against the surfaces it sits on (WCAG 1.4.11). */
-  --line: #d9d0b9;
-  --line-strong: #c3b89c;
-  --line-control: #877c66;
-  --rule: #231f18;
+  /* Status, as a text colour over a 16% tint of itself */
+  --ok: #9fd18c;
+  --ok-bg: #353b2a;
+  --warn: #e4ee4c;
+  --warn-bg: #403f1f;
+  --danger: #f07a5c;
+  --danger-bg: #44291f;
+  --neutral-bg: #38332a;
+  --online: #7cc46a;
 
-  /* Tints of ink, for hover fills and overlays */
-  --ink-hover: rgba(23, 21, 15, 0.06);
-  --ink-press: rgba(23, 21, 15, 0.1);
-  --brick-hover: rgba(176, 54, 25, 0.08);
-  --scrim: rgba(23, 21, 15, 0.42);
-  --paper-dim: rgba(242, 239, 228, 0.7);
+  /* Lines. --line-control marks an input or control and holds 3:1. */
+  --line: rgba(242, 239, 228, 0.08);
+  --line-strong: rgba(242, 239, 228, 0.16);
+  --line-control: rgba(242, 239, 228, 0.36);
 
-  /* Depth: only things that float get a shadow */
-  --shadow-bar: 0 10px 30px rgba(23, 21, 15, 0.08);
-  --shadow-dialog: 0 24px 64px rgba(23, 21, 15, 0.26);
+  --hover: rgba(242, 239, 228, 0.06);
+  --press: rgba(242, 239, 228, 0.1);
+  --scrim: rgba(6, 5, 3, 0.72);
+
+  /* Depth: only what floats */
+  --shadow-float: 0 24px 64px rgba(0, 0, 0, 0.5);
 
   /* Type */
-  --display: "Instrument Serif", "Iowan Old Style", Georgia, serif;
   --sans: "Hanken Grotesk", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --display: "Instrument Serif", "Iowan Old Style", Georgia, serif;
 
-  /* Type scale. Nothing on screen goes below --fs-label. */
-  --fs-label: 11px;     /* uppercase labels, chips, table headers */
-  --fs-control: 12px;   /* uppercase buttons, tabs, filters */
-  --fs-small: 13px;     /* hints, meta, captions */
-  --fs-data: 14.5px;    /* table cells, card data */
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-md: 14px;
   --fs-body: 15px;
-  --fs-lead: 17px;
-  --fs-title-s: 19px;   /* sans titles inside panels */
-  --fs-display-s: 23px;
-  --fs-display-m: 28px;
-  --fs-display-l: 34px;
-  --fs-display-xl: 54px;
-  --fs-stat: 52px;
-
-  --track-caps: 0.08em;
-  --track-display: -0.01em;
+  --fs-lg: 17px;
+  --fs-h3: 18px;
+  --fs-h2: 22px;
+  --fs-h1: 30px;
+  --fs-figure: 34px;
 
   /* Shape */
-  --r-sm: 8px;
-  --r-md: 12px;
-  --r-lg: 18px;
-  --r-xl: 22px;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 26px;
   --r-pill: 999px;
 
   /* Rhythm */
-  --gutter: 44px;
-  --shell: 1460px;
-  --grid-gap: 34px 30px;
-  --topbar-h: 150px;
-  --statusbar-h: 40px;
+  --pad: 32px;
+  --gap: 24px;
+  --sidebar: 236px;
+  --sidebar-compact: 84px;
+  --rail: 344px;
+  --chrome-h: 40px;
 
-  /* Motion. One ease for arrivals, a shorter one for feedback. */
+  /* Motion */
   --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
   --dur-fast: 120ms;
   --dur: 180ms;
-  --dur-slow: 260ms;
+  --dur-slow: 280ms;
 }
 
 *,
@@ -102,41 +96,31 @@
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Keep focused controls clear of the sticky top bar and the sticky
-     action and status bars at the foot of the screen. */
-  scroll-padding-top: calc(var(--topbar-h) + 16px);
-  scroll-padding-bottom: calc(var(--statusbar-h) + 110px);
+  scroll-padding-top: 24px;
+  scroll-padding-bottom: 24px;
 }
 
 body {
   margin: 0;
-  background: var(--paper);
-  color: var(--ink);
+  background: var(--bg);
+  color: var(--text);
   font-family: var(--sans);
   font-size: var(--fs-body);
   line-height: 1.5;
   accent-color: var(--brick);
-  caret-color: var(--brick);
+  caret-color: var(--brick-text);
 }
 
 ::selection {
   background: var(--lime);
-  color: var(--ink);
+  color: var(--lime-ink);
 }
 
-h1,
-h2,
-h3,
-h4,
-p,
-figure,
-ul,
-ol {
+h1, h2, h3, h4, p, figure, ul, ol, dl, dd {
   margin: 0;
 }
 
-ul,
-ol {
+ul, ol {
   padding: 0;
   list-style: none;
 }
@@ -152,8 +136,7 @@ button {
   cursor: pointer;
 }
 
-img,
-svg {
+img, svg {
   display: block;
   max-width: 100%;
 }
@@ -164,13 +147,19 @@ table {
 }
 
 :focus-visible {
-  outline: 2px solid var(--brick);
+  outline: 2px solid var(--lime);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
 [hidden] {
   display: none !important;
+}
+
+/* Scrollbars in the palette */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--s4) transparent;
 }
 
 /* --------------------------------------------------------------------------
@@ -184,9 +173,9 @@ table {
   z-index: 100;
   padding: 10px 16px;
   border-radius: var(--r-pill);
-  background: var(--ink);
-  color: var(--paper);
-  font-size: var(--fs-small);
+  background: var(--lime);
+  color: var(--lime-ink);
+  font-size: var(--fs-sm);
   font-weight: 600;
   transform: translateY(-160%);
   transition: transform var(--dur) var(--ease-out);
@@ -197,186 +186,107 @@ table {
 }
 
 /* --------------------------------------------------------------------------
-   Layout helpers
+   Section headings, in the shape the whole app uses:
+   a title, a line under it with its key figure in brick, and an action.
    -------------------------------------------------------------------------- */
 
-.shell {
-  width: 100%;
-  max-width: var(--shell);
-  margin: 0 auto;
-  padding: 0 var(--gutter);
+.section {
+  margin-top: 40px;
 }
 
-.stack-sm > * + * { margin-top: 8px; }
-.stack > * + *    { margin-top: 16px; }
-.stack-lg > * + * { margin-top: 28px; }
-
-/* Listing grids: three across, two below 1200px. Shared by Shop, Overview,
-   My Listed Items, Manage Listings and Item Moderation. */
-.listing-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--grid-gap);
+.section:first-child {
+  margin-top: 0;
 }
 
-/* Dashed tile that closes a listing grid (Add a new listing, the
-   "more items later" note on Overview). */
-.grid-tile {
-  display: grid;
-  place-content: center;
-  justify-items: center;
-  gap: 6px;
-  min-height: 260px;
-  padding: 40px 28px;
-  text-align: center;
-  border: 1px dashed var(--line-control);
-  border-radius: var(--r-lg);
-  background: transparent;
-  transition: border-color var(--dur) var(--ease-out), background var(--dur) var(--ease-out);
-}
-
-a.grid-tile:hover {
-  border-color: var(--ink);
-  background: var(--ink-hover);
-}
-
-.grid-tile-plus {
-  font-family: var(--display);
-  font-size: 40px;
-  line-height: 1;
-  color: var(--muted);
-  transition: transform var(--dur) var(--ease-out), color var(--dur) var(--ease-out);
-}
-
-a.grid-tile:hover .grid-tile-plus {
-  color: var(--ink);
-  transform: rotate(90deg);
-}
-
-.grid-tile-title {
-  font-family: var(--display);
-  font-size: var(--fs-display-s);
-  line-height: 1.2;
-}
-
-/* Toolbar above a grid or table */
-.toolbar {
+.section-head {
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px 16px;
-  margin-bottom: 26px;
-}
-
-/* Sticky bar at the foot of a screen that acts on the selected card. */
-.action-bar {
-  position: sticky;
-  bottom: calc(var(--statusbar-h) + 12px);
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  gap: 18px 22px;
-  flex-wrap: wrap;
-  margin-top: 42px;
-  padding: 14px 18px;
-  background: var(--tan);
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-bar);
-}
-
-.action-bar-copy {
-  flex: 1;
-  min-width: 220px;
-}
-
-.action-bar-name {
-  font-size: var(--fs-body);
-  font-weight: 600;
-}
-
-/* Message shown when a filter or search leaves nothing to show. */
-.no-results {
-  padding: 64px 0;
-  text-align: center;
-  color: var(--muted);
-}
-
-.footnote {
-  margin-top: 32px;
-}
-
-/* --------------------------------------------------------------------------
-   Page headings
-   -------------------------------------------------------------------------- */
-
-.page-head {
-  text-align: center;
-  padding: 42px 0 30px;
-}
-
-.page-head h1 {
-  font-family: var(--display);
-  font-weight: 400;
-  font-size: var(--fs-display-xl);
-  line-height: 1.04;
-  letter-spacing: var(--track-display);
-  text-wrap: balance;
-}
-
-.page-head p {
-  margin-top: 6px;
-  color: var(--ink-soft);
-  font-size: var(--fs-body);
-}
-
-.page-head em,
-.accent {
-  font-family: var(--display);
-  font-style: italic;
-  color: var(--brick);
-}
-
-.page-head em {
-  font-size: 1.12em;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
 }
 
 .section-title {
-  font-family: var(--display);
-  font-weight: 400;
-  font-size: var(--fs-display-m);
-  letter-spacing: var(--track-display);
+  font-size: var(--fs-h2);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
 }
 
-.display-title {
-  font-family: var(--display);
-  font-weight: 400;
-  font-size: var(--fs-display-l);
-  letter-spacing: var(--track-display);
-  line-height: 1.1;
+.section-sub {
+  margin-top: 4px;
+  color: var(--text-soft);
+  font-size: var(--fs-md);
 }
 
-/* --------------------------------------------------------------------------
-   Micro-labels
-   -------------------------------------------------------------------------- */
-
-.eyebrow,
-.field-label {
-  font-size: var(--fs-label);
-  letter-spacing: var(--track-caps);
-  text-transform: uppercase;
-  color: var(--muted);
+.hl {
+  color: var(--brick-text);
   font-weight: 600;
+}
+
+.link-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.link-more .chev {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--r-sm);
+  background: var(--s3);
+  transition: background var(--dur-fast) var(--ease-out), transform var(--dur) var(--ease-out);
+}
+
+.link-more:hover .chev {
+  background: var(--s4);
+  transform: translateX(2px);
+}
+
+.label {
+  font-size: var(--fs-sm);
+  color: var(--muted);
 }
 
 .field-label {
   display: block;
-  margin-bottom: 7px;
+  margin-bottom: 8px;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-soft);
 }
 
 .hint {
   color: var(--muted);
-  font-size: var(--fs-small);
+  font-size: var(--fs-sm);
   line-height: 1.55;
+}
+
+/* --------------------------------------------------------------------------
+   Panels
+   -------------------------------------------------------------------------- */
+
+.panel {
+  background: var(--s2);
+  border-radius: var(--r-xl);
+  padding: 24px;
+}
+
+.panel-inset {
+  background: var(--s3);
+  border-radius: var(--r-lg);
+  padding: 20px;
+}
+
+.panel-title {
+  font-size: var(--fs-h3);
+  font-weight: 700;
 }
 
 /* --------------------------------------------------------------------------
@@ -388,15 +298,13 @@ a.grid-tile:hover .grid-tile-plus {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 40px;
+  height: 42px;
   padding: 0 20px;
   border-radius: var(--r-pill);
-  border: 1px solid var(--ink);
+  border: 1px solid var(--line-control);
   background: transparent;
-  font-size: var(--fs-control);
+  font-size: var(--fs-md);
   font-weight: 600;
-  letter-spacing: var(--track-caps);
-  text-transform: uppercase;
   white-space: nowrap;
   transition:
     background var(--dur-fast) var(--ease-out),
@@ -405,8 +313,14 @@ a.grid-tile:hover .grid-tile-plus {
     transform var(--dur-fast) var(--ease-out);
 }
 
-.btn:hover { background: var(--ink-hover); }
-.btn:active:not(:disabled) { transform: translateY(1px); background: var(--ink-press); }
+.btn svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+.btn:hover { background: var(--hover); border-color: var(--text-soft); }
+.btn:active:not(:disabled) { transform: translateY(1px); background: var(--press); }
 
 .btn-primary {
   background: var(--brick);
@@ -415,36 +329,50 @@ a.grid-tile:hover .grid-tile-plus {
 }
 
 .btn-primary:hover,
-.btn-primary:active:not(:disabled) { background: var(--brick-dark); border-color: var(--brick-dark); }
+.btn-primary:active:not(:disabled) { background: var(--brick-hover); border-color: var(--brick-hover); }
 
 .btn-dark {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: var(--paper);
+  background: var(--s1);
+  border-color: var(--s1);
+  color: var(--text);
 }
 
 .btn-dark:hover,
-.btn-dark:active:not(:disabled) { background: #000; }
+.btn-dark:active:not(:disabled) { background: #000; border-color: #000; }
 
-.btn-danger {
-  border-color: var(--brick);
-  color: var(--brick);
+.btn-light {
+  background: var(--paper);
+  border-color: var(--paper);
+  color: var(--s1);
 }
 
-.btn-danger:hover { background: var(--brick-hover); }
+.btn-light:hover,
+.btn-light:active:not(:disabled) { background: #fff; border-color: #fff; }
+
+.btn-danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.btn-danger:hover { background: var(--danger-bg); border-color: var(--danger); }
 
 .btn-block { width: 100%; }
+.btn-lg { height: 52px; padding: 0 28px; font-size: var(--fs-lg); }
+.btn-sm { height: 34px; padding: 0 14px; font-size: var(--fs-sm); }
 
-.btn-lg { height: 48px; padding: 0 28px; }
+.btn-icon {
+  width: 42px;
+  padding: 0;
+}
 
-.btn-sm { height: 32px; padding: 0 14px; font-size: var(--fs-label); }
+.btn-sm.btn-icon { width: 34px; }
 
 .btn:disabled,
 .btn[aria-disabled="true"] {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: not-allowed;
-  border-color: var(--line-control);
   background: transparent;
+  border-color: var(--line-control);
   color: var(--muted);
 }
 
@@ -454,39 +382,39 @@ a.grid-tile:hover .grid-tile-plus {
 
 .input {
   width: 100%;
-  height: 46px;
-  padding: 0 16px;
-  background: var(--field);
+  height: 48px;
+  padding: 0 18px;
+  background: var(--s1);
   border: 1px solid var(--line-control);
   border-radius: var(--r-pill);
   font: inherit;
-  color: var(--ink);
+  font-size: var(--fs-body);
+  color: var(--text);
   transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
 }
 
-.input::placeholder { color: var(--placeholder); }
-
-.input:hover { border-color: var(--ink-soft); }
+.input::placeholder { color: var(--muted); }
+.input:hover { border-color: var(--text-soft); }
 
 .input:focus {
   outline: none;
-  border-color: var(--ink);
-  box-shadow: 0 0 0 3px rgba(23, 21, 15, 0.12);
+  border-color: var(--text);
+  box-shadow: 0 0 0 3px rgba(242, 239, 228, 0.12);
 }
 
 .input:focus-visible {
-  outline: 2px solid var(--brick);
+  outline: 2px solid var(--lime);
   outline-offset: 2px;
 }
 
-.input[aria-invalid="true"] { border-color: var(--blush-ink); }
+.input[aria-invalid="true"] { border-color: var(--danger); }
 
 select.input {
   appearance: none;
-  padding-right: 40px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235f584d' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  padding-right: 44px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23cfc8b8' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 16px center;
+  background-position: right 18px center;
   background-size: 16px;
 }
 
@@ -499,94 +427,106 @@ select.input {
   margin-top: 16px;
 }
 
+/* Search: a pill field with its button inside, as in the app header */
 .search {
   position: relative;
 }
 
-.search .input { padding-right: 46px; }
+.search .input {
+  height: 52px;
+  padding-right: 60px;
+  background: transparent;
+}
 
-.search svg {
+.search-button {
   position: absolute;
-  right: 16px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 16px;
-  height: 16px;
-  stroke: var(--muted);
-  fill: none;
-  stroke-width: 1.8;
+  right: 5px;
+  top: 5px;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--s3);
+  color: var(--text);
   pointer-events: none;
 }
 
-/* Two-option segmented choice (Register's account type) */
+.search-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Segmented choice: a pill track with the active option filled */
 .segmented {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line-control);
+  border-radius: var(--r-pill);
 }
 
 .segment {
-  height: 44px;
+  height: 42px;
+  border: 0;
   border-radius: var(--r-pill);
-  border: 1px solid var(--line-control);
-  background: var(--field);
-  font-size: var(--fs-control);
+  background: transparent;
+  color: var(--text-soft);
+  font-size: var(--fs-md);
   font-weight: 600;
-  letter-spacing: var(--track-caps);
-  text-transform: uppercase;
-  transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out),
-    color var(--dur-fast) var(--ease-out);
+  transition: background var(--dur) var(--ease-out), color var(--dur-fast) var(--ease-out);
 }
 
-.segment:hover { border-color: var(--ink); }
+.segment:hover { color: var(--text); background: var(--hover); }
 
-.segment[aria-checked="true"] {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: var(--paper);
+.segment[aria-checked="true"],
+.segment[aria-pressed="true"] {
+  background: var(--brick);
+  color: #fff;
 }
 
 /* --------------------------------------------------------------------------
-   Chips and badges
+   Pills, counts and filter chips
    -------------------------------------------------------------------------- */
 
-.chip {
+.pill {
   display: inline-flex;
   flex: none;
   align-items: center;
   gap: 6px;
-  height: 22px;
-  padding: 0 10px;
+  height: 26px;
+  padding: 0 12px;
   border-radius: var(--r-pill);
-  font-size: var(--fs-label);
-  font-weight: 700;
-  letter-spacing: var(--track-caps);
-  text-transform: uppercase;
+  font-size: var(--fs-xs);
+  font-weight: 600;
   white-space: nowrap;
 }
 
-.chip-lime  { background: var(--lime); color: var(--ink); }
-.chip-mint  { background: var(--mint); color: var(--mint-ink); }
-.chip-blush { background: var(--blush); color: var(--blush-ink); }
-.chip-tan   { background: var(--tan-deep); color: var(--ink-soft); }
-.chip-ghost { background: transparent; color: var(--muted); border: 1px solid var(--line-control); }
+.pill-ok      { background: var(--ok-bg); color: var(--ok); }
+.pill-warn    { background: var(--warn-bg); color: var(--warn); }
+.pill-danger  { background: var(--danger-bg); color: var(--danger); }
+.pill-neutral { background: var(--neutral-bg); color: var(--text-soft); }
+
+/* Solid lime pill for "Expiring soon" on photos, where a tint would vanish */
+.pill-lime { background: var(--lime); color: var(--lime-ink); }
 
 .count {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
   border-radius: var(--r-pill);
   background: var(--lime);
-  color: var(--ink);
-  font-size: var(--fs-label);
+  color: var(--lime-ink);
+  font-size: var(--fs-xs);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
-/* Filter pills */
 .filters {
   display: flex;
   flex-wrap: wrap;
@@ -594,42 +534,88 @@ select.input {
 }
 
 .filter {
-  height: 32px;
-  padding: 0 15px;
+  height: 36px;
+  padding: 0 16px;
   border-radius: var(--r-pill);
   border: 1px solid var(--line-control);
   background: transparent;
-  font-size: var(--fs-label);
+  color: var(--text-soft);
+  font-size: var(--fs-md);
   font-weight: 600;
-  letter-spacing: var(--track-caps);
-  text-transform: uppercase;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out),
     color var(--dur-fast) var(--ease-out);
 }
 
-.filter:hover { border-color: var(--ink); }
+.filter:hover { border-color: var(--text-soft); color: var(--text); }
 
 .filter span { color: var(--muted); font-weight: 500; font-variant-numeric: tabular-nums; }
 
 .filter[aria-pressed="true"] {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: var(--paper);
+  background: var(--paper);
+  border-color: var(--paper);
+  color: var(--s1);
 }
 
-.filter[aria-pressed="true"] span { color: var(--paper-dim); }
+.filter[aria-pressed="true"] span { color: #5f584d; }
 
 /* --------------------------------------------------------------------------
-   Cards and panels
+   Listing grid and the dashed tile that closes it
    -------------------------------------------------------------------------- */
 
-.panel {
-  background: var(--tan);
+.listing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 20px;
+}
+
+.grid-tile {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  min-height: 300px;
+  padding: 32px 24px;
+  text-align: center;
+  border: 1.5px dashed var(--line-control);
   border-radius: var(--r-lg);
-  padding: 26px;
+  color: var(--text-soft);
+  transition: border-color var(--dur) var(--ease-out), background var(--dur) var(--ease-out);
+}
+
+a.grid-tile:hover {
+  border-color: var(--text);
+  background: var(--hover);
+}
+
+.grid-tile-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--s3);
+  color: var(--text);
+  transition: transform var(--dur) var(--ease-out), background var(--dur) var(--ease-out);
+}
+
+a.grid-tile:hover .grid-tile-icon {
+  background: var(--brick);
+  transform: rotate(90deg);
+}
+
+.grid-tile-title {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--text);
+}
+
+.no-results {
+  padding: 56px 0;
+  text-align: center;
+  color: var(--muted);
 }
 
 /* --------------------------------------------------------------------------
@@ -646,65 +632,68 @@ select.input {
 
 .price del {
   color: var(--muted);
-  font-size: var(--fs-small);
+  font-size: var(--fs-sm);
   text-decoration-thickness: 1px;
 }
 
 .price ins {
-  color: var(--price);
-  font-size: 18px;
+  color: var(--text);
+  font-size: var(--fs-h3);
   font-weight: 700;
   text-decoration: none;
 }
 
 /* --------------------------------------------------------------------------
-   Data tables
+   Data tables: a pill header bar, then quiet rows
    -------------------------------------------------------------------------- */
 
-/* Lets a wide table scroll inside its own box instead of the page. */
 .table-wrap {
   overflow-x: auto;
 }
 
+.table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
 .table th {
   text-align: left;
-  font-size: var(--fs-label);
-  letter-spacing: var(--track-caps);
-  text-transform: uppercase;
-  color: var(--muted);
-  font-weight: 600;
-  padding: 0 14px 12px;
+  font-size: var(--fs-md);
+  font-weight: 500;
+  color: var(--text-soft);
+  padding: 13px 18px;
+  background: var(--s2);
   white-space: nowrap;
 }
 
-.table thead tr { border-bottom: 1.5px solid var(--rule); }
+.table thead th:first-child { border-radius: var(--r-pill) 0 0 var(--r-pill); padding-left: 24px; }
+.table thead th:last-child { border-radius: 0 var(--r-pill) var(--r-pill) 0; padding-right: 24px; }
 
 .table td {
-  padding: 16px 14px;
+  padding: 16px 18px;
   border-bottom: 1px solid var(--line);
   vertical-align: middle;
-  font-size: var(--fs-data);
+  font-size: var(--fs-md);
+  color: var(--text-soft);
 }
 
-.table tbody tr { transition: background var(--dur-fast) var(--ease-out); }
-.table tbody tr:hover { background: var(--ink-hover); }
+.table td:first-child { padding-left: 24px; }
+.table td:last-child { padding-right: 24px; }
 
+.table tbody tr { transition: background var(--dur-fast) var(--ease-out); }
+.table tbody tr:hover td { background: var(--hover); }
 .table tbody tr:last-child td { border-bottom: 0; }
 
-.table tbody tr.is-flagged { background: var(--tan); }
-
-/* Numeric columns: right-aligned, digits in step */
 .table .num {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-/* Identity column: the row's name */
 .table .name {
+  color: var(--text);
   font-weight: 600;
 }
 
-/* Trailing action column */
 .table .actions {
   text-align: right;
   white-space: nowrap;
@@ -712,41 +701,69 @@ select.input {
 
 .table .actions .row { justify-content: flex-end; gap: 8px; }
 
+/* Person cell: initial avatar then the name */
+.who {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--s4);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
 /* --------------------------------------------------------------------------
    Empty state
    -------------------------------------------------------------------------- */
 
 .empty {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
   text-align: center;
-  padding: 90px 20px;
+  padding: 72px 24px;
+  border-radius: var(--r-xl);
+  background: var(--s2);
 }
 
 .empty h2 {
-  font-family: var(--display);
-  font-weight: 400;
-  font-size: var(--fs-display-m);
+  font-size: var(--fs-h2);
+  font-weight: 700;
 }
 
-.empty p { color: var(--muted); margin-top: 6px; }
-
-.empty .btn { margin-top: 22px; }
+.empty p { color: var(--muted); }
+.empty .btn { margin-top: 14px; }
 
 /* --------------------------------------------------------------------------
    Notices
    -------------------------------------------------------------------------- */
 
 .notice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   border-radius: var(--r-md);
-  padding: 12px 16px;
-  font-size: var(--fs-small);
+  padding: 14px 18px;
+  font-size: var(--fs-md);
   line-height: 1.5;
 }
 
 .notice strong { font-weight: 700; }
+.notice svg { width: 18px; height: 18px; flex: none; }
 
-.notice-error { background: var(--blush-soft); color: var(--blush-ink); }
-.notice-info  { background: var(--mint); color: var(--mint-ink); }
-.notice-lime  { background: var(--lime); color: var(--ink); }
+.notice-error { background: var(--danger-bg); color: var(--danger); }
+.notice-info  { background: var(--ok-bg); color: var(--ok); }
+.notice-lime  { background: var(--lime); color: var(--lime-ink); }
 
 /* --------------------------------------------------------------------------
    Dialogs
@@ -768,20 +785,20 @@ select.input {
   width: min(520px, 100%);
   max-height: calc(100vh - 64px);
   overflow-y: auto;
-  background: var(--paper);
-  border-radius: var(--r-lg);
+  background: var(--s2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
   padding: 28px;
-  box-shadow: var(--shadow-dialog);
+  box-shadow: var(--shadow-float);
   animation: dialog-in var(--dur-slow) var(--ease-out);
 }
 
 .dialog h2 {
-  font-family: var(--display);
-  font-weight: 400;
-  font-size: var(--fs-display-m);
+  font-size: var(--fs-h2);
+  font-weight: 700;
 }
 
-.dialog p { color: var(--ink-soft); margin-top: 8px; font-size: var(--fs-small); line-height: 1.55; }
+.dialog p { color: var(--text-soft); margin-top: 8px; font-size: var(--fs-md); line-height: 1.55; }
 
 .dialog-actions {
   display: flex;
@@ -800,6 +817,18 @@ select.input {
 }
 
 /* --------------------------------------------------------------------------
+   Photos
+   -------------------------------------------------------------------------- */
+
+.photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: var(--s3);
+}
+
+/* --------------------------------------------------------------------------
    Utility
    -------------------------------------------------------------------------- */
 
@@ -808,7 +837,8 @@ select.input {
 .wrap { flex-wrap: wrap; }
 .grow { flex: 1; }
 .muted { color: var(--muted); }
-.small { font-size: var(--fs-small); }
+.soft { color: var(--text-soft); }
+.small { font-size: var(--fs-sm); }
 .tnum { font-variant-numeric: tabular-nums; }
 .sr-only {
   position: absolute;
@@ -820,15 +850,6 @@ select.input {
   clip: rect(0 0 0 0);
   white-space: nowrap;
   border: 0;
-}
-
-/* --------------------------------------------------------------------------
-   Breakpoints: 1200px drops grids to two across, 1100px stacks side panels.
-   -------------------------------------------------------------------------- */
-
-@media (max-width: 1200px) {
-  :root { --gutter: 32px; }
-  .listing-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 /* --------------------------------------------------------------------------
@@ -844,7 +865,32 @@ select.input {
     transition-property: color, background-color, border-color, opacity !important;
     scroll-behavior: auto !important;
   }
+}
 
-  .btn:active:not(:disabled) { transform: none; }
-  a.grid-tile:hover .grid-tile-plus { transform: none; }
+/* --------------------------------------------------------------------------
+   Table cells with a photo or a person in front of the name
+   -------------------------------------------------------------------------- */
+
+.food-cell {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.food-thumb {
+  flex: none;
+  width: 44px;
+  height: 44px;
+}
+
+.food-thumb .food-photo {
+  border-radius: 50%;
+}
+
+.page-note {
+  margin-top: 20px;
+}
+
+.banner {
+  margin-bottom: 24px;
 }
