@@ -22,135 +22,148 @@ const isEmpty = cart.length === 0;
   subtitle="Reserve now, collect from each shop before closing."
   accent="before closing."
 >
+  <div class="empty" data-cart-empty hidden={!isEmpty}>
+    <h2>Your cart is empty.</h2>
+    <p>Browse the Shop to find discounted food.</p>
+    <a class="btn btn-dark" href="/buyer/shop">
+      Browse the shop
+    </a>
+  </div>
+
   {
-    isEmpty ? (
-      <div class="empty">
-        <h2>Your cart is empty.</h2>
-        <p>Browse the Shop to find discounted food.</p>
-        <a class="btn btn-dark" href="/buyer/shop">
-          Browse the shop
-        </a>
-      </div>
-    ) : (
+    !isEmpty && (
       <div class="cart" data-cart>
         <div class="lines">
-          {Object.entries(shops).map(([shopName, lines]) => (
-            <section class="shop-group">
-              <header class="shop-head">
-                <h2>{shopName}</h2>
-                <p class="small muted">&middot; Pickup: {lines[0]!.pickupLocation}</p>
-              </header>
+      {Object.entries(shops).map(([shopName, lines]) => (
+        <section class="shop-group">
+          <header class="shop-head">
+            <h2>{shopName}</h2>
+            <p class="small muted">&middot; Pickup: {lines[0]!.pickupLocation}</p>
+          </header>
 
-              <table class="table">
-                <thead>
-                  <tr>
-                    <th>Item</th>
-                    <th>Quantity</th>
-                    <th>Price</th>
-                    <th>Expiry</th>
-                    <th><span class="sr-only">Actions</span></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lines.map((line) => (
-                    <tr data-line={line.listingId}>
-                      <td>
-                        <div class="item">
-                          <span class="item-art">
-                            <FoodArt art={line.art} />
-                          </span>
-                          <span class="item-name">{line.foodName}</span>
-                        </div>
-                      </td>
-                      <td class="tnum">&times; {line.quantity}</td>
-                      <td>
-                        <p class="line-total tnum">{peso(line.quantity * line.unitPrice)}</p>
-                        <p class="small muted tnum">{peso(line.unitPrice)} each</p>
-                      </td>
-                      <td>
-                        <p>{line.expiryLabel}</p>
-                        {line.expiringSoon && <span class="chip chip-lime expiry-chip">Expiring soon</span>}
-                      </td>
-                      <td>
-                        <div class="line-actions">
-                          <button class="btn btn-sm" type="button">
-                            Edit quantity
-                          </button>
-                          <button class="btn btn-sm btn-danger" type="button" data-remove={line.listingId}>
-                            Remove
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </section>
-          ))}
-        </div>
-
-        <aside class="summary panel">
-          <p class="eyebrow">Order summary</p>
-
-          <div class="row-between summary-line">
-            <span>
-              <span data-item-count>{cartItemCount}</span> items &middot; {cartShopCount} shops
-            </span>
-            <span class="tnum" data-subtotal>
-              {peso(cartTotal)}
-            </span>
+          <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th class="num">Quantity</th>
+                <th class="num">Price</th>
+                <th>Expiry</th>
+                <th><span class="sr-only">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {lines.map((line) => (
+                <tr data-line={line.listingId}>
+                  <td>
+                    <div class="item">
+                      <span class="item-art">
+                        <FoodArt art={line.art} />
+                      </span>
+                      <span class="item-name" data-line-name>{line.foodName}</span>
+                    </div>
+                  </td>
+                  <td class="num" data-qty={line.quantity}>&times; {line.quantity}</td>
+                  <td class="num">
+                    <p class="line-total" data-line-total={line.quantity * line.unitPrice}>
+                      {peso(line.quantity * line.unitPrice)}
+                    </p>
+                    <p class="small muted">{peso(line.unitPrice)} each</p>
+                  </td>
+                  <td>
+                    <p>{line.expiryLabel}</p>
+                    {line.expiringSoon && <span class="chip chip-lime expiry-chip">Expiring soon</span>}
+                  </td>
+                  <td class="actions">
+                    <div class="line-actions">
+                      <button class="btn btn-sm" type="button" aria-label={`Edit quantity: ${line.foodName}`}>
+                        Edit quantity
+                      </button>
+                      <button
+                        class="btn btn-sm btn-danger"
+                        type="button"
+                        data-remove={line.listingId}
+                        aria-label={`Remove ${line.foodName}`}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
           </div>
+        </section>
+      ))}
+    </div>
 
-          <div class="row-between total">
-            <span>Total</span>
-            <span class="tnum" data-total>
-              {peso(cartTotal)}
-            </span>
-          </div>
+    <aside class="summary panel">
+      <p class="eyebrow">Order summary</p>
 
-          <p class="hint">
-            Reserving holds the food for you. Collect each order from its shop before the expiry time.
-          </p>
-
-          <a class="btn btn-primary btn-lg btn-block" href="/buyer/pending">
-            Checkout
-          </a>
-        </aside>
+      <div class="row-between summary-line">
+        <span>
+          <span data-item-count>{cartItemCount}</span> items &middot; <span data-shop-count>{cartShopCount}</span> shops
+        </span>
+        <span class="tnum" data-subtotal>
+          {peso(cartTotal)}
+        </span>
       </div>
+
+      <div class="row-between total">
+        <span>Total</span>
+        <span class="tnum" data-total>
+          {peso(cartTotal)}
+        </span>
+      </div>
+
+      <p class="hint">
+        Reserving holds the food for you. Collect each order from its shop before the expiry time.
+      </p>
+
+      <a class="btn btn-primary btn-lg btn-block" href="/buyer/pending">
+        Checkout
+      </a>
+    </aside>
+  </div>
     )
   }
 </AppLayout>
 
 <script>
   import { peso } from '../../data/types';
+  import { announce } from '../../scripts/announce';
 
-  const rows = () => Array.from(document.querySelectorAll<HTMLElement>('[data-line]'));
+  const rows = () => Array.from(document.querySelectorAll<HTMLElement>('[data-line]:not([hidden])'));
 
   const recalculate = () => {
     let total = 0;
     let items = 0;
 
     rows().forEach((row) => {
-      if (row.hidden) return;
-      const lineTotal = row.querySelector<HTMLElement>('.line-total')?.textContent ?? '0';
-      const quantity = row.querySelector<HTMLElement>('td.tnum')?.textContent ?? '0';
-      total += Number(lineTotal.replace(/[^\d.]/g, ''));
-      items += Number(quantity.replace(/[^\d.]/g, ''));
+      total += Number(row.querySelector<HTMLElement>('[data-line-total]')?.dataset.lineTotal ?? 0);
+      items += Number(row.querySelector<HTMLElement>('[data-qty]')?.dataset.qty ?? 0);
     });
 
-    const totalNode = document.querySelector<HTMLElement>('[data-total]');
-    const subtotalNode = document.querySelector<HTMLElement>('[data-subtotal]');
-    const countNode = document.querySelector<HTMLElement>('[data-item-count]');
+    const shops = document.querySelectorAll('.shop-group:not([hidden])').length;
+    const set = (selector: string, value: string) => {
+      const node = document.querySelector<HTMLElement>(selector);
+      if (node) node.textContent = value;
+    };
 
-    if (totalNode) totalNode.textContent = peso(total);
-    if (subtotalNode) subtotalNode.textContent = peso(total);
-    if (countNode) countNode.textContent = String(items);
+    set('[data-total]', peso(total));
+    set('[data-subtotal]', peso(total));
+    set('[data-item-count]', String(items));
+    set('[data-shop-count]', String(shops));
+
+    return { total, items };
   };
 
   document.querySelectorAll<HTMLButtonElement>('[data-remove]').forEach((button) => {
     button.addEventListener('click', () => {
       const row = button.closest<HTMLElement>('[data-line]');
       if (!row) return;
+      const name = row.querySelector<HTMLElement>('[data-line-name]')?.textContent ?? 'Item';
       row.hidden = true;
 
       // Drop the whole shop group once its last line is gone.
@@ -158,7 +171,20 @@ const isEmpty = cart.length === 0;
       const remaining = group?.querySelectorAll<HTMLElement>('[data-line]:not([hidden])').length ?? 0;
       if (group && remaining === 0) group.hidden = true;
 
-      recalculate();
+      const { total } = recalculate();
+
+      if (rows().length === 0) {
+        document.querySelector<HTMLElement>('[data-cart]')?.setAttribute('hidden', '');
+        const empty = document.querySelector<HTMLElement>('[data-cart-empty]');
+        if (empty) empty.hidden = false;
+        empty?.querySelector<HTMLElement>('a')?.focus();
+        announce(`${name} removed. Your cart is empty.`);
+        return;
+      }
+
+      // Focus moves to the next remove button so keyboard users keep their place.
+      rows()[0]?.querySelector<HTMLButtonElement>('[data-remove]')?.focus();
+      announce(`${name} removed. Total is now ${peso(total)}.`);
     });
   });
 </script>
@@ -166,7 +192,7 @@ const isEmpty = cart.length === 0;
 <style>
   .cart {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 360px;
+    grid-template-columns: minmax(0, 1fr) 340px;
     gap: 40px;
     align-items: start;
   }
@@ -184,11 +210,21 @@ const isEmpty = cart.length === 0;
   }
 
   .shop-head h2 {
-    font-size: 14px;
+    font-size: var(--fs-data);
     font-weight: 700;
-    letter-spacing: 0.09em;
+    letter-spacing: var(--track-caps);
     text-transform: uppercase;
   }
+
+  /* Both shop groups share one set of column widths so they line up. */
+  .lines .table {
+    table-layout: fixed;
+  }
+
+  .lines .table th:nth-child(2) { width: 96px; }
+  .lines .table th:nth-child(3) { width: 120px; }
+  .lines .table th:nth-child(4) { width: 170px; }
+  .lines .table th:nth-child(5) { width: 250px; }
 
   .item {
     display: flex;
@@ -203,12 +239,11 @@ const isEmpty = cart.length === 0;
 
   .item-name {
     font-weight: 600;
-    font-size: 14.5px;
   }
 
   .line-total {
     font-weight: 700;
-    font-size: 15px;
+    font-size: var(--fs-body);
   }
 
   .expiry-chip {
@@ -223,19 +258,25 @@ const isEmpty = cart.length === 0;
 
   .summary-line {
     margin-top: 16px;
-    font-size: 14px;
+    font-size: var(--fs-data);
   }
 
   .total {
     margin-top: 22px;
     padding-top: 18px;
     border-top: 1px solid var(--line-strong);
-    font-size: 20px;
+    font-size: var(--fs-title-s);
     font-weight: 700;
   }
 
   .total span:last-child {
-    font-size: 30px;
+    font-size: var(--fs-display-m);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .summary {
+    position: sticky;
+    top: calc(var(--topbar-h) + 16px);
   }
 
   .summary .hint {
@@ -245,6 +286,12 @@ const isEmpty = cart.length === 0;
   @media (max-width: 1100px) {
     .cart {
       grid-template-columns: 1fr;
+    }
+
+    .summary {
+      position: static;
+      max-width: 480px;
+      margin-left: auto;
     }
   }
 </style>

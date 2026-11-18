@@ -10,30 +10,34 @@ import AuthLayout from '../layouts/AuthLayout.astro';
 >
   <p class="note" slot="hero-extra">Business name field appears only when Seller is chosen (shown here).</p>
 
-  <form class="register" method="get" action="/login">
-    <h2>Create an account</h2>
+  <form class="register" method="post" data-demo-form data-next="/login">
+    <h2 class="display-title">Create an account</h2>
 
     <div class="field">
       <label class="field-label" for="new-username">Username</label>
-      <input class="input" id="new-username" name="username" value="mangben_owner" autocomplete="username" />
+      <input class="input" id="new-username" name="username" value="mangben_owner" autocomplete="username" required />
     </div>
 
     <div class="field">
       <label class="field-label" for="new-password">Password</label>
-      <input class="input" id="new-password" name="password" type="password" value="secondserve" autocomplete="new-password" />
+      <input class="input" id="new-password" name="password" type="password" value="secondserve" autocomplete="new-password" required />
     </div>
 
     <div class="field">
-      <span class="field-label">Account type</span>
-      <div class="roles" role="radiogroup" aria-label="Account type">
-        <button class="role" type="button" data-role="buyer" aria-pressed="false">Buyer</button>
-        <button class="role" type="button" data-role="seller" aria-pressed="true">Seller</button>
+      <span class="field-label" id="account-type-label">Account type</span>
+      <div class="segmented" role="radiogroup" aria-labelledby="account-type-label">
+        <button class="segment" type="button" role="radio" data-role="buyer" aria-checked="false" tabindex="-1">
+          Buyer
+        </button>
+        <button class="segment" type="button" role="radio" data-role="seller" aria-checked="true" tabindex="0">
+          Seller
+        </button>
       </div>
     </div>
 
     <div class="field" data-shop-field>
       <label class="field-label" for="shop">Shop / business name</label>
-      <input class="input" id="shop" name="shop" value="Mang Ben's Bakery" />
+      <input class="input" id="shop" name="shop" value="Mang Ben's Bakery" required />
     </div>
 
     <p class="notice notice-info">
@@ -46,14 +50,35 @@ import AuthLayout from '../layouts/AuthLayout.astro';
 </AuthLayout>
 
 <script>
-  const shopField = document.querySelector<HTMLElement>('[data-shop-field]');
+  import { initDemoForms } from '../scripts/demo-forms';
 
-  document.querySelectorAll<HTMLButtonElement>('.role').forEach((button) => {
-    button.addEventListener('click', () => {
-      document.querySelectorAll<HTMLButtonElement>('.role').forEach((other) => {
-        other.setAttribute('aria-pressed', String(other === button));
-      });
-      if (shopField) shopField.hidden = button.dataset.role !== 'seller';
+  initDemoForms();
+
+  const shopField = document.querySelector<HTMLElement>('[data-shop-field]');
+  const shopInput = shopField?.querySelector<HTMLInputElement>('input');
+  const options = Array.from(document.querySelectorAll<HTMLButtonElement>('.segment'));
+
+  const choose = (option: HTMLButtonElement, moveFocus = false) => {
+    options.forEach((other) => {
+      const checked = other === option;
+      other.setAttribute('aria-checked', String(checked));
+      other.tabIndex = checked ? 0 : -1;
+    });
+    if (moveFocus) option.focus();
+
+    const isSeller = option.dataset.role === 'seller';
+    if (shopField) shopField.hidden = !isSeller;
+    if (shopInput) shopInput.required = isSeller;
+  };
+
+  options.forEach((option, index) => {
+    option.addEventListener('click', () => choose(option));
+    // Radio-group keys: arrows move and select, as in a native radio set.
+    option.addEventListener('keydown', (event) => {
+      const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
+      if (!step) return;
+      event.preventDefault();
+      choose(options[(index + step + options.length) % options.length]!, true);
     });
   });
 </script>
@@ -63,41 +88,13 @@ import AuthLayout from '../layouts/AuthLayout.astro';
     margin-top: 30px;
     max-width: 42ch;
     color: var(--muted);
-    font-size: 13px;
-    border-left: 2px solid var(--line-strong);
-    padding-left: 14px;
+    font-size: var(--fs-small);
   }
 
   .register h2 {
-    font-family: var(--display);
-    font-weight: 400;
-    font-size: 34px;
     margin-bottom: 22px;
-    letter-spacing: -0.01em;
   }
 
-  .roles {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-
-  .role {
-    height: 44px;
-    border-radius: var(--r-pill);
-    border: 1px solid var(--line-strong);
-    background: var(--field);
-    font-size: 11.5px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  .role[aria-pressed='true'] {
-    background: var(--ink);
-    border-color: var(--ink);
-    color: var(--paper);
-  }
 
   .notice {
     margin-top: 18px;

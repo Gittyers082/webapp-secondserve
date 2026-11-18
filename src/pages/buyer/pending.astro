@@ -23,12 +23,13 @@ const readyShop = pendingOrders.find((order) => order.status === 'ready');
     )
   }
 
-  <table class="table orders">
+  <div class="table-wrap orders">
+  <table class="table">
     <thead>
       <tr>
         <th>Food</th>
-        <th>Qty</th>
-        <th>Price</th>
+        <th class="num">Qty</th>
+        <th class="num">Price</th>
         <th>Pickup location</th>
         <th>Status</th>
         <th><span class="sr-only">Actions</span></th>
@@ -38,9 +39,9 @@ const readyShop = pendingOrders.find((order) => order.status === 'ready');
       {
         pendingOrders.map((order) => (
           <tr data-order={order.id}>
-            <td class="food">{order.foodName}</td>
-            <td class="tnum">{order.quantity}</td>
-            <td class="tnum">{peso(order.total)}</td>
+            <td class="name">{order.foodName}</td>
+            <td class="num">{order.quantity}</td>
+            <td class="num">{peso(order.total)}</td>
             <td class="muted">{order.pickupLocation}</td>
             <td>
               {order.status === 'ready' ? (
@@ -51,7 +52,7 @@ const readyShop = pendingOrders.find((order) => order.status === 'ready');
             </td>
             <td class="actions">
               {order.status === 'ready' ? (
-                <button class="btn btn-sm btn-dark" type="button" data-collect={order.id}>
+                <button class="btn btn-sm btn-dark" type="button" data-collect={order.id} aria-label={`Already picked up: ${order.foodName}`}>
                   Already picked up
                 </button>
               ) : (
@@ -63,20 +64,25 @@ const readyShop = pendingOrders.find((order) => order.status === 'ready');
       }
     </tbody>
   </table>
+  </div>
 
   <p class="hint footnote">
     Tap Already Picked Up only after you have collected your food. The order then moves to My Order History.
   </p>
 
-  <p class="empty-note" data-empty hidden>Nothing pending. Everything you reserved has been collected.</p>
+  <p class="no-results" data-empty hidden>Nothing pending. Everything you reserved has been collected.</p>
 </AppLayout>
 
 <script>
+  import { announce } from '../../scripts/announce';
+
   document.querySelectorAll<HTMLButtonElement>('[data-collect]').forEach((button) => {
     button.addEventListener('click', () => {
       const row = button.closest<HTMLElement>('[data-order]');
       if (!row) return;
+      const food = row.querySelector<HTMLElement>('.name')?.textContent ?? 'Order';
       row.hidden = true;
+      announce(`${food} moved to My Order History.`);
 
       const remaining = document.querySelectorAll<HTMLElement>('[data-order]:not([hidden])').length;
       if (remaining === 0) {
@@ -93,24 +99,5 @@ const readyShop = pendingOrders.find((order) => order.status === 'ready');
 <style>
   .banner {
     margin-bottom: 26px;
-  }
-
-  .food {
-    font-weight: 600;
-    font-size: 14.5px;
-  }
-
-  .actions {
-    text-align: right;
-  }
-
-  .footnote {
-    margin-top: 22px;
-  }
-
-  .empty-note {
-    padding: 70px 0;
-    text-align: center;
-    color: var(--muted);
   }
 </style>

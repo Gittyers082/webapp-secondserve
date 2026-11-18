@@ -46,14 +46,14 @@ const stats = [
 
   <div class="toolbar">
     <label class="toggle">
-      <input type="checkbox" checked data-expiry-filter />
+      <input type="checkbox" role="switch" checked data-expiry-filter />
       <span class="track" aria-hidden="true"></span>
       <span class="toggle-label">Expiring within 3 days</span>
     </label>
-    <p class="small muted" data-shown>Showing {expiringWithinThreeDays.length} of {sellerListings.length} items</p>
+    <p class="small muted tnum" data-shown>Showing {expiringWithinThreeDays.length} of {sellerListings.length} items</p>
   </div>
 
-  <div class="grid">
+  <div class="listing-grid">
     {
       sellerListings.map((listing) => {
         const soon = expiringWithinThreeDays.includes(listing);
@@ -65,14 +65,16 @@ const stats = [
       })
     }
 
-    <div class="later panel-outline" data-later>
-      <p class="later-head">{laterCount} more items expire after Nov 7.</p>
+    <div class="grid-tile" data-later>
+      <p class="grid-tile-title">{laterCount} more items expire after Nov 7.</p>
       <p class="later-note">Switch the filter off to see them.</p>
     </div>
   </div>
 </AppLayout>
 
 <script>
+  import { announce } from '../../scripts/announce';
+
   const toggle = document.querySelector<HTMLInputElement>('[data-expiry-filter]');
   const cells = Array.from(document.querySelectorAll<HTMLElement>('.cell'));
   const later = document.querySelector<HTMLElement>('[data-later]');
@@ -89,7 +91,9 @@ const stats = [
     });
 
     if (later) later.hidden = !filtered;
-    if (shown) shown.textContent = `Showing ${visible} of ${cells.length} items`;
+    const message = `Showing ${visible} of ${cells.length} items`;
+    if (shown) shown.textContent = message;
+    announce(message);
   };
 
   toggle?.addEventListener('change', render);
@@ -111,7 +115,8 @@ const stats = [
 
   .stat-value {
     font-family: var(--display);
-    font-size: 52px;
+    font-size: var(--fs-stat);
+    font-variant-numeric: tabular-nums;
     line-height: 1;
     margin-bottom: 12px;
   }
@@ -135,16 +140,16 @@ const stats = [
   }
 
   .next-art :global(.art) {
-    background: rgba(255, 255, 255, 0.45);
+    background: var(--field);
   }
 
   .next-label {
-    color: rgba(23, 21, 15, 0.6);
+    color: var(--ink-soft);
   }
 
   .next-name {
     margin: 4px 0 2px;
-    font-size: 19px;
+    font-size: var(--fs-title-s);
     font-weight: 600;
     line-height: 1.2;
   }
@@ -176,7 +181,8 @@ const stats = [
     height: 28px;
     border-radius: var(--r-pill);
     background: var(--tan-deep);
-    transition: background 0.18s ease;
+    box-shadow: inset 0 0 0 1px var(--line-control);
+    transition: background var(--dur) var(--ease-out);
   }
 
   .track::after {
@@ -188,7 +194,7 @@ const stats = [
     height: 20px;
     border-radius: 50%;
     background: var(--ink);
-    transition: transform 0.18s ease;
+    transition: transform var(--dur) var(--ease-out);
   }
 
   .toggle input:checked + .track {
@@ -205,38 +211,24 @@ const stats = [
   }
 
   .toggle-label {
-    font-size: 17px;
+    font-size: var(--fs-lead);
   }
 
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 34px 30px;
+  .toggle:hover .track {
+    background: var(--line-strong);
   }
 
-  .later {
-    display: grid;
-    place-content: center;
-    text-align: center;
-    padding: 40px 28px;
-    min-height: 260px;
-  }
-
-  .later-head {
-    font-family: var(--display);
-    font-size: 25px;
-    line-height: 1.2;
+  .toggle:hover input:checked + .track {
+    background: var(--lime-deep);
   }
 
   .later-note {
-    margin-top: 10px;
-    font-family: var(--display);
-    font-size: 14px;
+    margin-top: 4px;
+    font-size: var(--fs-small);
     color: var(--muted);
   }
 
   @media (max-width: 1200px) {
     .stats { grid-template-columns: repeat(2, 1fr); }
-    .grid { grid-template-columns: repeat(2, 1fr); }
   }
 </style>

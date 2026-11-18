@@ -10,7 +10,8 @@ import { admin, pendingAccounts } from '../../data/store';
   heading="Pending Approvals"
   subtitle={`${pendingAccounts.length} new accounts are waiting for you.`}
 >
-  <table class="table" data-approvals>
+  <div class="table-wrap" data-approvals>
+  <table class="table">
     <thead>
       <tr>
         <th>Username</th>
@@ -25,7 +26,7 @@ import { admin, pendingAccounts } from '../../data/store';
       {
         pendingAccounts.map((account) => (
           <tr data-account={account.id}>
-            <td class="username">{account.username}</td>
+            <td class="name">{account.username}</td>
             <td>{account.role === 'seller' ? 'Seller' : 'Buyer'}</td>
             <td class="muted">{account.shopName ?? '—'}</td>
             <td class="muted">{account.requestedAt}</td>
@@ -34,10 +35,10 @@ import { admin, pendingAccounts } from '../../data/store';
             </td>
             <td class="actions">
               <div class="row">
-                <button class="btn btn-sm btn-dark" type="button" data-decide="approved">
+                <button class="btn btn-sm btn-dark" type="button" data-decide="approved" aria-label={`Approve ${account.username}`}>
                   Approve
                 </button>
-                <button class="btn btn-sm btn-danger" type="button" data-decide="declined">
+                <button class="btn btn-sm btn-danger" type="button" data-decide="declined" aria-label={`Decline ${account.username}`}>
                   Decline
                 </button>
               </div>
@@ -47,6 +48,7 @@ import { admin, pendingAccounts } from '../../data/store';
       }
     </tbody>
   </table>
+  </div>
 
   <div class="empty" data-empty hidden>
     <h2>Nothing waiting.</h2>
@@ -56,6 +58,8 @@ import { admin, pendingAccounts } from '../../data/store';
 </AppLayout>
 
 <script>
+  import { announce } from '../../scripts/announce';
+
   const rows = Array.from(document.querySelectorAll<HTMLElement>('[data-account]'));
 
   const checkEmpty = () => {
@@ -66,6 +70,7 @@ import { admin, pendingAccounts } from '../../data/store';
     const empty = document.querySelector<HTMLElement>('[data-empty]');
     if (table) table.hidden = true;
     if (empty) empty.hidden = false;
+    empty?.querySelector<HTMLElement>('a')?.focus();
   };
 
   rows.forEach((row) => {
@@ -88,23 +93,15 @@ import { admin, pendingAccounts } from '../../data/store';
         }
 
         row.dataset.decided = 'true';
+        announce(`${row.querySelector('.name')?.textContent ?? 'Account'} ${decision.toLowerCase()}.`);
         checkEmpty();
+
+        // The buttons are gone; keep keyboard focus on the next pending decision.
+        rows
+          .find((other) => other.dataset.decided !== 'true')
+          ?.querySelector<HTMLButtonElement>('[data-decide]')
+          ?.focus();
       });
     });
   });
 </script>
-
-<style>
-  .username {
-    font-size: 15px;
-  }
-
-  .actions {
-    text-align: right;
-  }
-
-  .actions .row {
-    justify-content: flex-end;
-    gap: 8px;
-  }
-</style>

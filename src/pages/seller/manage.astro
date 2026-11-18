@@ -16,25 +16,27 @@ const first = sellerListings[0]!;
   heading="Manage Listings"
   subtitle="Edit what you listed or take it down."
 >
-  <div class="toolbar">
-    <button class="btn btn-sm" type="button" data-dialog-open="edit-listing" data-needs-selection>Edit selected</button>
+  <div class="toolbar" role="toolbar" aria-label="Selected listing">
+    <button class="btn btn-sm" type="button" data-dialog-open="edit-listing" aria-haspopup="dialog" data-needs-selection>
+      Edit selected
+    </button>
     <button class="btn btn-sm" type="button" data-mark-sold data-needs-selection>Mark as sold</button>
     <button class="btn btn-sm" type="button" data-withdraw data-needs-selection>Withdraw</button>
-    <button class="btn btn-sm btn-danger" type="button" data-dialog-open="delete-listing" data-needs-selection>
+    <button class="btn btn-sm btn-danger" type="button" data-dialog-open="delete-listing" aria-haspopup="dialog" data-needs-selection>
       Delete selected
     </button>
   </div>
 
-  <div class="grid">
+  <div class="listing-grid">
     {
       sellerListings.map((listing, index) => (
         <ListingCard listing={listing} variant="seller" selectable selected={index === 0} />
       ))
     }
 
-    <a class="add-tile panel-outline" href="/seller/add-listing">
-      <span class="plus" aria-hidden="true">+</span>
-      <span class="add-title">Add a new listing</span>
+    <a class="grid-tile" href="/seller/add-listing">
+      <span class="grid-tile-plus" aria-hidden="true">+</span>
+      <span class="grid-tile-title">Add a new listing</span>
       <span class="small muted">Open the Add Listing tab</span>
     </a>
   </div>
@@ -45,7 +47,7 @@ const first = sellerListings[0]!;
 
   <!-- Edit ------------------------------------------------------------- -->
   <Dialog id="edit-listing" title="Edit listing" wide>
-    <form class="edit" method="get" action="#">
+    <form class="edit" method="post" data-edit-form>
       <div class="edit-photo">
         <span class="field-label">Product photo</span>
         <div class="photo-frame"><FoodArt art={first.art} /></div>
@@ -58,7 +60,7 @@ const first = sellerListings[0]!;
       <div class="edit-fields">
         <div class="field">
           <label class="field-label" for="edit-name">Food name</label>
-          <input class="input" id="edit-name" value={first.name} />
+          <input class="input" id="edit-name" name="name" value={first.name} required data-autofocus />
         </div>
 
         <div class="field-row">
@@ -97,7 +99,7 @@ const first = sellerListings[0]!;
 
       <div class="dialog-actions edit-actions">
         <button class="btn" type="button" data-dialog-close>Cancel</button>
-        <button class="btn btn-primary" type="button" data-dialog-close>Save changes</button>
+        <button class="btn btn-primary" type="submit">Save changes</button>
       </div>
     </form>
   </Dialog>
@@ -116,39 +118,36 @@ const first = sellerListings[0]!;
 </AppLayout>
 
 <script>
-  let cards = Array.from(document.querySelectorAll<HTMLElement>('article[data-listing]'));
-  const deleteTitle = document.querySelector<HTMLElement>('[data-dialog="delete-listing"] h2');
+  import { announce } from '../../scripts/announce';
+  import { closeDialog } from '../../scripts/dialog';
+  import { setupSelection } from '../../scripts/selection';
 
-  const selected = () => cards.find((card) => card.isConnected && card.classList.contains('is-selected'));
+  const cards = () => Array.from(document.querySelectorAll<HTMLElement>('article[data-listing]'));
+  const deleteTitle = document.querySelector<HTMLElement>('[data-dialog="delete-listing"] [data-dialog-title]');
+
+  /** The card title is uppercased by CSS; textContent keeps the real casing. */
+  const nameOf = (card?: HTMLElement) =>
+    card?.querySelector<HTMLElement>('h3')?.textContent?.replace(/\s*\(.*\)\s*$/, '') ?? '';
 
   const syncToolbar = () => {
-    const card = selected();
+    const card = selection.selected();
 
     document.querySelectorAll<HTMLButtonElement>('[data-needs-selection]').forEach((button) => {
       button.disabled = !card;
     });
 
-    if (deleteTitle) {
-      // The card title is uppercased by CSS, so textContent still holds the
-      // original casing. Drop the "(box of 4)" tail for a readable question.
-      const name = card?.querySelector<HTMLElement>('h3')?.textContent?.replace(/\s*\(.*\)\s*$/, '');
-      deleteTitle.textContent = name ? `Delete ${name}?` : 'Delete this listing?';
-    }
+    if (deleteTitle) deleteTitle.textContent = card ? `Delete ${nameOf(card)}?` : 'Delete this listing?';
   };
 
-  cards.forEach((card) => {
-    card.querySelector<HTMLElement>('.thumb')?.addEventListener('click', () => {
-      cards.forEach((other) => other.classList.toggle('is-selected', other === card));
-      syncToolbar();
-    });
-  });
+  const selection = setupSelection({ cards, onSelect: syncToolbar });
 
   const setState = (label: string, tone: string) => {
-    const card = selected();
+    const card = selection.selected();
     const chip = card?.querySelector<HTMLElement>('.foot .chip');
-    if (!chip) return;
+    if (!card || !chip) return;
     chip.className = `chip ${tone}`;
     chip.textContent = label;
+    announce(`${nameOf(card)} marked ${label.toLowerCase()}.`);
   };
 
   document.querySelector<HTMLButtonElement>('[data-mark-sold]')?.addEventListener('click', () =>
@@ -159,61 +158,27 @@ const first = sellerListings[0]!;
     setState('Withdrawn', 'chip-tan'),
   );
 
-  document.querySelector<HTMLButtonElement>('[data-confirm-delete]')?.addEventListener('click', () => {
-    const card = selected();
-    card?.remove();
-    cards = cards.filter((other) => other !== card);
+  document.querySelector<HTMLFormElement>('[data-edit-form]')?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    closeDialog();
+    announce('Changes saved.');
+  });
 
-    const scrim = document.querySelector<HTMLElement>('[data-dialog="delete-listing"]');
-    if (scrim) scrim.hidden = true;
+  document.querySelector<HTMLButtonElement>('[data-confirm-delete]')?.addEventListener('click', () => {
+    const card = selection.selected();
+    const name = nameOf(card);
+    closeDialog();
+    card?.remove();
     syncToolbar();
+    // The opener was removed with nothing selected; keep focus in the grid.
+    document.querySelector<HTMLElement>('[data-select]')?.focus();
+    if (name) announce(`${name} deleted.`);
   });
 
   syncToolbar();
 </script>
 
 <style>
-  .toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 26px;
-  }
-
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 34px 30px;
-  }
-
-  .add-tile {
-    display: grid;
-    place-content: center;
-    justify-items: center;
-    gap: 6px;
-    text-align: center;
-    padding: 40px 28px;
-    min-height: 260px;
-  }
-
-  .add-tile:hover { border-color: var(--ink); }
-
-  .plus {
-    font-family: var(--display);
-    font-size: 40px;
-    line-height: 1;
-    color: var(--muted);
-  }
-
-  .add-title {
-    font-family: var(--display);
-    font-size: 22px;
-  }
-
-  .footnote {
-    margin-top: 32px;
-  }
-
   .edit {
     display: grid;
     grid-template-columns: 260px minmax(0, 1fr);
@@ -236,10 +201,6 @@ const first = sellerListings[0]!;
 
   .edit-actions {
     grid-column: 1 / -1;
-  }
-
-  @media (max-width: 1200px) {
-    .grid { grid-template-columns: repeat(2, 1fr); }
   }
 
   @media (max-width: 800px) {

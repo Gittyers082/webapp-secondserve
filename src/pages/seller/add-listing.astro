@@ -18,16 +18,16 @@ const draft = sellerListings[0]!;
 >
   <div class="add">
     <!-- Listing details -------------------------------------------------- -->
-    <form class="form" method="get" action="/seller/listed-items">
+    <form class="form" method="post" data-demo-form data-next="/seller/listed-items">
       <div class="field">
         <label class="field-label" for="food-name">Food name</label>
-        <input class="input" id="food-name" name="name" value={draft.name} />
+        <input class="input" id="food-name" name="name" value={draft.name} required />
       </div>
 
       <div class="field-row">
         <div>
           <label class="field-label" for="quantity">Quantity</label>
-          <input class="input" id="quantity" name="quantity" value={draft.quantity} inputmode="numeric" />
+          <input class="input" id="quantity" name="quantity" value={draft.quantity} inputmode="numeric" required />
         </div>
         <div>
           <label class="field-label" for="original-price">Original price</label>
@@ -38,7 +38,14 @@ const draft = sellerListings[0]!;
       <div class="field-row">
         <div>
           <label class="field-label" for="discounted-price">Discounted price</label>
-          <input class="input" id="discounted-price" name="discountedPrice" value={peso(draft.discountedPrice)} />
+          <input
+            class="input"
+            id="discounted-price"
+            name="discountedPrice"
+            value={peso(draft.discountedPrice)}
+            aria-describedby="eligibility"
+            required
+          />
         </div>
         <div>
           <label class="field-label" for="expiry-date">Expiry date</label>
@@ -57,7 +64,7 @@ const draft = sellerListings[0]!;
         </div>
       </div>
 
-      <p class="hint eligibility">
+      <p class="hint eligibility" id="eligibility">
         Eligible products: surplus food that is still safe to eat and not yet expired. The discounted price must
         be lower than the original price.
       </p>
@@ -89,7 +96,7 @@ const draft = sellerListings[0]!;
         <p class="small muted file">ube-pandesal.jpg &middot; 1.2 MB &middot; taken with camera</p>
 
         <div class="photo-actions">
-          <button class="btn btn-sm btn-dark" type="button" data-dialog-open="camera">Retake with camera</button>
+          <button class="btn btn-sm btn-dark" type="button" data-dialog-open="camera" aria-haspopup="dialog">Retake with camera</button>
           <button class="btn btn-sm" type="button">Replace from file</button>
           <button class="btn btn-sm btn-danger" type="button" data-remove-photo>Remove</button>
         </div>
@@ -103,7 +110,7 @@ const draft = sellerListings[0]!;
           <p class="empty-title">Show shoppers your food</p>
           <p class="hint">Take a photo with your computer&rsquo;s camera, or upload one you already have.</p>
           <div class="photo-actions center">
-            <button class="btn btn-sm btn-dark" type="button" data-dialog-open="camera">Take photo</button>
+            <button class="btn btn-sm btn-dark" type="button" data-dialog-open="camera" aria-haspopup="dialog">Take photo</button>
             <button class="btn btn-sm" type="button" data-restore-photo>Upload from computer</button>
           </div>
         </div>
@@ -157,6 +164,12 @@ const draft = sellerListings[0]!;
 </AppLayout>
 
 <script>
+  import { announce } from '../../scripts/announce';
+  import { closeDialog, openDialog } from '../../scripts/dialog';
+  import { initDemoForms } from '../../scripts/demo-forms';
+
+  initDemoForms();
+
   const added = document.querySelector<HTMLElement>('[data-photo-added]');
   const empty = document.querySelector<HTMLElement>('[data-photo-empty]');
   const stateAdded = document.querySelector<HTMLElement>('[data-photo-state="added"]');
@@ -167,33 +180,20 @@ const draft = sellerListings[0]!;
     if (empty) empty.hidden = hasPhoto;
     if (stateAdded) stateAdded.hidden = !hasPhoto;
     if (stateEmpty) stateEmpty.hidden = hasPhoto;
-  };
 
-  const show = (id: string) => {
-    const node = document.querySelector<HTMLElement>(`[data-dialog="${id}"]`);
-    if (node) node.hidden = false;
-  };
-
-  const hide = (id: string) => {
-    const node = document.querySelector<HTMLElement>(`[data-dialog="${id}"]`);
-    if (node) node.hidden = true;
+    // Whichever panel is now showing, put focus on its first action.
+    (hasPhoto ? added : empty)?.querySelector<HTMLButtonElement>('button')?.focus();
+    announce(hasPhoto ? 'Photo added.' : 'Photo removed. A photo is required to publish.');
   };
 
   document.querySelector<HTMLButtonElement>('[data-remove-photo]')?.addEventListener('click', () => setPhoto(false));
   document.querySelector<HTMLButtonElement>('[data-restore-photo]')?.addEventListener('click', () => setPhoto(true));
 
-  document.querySelector<HTMLButtonElement>('[data-capture]')?.addEventListener('click', () => {
-    hide('camera');
-    show('confirm-photo');
-  });
-
-  document.querySelector<HTMLButtonElement>('[data-retake]')?.addEventListener('click', () => {
-    hide('confirm-photo');
-    show('camera');
-  });
+  document.querySelector<HTMLButtonElement>('[data-capture]')?.addEventListener('click', () => openDialog('confirm-photo'));
+  document.querySelector<HTMLButtonElement>('[data-retake]')?.addEventListener('click', () => openDialog('camera'));
 
   document.querySelector<HTMLButtonElement>('[data-use-photo]')?.addEventListener('click', () => {
-    hide('confirm-photo');
+    closeDialog();
     setPhoto(true);
   });
 </script>
@@ -235,17 +235,17 @@ const draft = sellerListings[0]!;
     gap: 10px;
     padding: 48px 32px;
     background: var(--tan);
-    border: 1px dashed var(--line-strong);
+    border: 1px dashed var(--line-control);
   }
 
   .empty-title {
     font-family: var(--display);
-    font-size: 22px;
+    font-size: var(--fs-display-s);
   }
 
   .photo-name {
     margin-top: 16px;
-    font-size: 16px;
+    font-size: var(--fs-lead);
     font-weight: 700;
   }
 
@@ -292,10 +292,20 @@ const draft = sellerListings[0]!;
     margin-bottom: 4px;
   }
 
+  @media (max-width: 1200px) {
+    .add {
+      gap: 36px;
+    }
+  }
+
   @media (max-width: 1100px) {
     .add {
       grid-template-columns: 1fr;
       gap: 34px;
+    }
+
+    .photo {
+      max-width: 560px;
     }
   }
 </style>

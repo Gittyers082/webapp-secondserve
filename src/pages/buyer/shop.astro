@@ -84,25 +84,27 @@ const categories = [
       <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M16.5 16.5L21 21"></path></svg>
     </div>
 
-    <div class="grid" data-grid>
+    <div class="listing-grid shelf-grid" data-grid>
       {listings.map((listing) => <ListingCard listing={listing} selectable selected={listing.id === featured.id} />)}
     </div>
 
-    <p class="no-results" data-no-results hidden>Nothing matches that search. Try another shop or food name.</p>
-  </section>
+    <p class="no-results" data-no-results hidden>
+      Nothing matches that search. Try a shop name such as &ldquo;Mang Ben&rsquo;s&rdquo;, or switch the filter back to All.
+    </p>
 
-  <!-- Selection bar ------------------------------------------------------ -->
-  <div class="selection" data-selection>
-    <div class="selection-art"><FoodArt art={featured.art} /></div>
-    <div class="selection-copy">
-      <p class="selection-name" data-selection-name>{featured.name}</p>
-      <p class="small muted" data-selection-meta>
-        Selected &middot; {featured.shopName} &middot; {featured.quantity} in stock
-      </p>
+    <!-- Selection bar ------------------------------------------------------ -->
+    <div class="action-bar" data-selection>
+      <div class="selection-art"><FoodArt art={featured.art} /></div>
+      <div class="action-bar-copy">
+        <p class="action-bar-name" data-selection-name>{featured.name}</p>
+        <p class="small muted" data-selection-meta>
+          Selected &middot; {featured.shopName} &middot; {featured.quantity} in stock
+        </p>
+      </div>
+      <QuantityStepper value={2} max={featured.quantity} name="shop" />
+      <button class="btn btn-primary" type="button" data-add-to-cart>Add to cart</button>
     </div>
-    <QuantityStepper value={2} max={featured.quantity} name="shop" />
-    <button class="btn btn-primary" type="button" data-add-to-cart>Add to cart</button>
-  </div>
+  </section>
 
   <!-- Details dialog ----------------------------------------------------- -->
   <Dialog id="details" title="Listing details" wide>
@@ -140,7 +142,7 @@ const categories = [
 
         <div class="details-actions">
           <QuantityStepper value={2} max={featured.quantity} name="details" />
-          <button class="btn btn-primary" type="button" data-dialog-close>Add to cart</button>
+          <button class="btn btn-primary" type="button" data-add-to-cart data-autofocus>Add to cart</button>
           <button class="btn" type="button" data-dialog-close>Close</button>
         </div>
       </div>
@@ -149,70 +151,42 @@ const categories = [
 </AppLayout>
 
 <script>
-  const grid = document.querySelector<HTMLElement>('[data-grid]');
-  const cards = Array.from(document.querySelectorAll<HTMLElement>('article[data-listing]'));
-  const noResults = document.querySelector<HTMLElement>('[data-no-results]');
-  const search = document.querySelector<HTMLInputElement>('[data-search]');
+  import { setupFilters } from '../../scripts/filters';
+  import { setupSelection } from '../../scripts/selection';
+
+  const cards = () => Array.from(document.querySelectorAll<HTMLElement>('article[data-listing]'));
   const selectionName = document.querySelector<HTMLElement>('[data-selection-name]');
   const selectionMeta = document.querySelector<HTMLElement>('[data-selection-meta]');
 
-  let category = 'all';
-
-  const applyFilters = () => {
-    const term = (search?.value ?? '').trim().toLowerCase();
-    let visible = 0;
-
-    cards.forEach((card) => {
-      const matchesCategory = category === 'all' || card.dataset.category === category;
-      const matchesTerm =
-        term === '' ||
-        (card.dataset.name ?? '').includes(term) ||
-        (card.dataset.shop ?? '').includes(term);
-      const show = matchesCategory && matchesTerm;
-      card.hidden = !show;
-      if (show) visible += 1;
-    });
-
-    if (noResults) noResults.hidden = visible > 0;
-    if (grid) grid.hidden = visible === 0;
-  };
-
-  document.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach((button) => {
-    button.addEventListener('click', () => {
-      category = button.dataset.filter ?? 'all';
-      document.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach((other) => {
-        other.setAttribute('aria-pressed', String(other === button));
-      });
-      applyFilters();
-    });
+  setupFilters({
+    items: cards,
+    noun: 'listing',
+    container: document.querySelector<HTMLElement>('[data-grid]'),
+    matches: (card, category, term) => {
+      const inCategory = category === 'all' || card.dataset.category === category;
+      const inSearch =
+        term === '' || (card.dataset.name ?? '').includes(term) || (card.dataset.shop ?? '').includes(term);
+      return inCategory && inSearch;
+    },
   });
 
-  search?.addEventListener('input', applyFilters);
-
-  cards.forEach((card) => {
-    const thumb = card.querySelector<HTMLElement>('.thumb');
-    thumb?.addEventListener('click', () => {
-      if (card.dataset.status === 'expired') return;
-      cards.forEach((other) => other.classList.toggle('is-selected', other === card));
-
+  setupSelection({
+    cards,
+    canSelect: (card) => card.dataset.status !== 'expired',
+    onSelect: (card) => {
       const name = card.querySelector<HTMLElement>('h3')?.textContent ?? '';
       const shop = card.querySelector<HTMLElement>('.shop')?.textContent ?? '';
       const left = card.querySelector<HTMLElement>('.meta dd')?.textContent ?? '';
 
       if (selectionName) selectionName.textContent = name;
       if (selectionMeta) selectionMeta.textContent = `Selected · ${shop} · ${left} in stock`;
-    });
+    },
   });
 
-  document.querySelectorAll<HTMLButtonElement>('.js-details').forEach((button) => {
+  document.querySelectorAll<HTMLButtonElement>('[data-add-to-cart]').forEach((button) => {
     button.addEventListener('click', () => {
-      const dialog = document.querySelector<HTMLElement>('[data-dialog="details"]');
-      if (dialog) dialog.hidden = false;
+      window.location.href = '/buyer/cart';
     });
-  });
-
-  document.querySelector<HTMLButtonElement>('[data-add-to-cart]')?.addEventListener('click', () => {
-    window.location.href = '/buyer/cart';
   });
 </script>
 
@@ -272,7 +246,7 @@ const categories = [
     margin-top: 6px;
     font-family: var(--display);
     font-weight: 400;
-    font-size: 32px;
+    font-size: var(--fs-display-l);
     line-height: 1.18;
     letter-spacing: -0.01em;
     max-width: 22ch;
@@ -292,18 +266,18 @@ const categories = [
   }
 
   .feature-price {
-    font-size: 13.5px;
+    font-size: var(--fs-small);
     color: var(--muted);
   }
 
   .feature-price strong {
     color: var(--price);
-    font-size: 15px;
+    font-size: var(--fs-body);
   }
 
   .feature-blurb {
     color: var(--ink-soft);
-    font-size: 13.5px;
+    font-size: var(--fs-small);
     line-height: 1.6;
     padding-top: 18px;
   }
@@ -318,7 +292,7 @@ const categories = [
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 24px;
+    gap: 16px 24px;
     flex-wrap: wrap;
   }
 
@@ -326,52 +300,15 @@ const categories = [
     margin-top: 18px;
   }
 
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 34px 30px;
+  .shelf-grid {
     margin-top: 28px;
-  }
-
-  .no-results {
-    padding: 70px 0;
-    text-align: center;
-    color: var(--muted);
   }
 
   /* Selection bar --------------------------------------------------------- */
 
-  .selection {
-    position: sticky;
-    bottom: 12px;
-    z-index: 20;
-    display: flex;
-    align-items: center;
-    gap: 22px;
-    margin-top: 42px;
-    padding: 14px 18px;
-    background: var(--tan);
-    border-radius: var(--r-lg);
-    box-shadow: 0 10px 30px rgba(23, 21, 15, 0.08);
-  }
-
   .selection-art {
     width: 56px;
     flex: none;
-  }
-
-  .selection-art :global(.art) {
-    background: var(--tan-deep);
-  }
-
-  .selection-copy {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .selection-name {
-    font-size: 15px;
-    font-weight: 600;
   }
 
   /* Details dialog -------------------------------------------------------- */
@@ -387,7 +324,7 @@ const categories = [
     margin-top: 12px;
     font-family: var(--display);
     font-weight: 400;
-    font-size: 27px;
+    font-size: var(--fs-display-m);
     line-height: 1.15;
   }
 
@@ -396,7 +333,7 @@ const categories = [
   }
 
   .details-price ins {
-    font-size: 24px;
+    font-size: var(--fs-display-s);
   }
 
   .details-meta {
@@ -408,7 +345,7 @@ const categories = [
 
   .details-meta dd {
     margin: 0;
-    font-size: 14px;
+    font-size: var(--fs-data);
   }
 
   .details-actions {
@@ -420,8 +357,9 @@ const categories = [
   }
 
   @media (max-width: 1100px) {
-    .grid { grid-template-columns: repeat(2, 1fr); }
-    .feature-copy { grid-template-columns: 1fr; gap: 22px; }
+    .feature-copy { grid-template-columns: 1fr; gap: 14px; }
+    .feature-blurb { padding-top: 0; max-width: 70ch; }
     .details { grid-template-columns: 1fr; }
+    .details-art { max-width: 320px; }
   }
 </style>

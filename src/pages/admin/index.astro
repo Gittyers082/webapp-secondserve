@@ -26,7 +26,7 @@ const filters = [
       <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M16.5 16.5L21 21"></path></svg>
     </div>
 
-    <div class="filters">
+    <div class="filters" role="group" aria-label="Filter users">
       {
         filters.map((filter) => (
           <button class="filter" type="button" data-filter={filter.id} aria-pressed={filter.id === 'all'}>
@@ -37,20 +37,21 @@ const filters = [
     </div>
   </div>
 
-  <table class="table">
+  <div class="table-wrap">
+  <table class="table" data-users>
     <thead>
       <tr>
         <th>Username</th>
         <th>Account type</th>
         <th>Status</th>
-        <th>Actions</th>
+        <th class="actions">Actions</th>
       </tr>
     </thead>
     <tbody>
       {
         users.map((user) => (
           <tr data-user={user.username} data-role={user.role} data-status={user.status}>
-            <td class="username">{user.username}</td>
+            <td class="name">{user.username}</td>
             <td>{user.role === 'seller' ? 'Seller' : 'Buyer'}</td>
             <td>
               <span
@@ -60,11 +61,12 @@ const filters = [
                 {user.status === 'banned' ? 'Banned' : 'Active'}
               </span>
             </td>
-            <td>
+            <td class="actions">
               <button
                 class:list={['btn', 'btn-sm', user.status === 'banned' ? '' : 'btn-danger']}
                 type="button"
                 data-toggle-ban={user.username}
+                aria-label={`${user.status === 'banned' ? 'Unban' : 'Ban'} ${user.username}`}
               >
                 {user.status === 'banned' ? 'Unban' : 'Ban user'}
               </button>
@@ -74,71 +76,58 @@ const filters = [
       }
     </tbody>
   </table>
+  </div>
 
-  <p class="no-results" data-no-results hidden>No user matches that search.</p>
+  <p class="no-results" data-no-results hidden>No user matches that search. Check the spelling, or switch the filter to All.</p>
 
   <Dialog id="confirm-ban" title="Ban this user?" message="">
     <div class="dialog-actions">
-      <button class="btn" type="button" data-dialog-close>Cancel</button>
+      <button class="btn" type="button" data-dialog-close data-autofocus>Cancel</button>
       <button class="btn btn-primary" type="button" data-confirm-ban>Ban user</button>
     </div>
   </Dialog>
 </AppLayout>
 
 <script>
-  const rows = Array.from(document.querySelectorAll<HTMLElement>('[data-user]'));
-  const search = document.querySelector<HTMLInputElement>('[data-search]');
-  const noResults = document.querySelector<HTMLElement>('[data-no-results]');
-  const scrim = document.querySelector<HTMLElement>('[data-dialog="confirm-ban"]');
-  const dialogTitle = scrim?.querySelector<HTMLElement>('h2');
-  const dialogBody = scrim?.querySelector<HTMLElement>('p');
+  import { announce } from '../../scripts/announce';
+  import { closeDialog, openDialog } from '../../scripts/dialog';
+  import { setupFilters } from '../../scripts/filters';
 
-  let filter = 'all';
+  const rows = () => Array.from(document.querySelectorAll<HTMLElement>('[data-user]'));
+  const scrim = document.querySelector<HTMLElement>('[data-dialog="confirm-ban"]');
+  const dialogTitle = scrim?.querySelector<HTMLElement>('[data-dialog-title]');
+  const dialogBody = scrim?.querySelector<HTMLElement>('[data-dialog-message]');
+
   let pending: HTMLElement | null = null;
 
-  const applyFilters = () => {
-    const term = (search?.value ?? '').trim().toLowerCase();
-    let visible = 0;
-
-    rows.forEach((row) => {
-      const matchesFilter =
-        filter === 'all' ||
-        (filter === 'banned' ? row.dataset.status === 'banned' : row.dataset.role === filter);
-      const matchesTerm = term === '' || (row.dataset.user ?? '').includes(term);
-      const show = matchesFilter && matchesTerm;
-      row.hidden = !show;
-      if (show) visible += 1;
-    });
-
-    if (noResults) noResults.hidden = visible > 0;
-  };
-
-  document.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach((button) => {
-    button.addEventListener('click', () => {
-      filter = button.dataset.filter ?? 'all';
-      document.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach((other) => {
-        other.setAttribute('aria-pressed', String(other === button));
-      });
-      applyFilters();
-    });
+  const { apply } = setupFilters({
+    items: rows,
+    noun: 'user',
+    matches: (row, filter, term) => {
+      const inFilter =
+        filter === 'all' || (filter === 'banned' ? row.dataset.status === 'banned' : row.dataset.role === filter);
+      return inFilter && (term === '' || (row.dataset.user ?? '').includes(term));
+    },
   });
-
-  search?.addEventListener('input', applyFilters);
 
   const setBanned = (row: HTMLElement, banned: boolean) => {
     const chip = row.querySelector<HTMLElement>('[data-status-chip]');
     const button = row.querySelector<HTMLButtonElement>('[data-toggle-ban]');
     if (!chip || !button) return;
 
+    const user = row.dataset.user ?? 'User';
     row.dataset.status = banned ? 'banned' : 'active';
     chip.className = `chip ${banned ? 'chip-blush' : 'chip-mint'}`;
     chip.textContent = banned ? 'Banned' : 'Active';
     button.className = `btn btn-sm${banned ? '' : ' btn-danger'}`;
     button.textContent = banned ? 'Unban' : 'Ban user';
+    button.setAttribute('aria-label', `${banned ? 'Unban' : 'Ban'} ${user}`);
+    announce(`${user} ${banned ? 'banned' : 'unbanned'}.`);
   };
 
-  rows.forEach((row) => {
-    row.querySelector<HTMLButtonElement>('[data-toggle-ban]')?.addEventListener('click', () => {
+  rows().forEach((row) => {
+    const button = row.querySelector<HTMLButtonElement>('[data-toggle-ban]');
+    button?.addEventListener('click', () => {
       if (row.dataset.status === 'banned') {
         setBanned(row, false);
         return;
@@ -150,38 +139,22 @@ const filters = [
         dialogBody.textContent =
           'They will be signed out and unable to sign in. You can unban them later from User Management.';
       }
-      if (scrim) scrim.hidden = false;
+      openDialog('confirm-ban', button);
     });
   });
 
   document.querySelector<HTMLButtonElement>('[data-confirm-ban]')?.addEventListener('click', () => {
-    if (pending) setBanned(pending, true);
+    const row = pending;
     pending = null;
-    if (scrim) scrim.hidden = true;
-    applyFilters();
+    closeDialog();
+    if (row) setBanned(row, true);
+    apply(false);
   });
 </script>
 
 <style>
-  .toolbar {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 26px;
-    flex-wrap: wrap;
-  }
 
   .toolbar .search {
-    width: 340px;
-  }
-
-  .username {
-    font-size: 15px;
-  }
-
-  .no-results {
-    padding: 60px 0;
-    text-align: center;
-    color: var(--muted);
+    width: min(340px, 100%);
   }
 </style>
