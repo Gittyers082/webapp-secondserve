@@ -8,6 +8,10 @@
 
 import type {
   AccountDecision,
+  AppNotification,
+  FaqEntry,
+  Review,
+  SaleRecord,
   CartLine,
   Listing,
   Order,
@@ -573,3 +577,292 @@ export const expiringWithinThreeDays = sellerListings.filter(
 );
 
 export const reservedOrderCount = handoverQueue.length;
+
+/* -------------------------------------------------------------------------- */
+/* Reviews                                                                     */
+/* -------------------------------------------------------------------------- */
+
+export const reviews: Review[] = [
+  {
+    id: 'r-01',
+    listingId: 'l-001',
+    shopName: "Mang Ben's Bakery",
+    foodName: 'Ube Cheese Pandesal (box of 6)',
+    author: 'maria_c',
+    rating: 5,
+    comment: 'Still soft at pickup and the cheese had not dried out. The counter had my name ready.',
+    date: 'Nov 5',
+    orderId: 'o-090',
+  },
+  {
+    id: 'r-02',
+    listingId: 'l-006',
+    shopName: "Mang Ben's Bakery",
+    foodName: 'Pan de Sal (dozen)',
+    author: 'jun_dela_cruz',
+    rating: 4,
+    comment: 'Good for the price. Two were a little flat but the rest were fine for breakfast.',
+    date: 'Nov 2',
+  },
+  {
+    id: 'r-03',
+    listingId: 'l-008',
+    shopName: "Mang Ben's Bakery",
+    foodName: 'Ensaymada (pack of 3)',
+    author: 'ally.p',
+    rating: 5,
+    comment: 'Plenty of cheese on top. Would reserve again.',
+    date: 'Nov 3',
+  },
+  {
+    id: 'r-04',
+    listingId: 'l-007',
+    shopName: "Mang Ben's Bakery",
+    foodName: 'Cheese Roll (box of 4)',
+    author: 'carol.m',
+    rating: 3,
+    comment: 'Tasty, but the pickup took a while because the shop was busy.',
+    date: 'Oct 30',
+  },
+  {
+    id: 'r-05',
+    listingId: 'l-002',
+    shopName: 'Kape Atbp Café',
+    foodName: 'Croissant (pair)',
+    author: 'ally.p',
+    rating: 4,
+    comment: 'Flaky and buttery. Reheated well the next morning.',
+    date: 'Nov 1',
+  },
+  {
+    id: 'r-06',
+    listingId: 'l-005',
+    shopName: 'Café Camp John Hay',
+    foodName: 'Carrot Cake Slice',
+    author: 'maria_c',
+    rating: 5,
+    comment: 'A big slice and the frosting was fresh.',
+    date: 'Oct 22',
+    orderId: 'o-074',
+  },
+  {
+    id: 'r-07',
+    listingId: 'l-003',
+    shopName: 'Session Road Deli',
+    foodName: 'Chicken Empanada (3 pcs)',
+    author: 'jun_dela_cruz',
+    rating: 4,
+    comment: 'Crisp crust, generous filling.',
+    date: 'Oct 18',
+  },
+];
+
+/** Reviews for one shop, newest first as seeded. */
+export const reviewsForShop = (shopName: string) => reviews.filter((review) => review.shopName === shopName);
+
+/* -------------------------------------------------------------------------- */
+/* Wishlist                                                                    */
+/* -------------------------------------------------------------------------- */
+
+/** Listings the buyer has saved before this session; the page adds to it locally. */
+export const savedListingIds: string[] = ['l-002', 'l-004'];
+
+/* -------------------------------------------------------------------------- */
+/* Notifications                                                               */
+/* -------------------------------------------------------------------------- */
+
+export const buyerNotifications: AppNotification[] = [
+  {
+    id: 'n-b1',
+    kind: 'order',
+    title: 'Ready for pickup',
+    body: "Ube Cheese Pandesal (box of 6) is ready at Mang Ben's Bakery. Collect it before tomorrow, 6:00 PM.",
+    time: '10 min ago',
+    read: false,
+    href: '/buyer/pending',
+  },
+  {
+    id: 'n-b2',
+    kind: 'listing',
+    title: 'A saved item is expiring',
+    body: 'Croissant (pair) from Kape Atbp Café expires Nov 6, 8:00 PM. 5 left.',
+    time: '1 hr ago',
+    read: false,
+    href: '/buyer/listing/l-002',
+  },
+  {
+    id: 'n-b3',
+    kind: 'review',
+    title: 'How was your order?',
+    body: 'You collected Ube Cheese Pandesal on Nov 5. Rate the shop to help other buyers.',
+    time: 'Yesterday',
+    read: true,
+    href: '/buyer/history',
+  },
+  {
+    id: 'n-b4',
+    kind: 'account',
+    title: 'Account approved',
+    body: 'An administrator approved your buyer account. Welcome to SecondServe.',
+    time: 'Nov 1',
+    read: true,
+  },
+];
+
+export const sellerNotifications: AppNotification[] = [
+  {
+    id: 'n-s1',
+    kind: 'order',
+    title: 'New reservation',
+    body: 'maria_c reserved 2 × Ube Cheese Pandesal (box of 6). Mark it ready when it is packed.',
+    time: '25 min ago',
+    read: false,
+    href: '/seller/handover',
+  },
+  {
+    id: 'n-s2',
+    kind: 'order',
+    title: 'New reservation',
+    body: 'jun_dela_cruz reserved 1 × Cheese Roll (box of 4).',
+    time: '1 hr ago',
+    read: false,
+    href: '/seller/handover',
+  },
+  {
+    id: 'n-s3',
+    kind: 'review',
+    title: 'New 5-star review',
+    body: 'maria_c rated Ube Cheese Pandesal 5 stars: "Still soft at pickup…"',
+    time: 'Yesterday',
+    read: false,
+    href: '/seller/reviews',
+  },
+  {
+    id: 'n-s4',
+    kind: 'listing',
+    title: 'Listing expired',
+    body: 'Pan de Sal (dozen) passed its expiry and was taken out of the Shop.',
+    time: 'Nov 3',
+    read: true,
+    href: '/seller/manage',
+  },
+];
+
+export const adminNotifications: AppNotification[] = [
+  {
+    id: 'n-a1',
+    kind: 'account',
+    title: '4 accounts waiting',
+    body: 'Two sellers and two buyers asked to join. Review them in Pending Approvals.',
+    time: '5 min ago',
+    read: false,
+    href: '/admin/approvals',
+  },
+  {
+    id: 'n-a2',
+    kind: 'listing',
+    title: 'Listing flagged',
+    body: 'Mystery Meal Tray from promo_blaster has no description, pickup place or expiry.',
+    time: '40 min ago',
+    read: false,
+    href: '/admin/moderation',
+  },
+  {
+    id: 'n-a3',
+    kind: 'account',
+    title: 'Repeated sign-in failures',
+    body: 'spamlistings99 failed to sign in 6 times after being banned.',
+    time: 'Yesterday',
+    read: true,
+    href: '/admin',
+  },
+];
+
+/* -------------------------------------------------------------------------- */
+/* Seller sales, for analytics                                                 */
+/* -------------------------------------------------------------------------- */
+
+/** Mang Ben's Bakery's completed sales over the last 7 days. */
+export const salesLog: SaleRecord[] = [
+  { date: '2026-10-30', day: 'Fri 30', listingName: 'Pan de Sal (dozen)', category: 'bread', quantity: 3, total: 105, fullPrice: 180 },
+  { date: '2026-10-30', day: 'Fri 30', listingName: 'Cheese Roll (box of 4)', category: 'bread', quantity: 1, total: 55, fullPrice: 100 },
+  { date: '2026-10-31', day: 'Sat 31', listingName: 'Ensaymada (pack of 3)', category: 'pastries', quantity: 2, total: 140, fullPrice: 260 },
+  { date: '2026-10-31', day: 'Sat 31', listingName: 'Ube Cheese Pandesal (box of 6)', category: 'bread', quantity: 2, total: 120, fullPrice: 240 },
+  { date: '2026-11-01', day: 'Sun 1', listingName: 'Monay Loaf', category: 'bread', quantity: 4, total: 160, fullPrice: 280 },
+  { date: '2026-11-02', day: 'Mon 2', listingName: 'Pan de Sal (dozen)', category: 'bread', quantity: 2, total: 70, fullPrice: 120 },
+  { date: '2026-11-02', day: 'Mon 2', listingName: 'Monay Loaf', category: 'bread', quantity: 3, total: 120, fullPrice: 210 },
+  { date: '2026-11-03', day: 'Tue 3', listingName: 'Ensaymada (pack of 3)', category: 'pastries', quantity: 1, total: 70, fullPrice: 130 },
+  { date: '2026-11-03', day: 'Tue 3', listingName: 'Cheese Roll (box of 4)', category: 'bread', quantity: 2, total: 110, fullPrice: 200 },
+  { date: '2026-11-04', day: 'Wed 4', listingName: 'Ube Cheese Pandesal (box of 6)', category: 'bread', quantity: 3, total: 180, fullPrice: 360 },
+  { date: '2026-11-05', day: 'Thu 5', listingName: 'Ube Cheese Pandesal (box of 6)', category: 'bread', quantity: 2, total: 120, fullPrice: 240 },
+  { date: '2026-11-05', day: 'Thu 5', listingName: 'Ensaymada (pack of 3)', category: 'pastries', quantity: 1, total: 70, fullPrice: 130 },
+];
+
+/* -------------------------------------------------------------------------- */
+/* FAQ and help                                                                */
+/* -------------------------------------------------------------------------- */
+
+export const faq: FaqEntry[] = [
+  {
+    question: 'How does reserving work?',
+    answer:
+      'Add food to your cart and check out to reserve it. The shop holds it for you. When the shop marks it ready, collect it in person before its expiry time and give your name at the counter.',
+    roles: ['buyer'],
+  },
+  {
+    question: 'Do I pay online?',
+    answer: 'No. You pay the shop when you collect your order, at the discounted price shown when you reserved.',
+    roles: ['buyer'],
+  },
+  {
+    question: 'What if I cannot collect in time?',
+    answer:
+      'Food that is not collected before its expiry time goes back to the shop. Please only reserve what you can pick up, so the food reaches someone who can.',
+    roles: ['buyer'],
+  },
+  {
+    question: 'How do I save or compare items?',
+    answer:
+      'Use the heart on any listing to save it to your Wishlist. From the Wishlist, choose up to three items and select Compare to see their prices, discounts and pickup details side by side.',
+    roles: ['buyer'],
+  },
+  {
+    question: 'What food can I list?',
+    answer:
+      'Surplus food that is still safe to eat and not yet expired. The discounted price must be lower than the original price, and every listing needs a photo, a pickup place and an expiry time.',
+    roles: ['seller'],
+  },
+  {
+    question: 'When should I mark an order ready?',
+    answer:
+      'As soon as it is packed and waiting at the counter. The buyer sees it turn ready in My Pending Orders and gets a notification.',
+    roles: ['seller'],
+  },
+  {
+    question: 'How are my analytics worked out?',
+    answer:
+      'From the orders buyers have collected. Revenue is what buyers paid; food rescued counts the items sold; savings is the difference from the full price.',
+    roles: ['seller'],
+  },
+  {
+    question: 'Why was an account or listing flagged?',
+    answer:
+      'Listings without a description, pickup place or expiry, and accounts that post misleading offers, are flagged for review. Flag a listing to keep it visible to you while you decide; remove it to take it out of the Shop.',
+    roles: ['admin'],
+  },
+  {
+    question: 'I forgot my password.',
+    answer: 'Ask an administrator to reset it. Passwords cannot be recovered by email in the desktop app.',
+  },
+  {
+    question: 'The app says it cannot reach the server.',
+    answer:
+      'Check that this computer is on the same network as the SecondServe server, then confirm the address and port on the Connect screen.',
+  },
+];
+
+/* -------------------------------------------------------------------------- */
+/* Unread counts                                                               */
+/* -------------------------------------------------------------------------- */
+
+export const unreadCount = (items: AppNotification[]) => items.filter((item) => !item.read).length;
