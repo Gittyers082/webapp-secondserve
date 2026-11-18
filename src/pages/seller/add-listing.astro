@@ -80,7 +80,7 @@ const draft = sellerListings[0]!;
 
   <Fragment slot="rail">
     <!-- Product photo ---------------------------------------------------- -->
-    <section class="panel photo-panel" aria-labelledby="photo-title">
+    <section class="panel rail-panel photo-panel" aria-labelledby="photo-title">
       <div class="row-between">
         <h2 class="panel-title" id="photo-title">Product photo</h2>
         <span class="pill pill-ok" data-photo-state="added">Photo added</span>
@@ -222,7 +222,7 @@ const draft = sellerListings[0]!;
   }
 
   .eligibility {
-    margin-top: 18px;
+    margin-top: 16px;
     max-width: 64ch;
   }
 
@@ -232,11 +232,6 @@ const draft = sellerListings[0]!;
     margin-top: 24px;
   }
 
-  .photo-panel {
-    display: grid;
-    gap: 14px;
-    padding: 20px;
-  }
 
   .photo-frame {
     margin-top: 2px;
@@ -246,7 +241,7 @@ const draft = sellerListings[0]!;
     display: grid;
     place-content: center;
     text-align: center;
-    gap: 10px;
+    gap: 12px;
     min-height: 240px;
     padding: 32px 24px;
     border: 1.5px dashed var(--line-control);
@@ -259,13 +254,13 @@ const draft = sellerListings[0]!;
   }
 
   .photo-name {
-    margin-top: 14px;
+    margin-top: 16px;
     font-size: var(--fs-lg);
     font-weight: 700;
   }
 
   .file {
-    margin-top: 6px;
+    margin-top: 8px;
   }
 
   .photo-actions {

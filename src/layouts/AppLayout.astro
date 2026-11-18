@@ -37,9 +37,7 @@ const [before, after] = highlight && subtitle ? subtitle.split(highlight) : [sub
           {
             subtitle && (
               <p class="section-sub">
-                {before}
-                {highlight && <span class="hl">{highlight}</span>}
-                {after}
+                {before}{highlight && <span class="hl">{highlight}</span>}{after}
               </p>
             )
           }
@@ -75,7 +73,7 @@ const [before, after] = highlight && subtitle ? subtitle.split(highlight) : [sub
 
   .main {
     min-width: 0;
-    padding: 36px var(--pad) 64px;
+    padding: var(--sp-8) var(--pad) var(--sp-16);
   }
 
   .main:focus {
@@ -87,7 +85,7 @@ const [before, after] = highlight && subtitle ? subtitle.split(highlight) : [sub
     align-items: flex-end;
     justify-content: space-between;
     gap: 20px;
-    margin-bottom: 32px;
+    margin-bottom: var(--sp-8);
   }
 
   .page-head h1 {
@@ -100,7 +98,7 @@ const [before, after] = highlight && subtitle ? subtitle.split(highlight) : [sub
   .page-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 12px;
     flex: none;
   }
 
@@ -109,7 +107,7 @@ const [before, after] = highlight && subtitle ? subtitle.split(highlight) : [sub
     top: 0;
     max-height: calc(100vh - var(--chrome-h));
     overflow-y: auto;
-    padding: 24px var(--pad) 24px 0;
+    padding: var(--sp-8) var(--pad) var(--sp-8) 0;
   }
 
   @media (max-width: 1279px) {
@@ -124,12 +122,12 @@ const [before, after] = highlight && subtitle ? subtitle.split(highlight) : [sub
     }
 
     .main {
-      padding-left: 28px;
-      padding-right: 24px;
+      padding-left: var(--sp-8);
+      padding-right: var(--sp-6);
     }
 
     .rail {
-      padding-right: 20px;
+      padding-right: var(--sp-6);
     }
   }
 
@@ -150,7 +148,7 @@ const [before, after] = highlight && subtitle ? subtitle.split(highlight) : [sub
       position: static;
       max-height: none;
       overflow: visible;
-      padding: 0 24px 64px 28px;
+      padding: 0 24px 64px 32px;
     }
   }
 </style>

@@ -11,10 +11,20 @@ const { title, description = 'Good products deserve a second chance.' } = Astro.
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script is:inline>
+      // Apply the saved theme before the first paint so a reload never flashes.
+      (function () {
+        var theme = 'dark';
+        try {
+          if (localStorage.getItem('secondserve-theme') === 'light') theme = 'light';
+        } catch (error) {}
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
     <title>SecondServe &mdash; {title}</title>
     <meta name="description" content={description} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -39,6 +49,10 @@ const { title, description = 'Good products deserve a second chance.' } = Astro.
       <slot />
     </div>
     <p class="sr-only" role="status" aria-live="polite" aria-atomic="true" data-announcer></p>
+    <script>
+      import { initThemeToggles } from '../scripts/theme';
+      initThemeToggles();
+    </script>
   </body>
 </html>
 

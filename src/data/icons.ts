@@ -27,4 +27,6 @@ export type IconName =
   | 'info'
   | 'refresh'
   | 'store'
-  | 'minus';
+  | 'minus'
+  | 'sun'
+  | 'moon';

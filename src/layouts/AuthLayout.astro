@@ -2,6 +2,7 @@
 import BaseLayout from './BaseLayout.astro';
 import Logo from '../components/Logo.astro';
 import FoodArt from '../components/FoodArt.astro';
+import ThemeToggle from '../components/ThemeToggle.astro';
 
 interface Props {
   title: string;
@@ -21,9 +22,7 @@ const [before, after] = accent ? headline.split(accent) : [headline, ''];
       <section class="hero">
         <Logo size={26} />
         <h1>
-          {before}
-          {accent && <span class="hl">{accent}</span>}
-          {after}
+          {before}{accent && <span class="hl">{accent}</span>}{after}
         </h1>
         <p class="lede">{lede}</p>
         <slot name="hero-extra" />
@@ -42,6 +41,7 @@ const [before, after] = accent ? headline.split(accent) : [headline, ''];
 
     <footer class="auth-foot">
       <span>SecondServe Desktop</span>
+      <ThemeToggle variant="pill" />
       <span>Good products deserve a second chance</span>
     </footer>
   </div>
@@ -72,7 +72,7 @@ const [before, after] = accent ? headline.split(accent) : [headline, ''];
   }
 
   .hero h1 {
-    margin-top: 36px;
+    margin-top: 40px;
     font-size: clamp(38px, 3.8vw, 54px);
     font-weight: 700;
     line-height: 1.08;
@@ -81,7 +81,7 @@ const [before, after] = accent ? headline.split(accent) : [headline, ''];
   }
 
   .lede {
-    margin-top: 18px;
+    margin-top: 16px;
     max-width: 46ch;
     color: var(--text-soft);
     font-size: var(--fs-lg);
@@ -91,9 +91,9 @@ const [before, after] = accent ? headline.split(accent) : [headline, ''];
   .strip {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 14px;
+    gap: 16px;
     max-width: 520px;
-    margin-top: 36px;
+    margin-top: 40px;
   }
 
   .strip :global(.food-photo) {
@@ -107,7 +107,7 @@ const [before, after] = accent ? headline.split(accent) : [headline, ''];
   .card {
     background: var(--s2);
     border-radius: var(--r-xl);
-    padding: 36px;
+    padding: 40px;
   }
 
   .card :global(h2) {
@@ -121,7 +121,7 @@ const [before, after] = accent ? headline.split(accent) : [headline, ''];
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    padding: 14px 48px;
+    padding: 16px 48px;
     border-top: 1px solid var(--line);
     font-size: var(--fs-sm);
     color: var(--muted);

@@ -75,7 +75,7 @@ public/
                 secondserve-mark.png (tray-and-hand tile, rounded)
   photos/       Food photographs, one per listing type, with CREDITS.md
 src/
-  components/   Logo, Icon, Sidebar, FoodArt (listing photo), ListingCard,
+  components/   Logo, Icon, Sidebar, ThemeToggle, FoodArt (listing photo), ListingCard,
                 QuantityStepper, Dialog, ProfilePanel
   data/         types.ts (domain model), store.ts (seed data), nav.ts (sidebar
                 items and their icons), icons.ts (icon names)
@@ -85,7 +85,8 @@ src/
   pages/        One file per screen, grouped by role
   scripts/      Shared client behaviour: dialog (focus trap and restore),
                 filters, selection, announce (screen-reader status),
-                demo-forms (form stand-ins until a server exists)
+                theme (light and dark), demo-forms (form stand-ins until a
+                server exists)
   styles/       global.css — design tokens and shared primitives
 ```
 
@@ -117,6 +118,13 @@ src/
   where a screen acts on one thing at a time, a summary rail on the right (the
   selected listing and cart on Shop, the order summary on View Cart, the
   selected listing's actions on Manage Listings and Item Moderation).
+- **Light and dark.** The sidebar (and the footer of the sign-in screens) has a
+  Light mode switch. The choice is saved in the browser and applied by a small
+  inline script in `BaseLayout` before the page paints, so a reload never
+  flashes the other theme. Both themes are the same set of roles in
+  `global.css`; the light one swaps in the brand's cream as the surface.
+- **Spacing** uses one 4px-step scale (`--sp-1` to `--sp-16`), one gutter
+  between sibling blocks and a wider step between sections.
 - **Photos, not drawings.** `FoodArt.astro` shows an openly licensed photograph
   for each `FoodArt` key from `public/photos/`. They stand in for sellers' own
   uploads; `public/photos/CREDITS.md` lists each one's author and licence.

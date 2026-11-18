@@ -29,6 +29,19 @@
   --lime-ink: #17150f;
   --paper: #f2efe4;
 
+  /* Roles that flip with the theme */
+  --field: var(--s1);                /* inside of inputs */
+  --solid: var(--s1);                /* solid secondary button */
+  --solid-text: var(--text);
+  --solid-hover: #000;
+  --contrast: var(--paper);          /* highest-contrast pill: chosen filter, edit buttons */
+  --contrast-text: var(--s1);
+  --contrast-muted: #5f584d;
+  --contrast-hover: #fff;
+  --focus: var(--lime);
+  --ring: rgba(242, 239, 228, 0.12);
+  --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23cfc8b8' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+
   /* Status, as a text colour over a 16% tint of itself */
   --ok: #9fd18c;
   --ok-bg: #353b2a;
@@ -66,15 +79,29 @@
   --fs-figure: 34px;
 
   /* Shape */
-  --r-sm: 10px;
-  --r-md: 14px;
-  --r-lg: 20px;
-  --r-xl: 26px;
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 24px;
   --r-pill: 999px;
 
-  /* Rhythm */
-  --pad: 32px;
-  --gap: 24px;
+  /* Spacing scale on a 4px base. Every gap, margin and padding in the app
+     uses one of these steps. */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-16: 64px;
+
+  /* Rhythm: one gutter between sibling blocks, a wider step between sections */
+  --pad: var(--sp-8);
+  --gutter: var(--sp-6);
+  --section-gap: var(--sp-12);
   --sidebar: 236px;
   --sidebar-compact: 84px;
   --rail: 344px;
@@ -85,6 +112,61 @@
   --dur-fast: 120ms;
   --dur: 180ms;
   --dur-slow: 280ms;
+}
+
+/* Light theme: the same roles on the brand's cream paper. Text tiers hold
+   4.5:1 on --s4 and control borders 3:1, as in the dark theme. */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #e6e0d0;
+  --s1: #f2efe4;
+  --s2: #fbf9f3;
+  --s3: #ebe5d6;
+  --s4: #ddd5c2;
+
+  --text: #17150f;
+  --text-soft: #3d3831;
+  --muted: #5a5347;
+
+  --brick-text: #9e3015;
+
+  --ok: #3f6b35;
+  --ok-bg: #dbe9d0;
+  --warn: #17150f;
+  --warn-bg: #e4ee4c;
+  --danger: #ad2f2f;
+  --danger-bg: #f7dcdc;
+  --neutral-bg: #e2dac7;
+  --online: #3f8f43;
+
+  --line: rgba(23, 21, 15, 0.1);
+  --line-strong: rgba(23, 21, 15, 0.18);
+  --line-control: rgba(23, 21, 15, 0.52);
+
+  --hover: rgba(23, 21, 15, 0.05);
+  --press: rgba(23, 21, 15, 0.09);
+  --scrim: rgba(23, 21, 15, 0.45);
+  --shadow-float: 0 24px 64px rgba(23, 21, 15, 0.22);
+
+  --field: #fffdf8;
+  --solid: #17150f;
+  --solid-text: #f2efe4;
+  --solid-hover: #000;
+  --contrast: #17150f;
+  --contrast-text: #f2efe4;
+  --contrast-muted: #c9c2b2;
+  --contrast-hover: #000;
+  --focus: #9e3015;
+  --ring: rgba(23, 21, 15, 0.12);
+  --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233d3831' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+}
+
+/* Swap themes without animating every surface at once. */
+:root.theme-switching *,
+:root.theme-switching *::before,
+:root.theme-switching *::after {
+  transition: none !important;
 }
 
 *,
@@ -147,7 +229,7 @@ table {
 }
 
 :focus-visible {
-  outline: 2px solid var(--lime);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
   border-radius: 6px;
 }
@@ -171,7 +253,7 @@ table {
   left: 16px;
   top: 8px;
   z-index: 100;
-  padding: 10px 16px;
+  padding: 12px 16px;
   border-radius: var(--r-pill);
   background: var(--lime);
   color: var(--lime-ink);
@@ -191,7 +273,7 @@ table {
    -------------------------------------------------------------------------- */
 
 .section {
-  margin-top: 40px;
+  margin-top: var(--section-gap);
 }
 
 .section:first-child {
@@ -227,7 +309,7 @@ table {
 .link-more {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   flex: none;
   font-size: var(--fs-md);
   font-weight: 600;
@@ -284,6 +366,14 @@ table {
   padding: 20px;
 }
 
+/* The summary rail's one panel: the same padding and inner rhythm on every
+   screen that has one. */
+.rail-panel {
+  display: grid;
+  gap: var(--sp-6);
+  padding: var(--sp-5);
+}
+
 .panel-title {
   font-size: var(--fs-h3);
   font-weight: 700;
@@ -332,22 +422,22 @@ table {
 .btn-primary:active:not(:disabled) { background: var(--brick-hover); border-color: var(--brick-hover); }
 
 .btn-dark {
-  background: var(--s1);
-  border-color: var(--s1);
-  color: var(--text);
+  background: var(--solid);
+  border-color: var(--solid);
+  color: var(--solid-text);
 }
 
 .btn-dark:hover,
-.btn-dark:active:not(:disabled) { background: #000; border-color: #000; }
+.btn-dark:active:not(:disabled) { background: var(--solid-hover); border-color: var(--solid-hover); }
 
 .btn-light {
-  background: var(--paper);
-  border-color: var(--paper);
-  color: var(--s1);
+  background: var(--contrast);
+  border-color: var(--contrast);
+  color: var(--contrast-text);
 }
 
 .btn-light:hover,
-.btn-light:active:not(:disabled) { background: #fff; border-color: #fff; }
+.btn-light:active:not(:disabled) { background: var(--contrast-hover); border-color: var(--contrast-hover); }
 
 .btn-danger {
   border-color: var(--danger);
@@ -357,8 +447,8 @@ table {
 .btn-danger:hover { background: var(--danger-bg); border-color: var(--danger); }
 
 .btn-block { width: 100%; }
-.btn-lg { height: 52px; padding: 0 28px; font-size: var(--fs-lg); }
-.btn-sm { height: 34px; padding: 0 14px; font-size: var(--fs-sm); }
+.btn-lg { height: 52px; padding: 0 32px; font-size: var(--fs-lg); }
+.btn-sm { height: 34px; padding: 0 16px; font-size: var(--fs-sm); }
 
 .btn-icon {
   width: 42px;
@@ -383,8 +473,8 @@ table {
 .input {
   width: 100%;
   height: 48px;
-  padding: 0 18px;
-  background: var(--s1);
+  padding: 0 16px;
+  background: var(--field);
   border: 1px solid var(--line-control);
   border-radius: var(--r-pill);
   font: inherit;
@@ -399,11 +489,11 @@ table {
 .input:focus {
   outline: none;
   border-color: var(--text);
-  box-shadow: 0 0 0 3px rgba(242, 239, 228, 0.12);
+  box-shadow: 0 0 0 3px var(--ring);
 }
 
 .input:focus-visible {
-  outline: 2px solid var(--lime);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -411,8 +501,8 @@ table {
 
 select.input {
   appearance: none;
-  padding-right: 44px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23cfc8b8' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  padding-right: 48px;
+  background-image: var(--chevron);
   background-repeat: no-repeat;
   background-position: right 18px center;
   background-size: 16px;
@@ -434,7 +524,7 @@ select.input {
 
 .search .input {
   height: 52px;
-  padding-right: 60px;
+  padding-right: 64px;
   background: transparent;
 }
 
@@ -495,7 +585,7 @@ select.input {
   display: inline-flex;
   flex: none;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   height: 26px;
   padding: 0 12px;
   border-radius: var(--r-pill);
@@ -518,7 +608,7 @@ select.input {
   justify-content: center;
   min-width: 22px;
   height: 22px;
-  padding: 0 7px;
+  padding: 0 8px;
   border-radius: var(--r-pill);
   background: var(--lime);
   color: var(--lime-ink);
@@ -554,12 +644,12 @@ select.input {
 .filter span { color: var(--muted); font-weight: 500; font-variant-numeric: tabular-nums; }
 
 .filter[aria-pressed="true"] {
-  background: var(--paper);
-  border-color: var(--paper);
-  color: var(--s1);
+  background: var(--contrast);
+  border-color: var(--contrast);
+  color: var(--contrast-text);
 }
 
-.filter[aria-pressed="true"] span { color: #5f584d; }
+.filter[aria-pressed="true"] span { color: var(--contrast-muted); }
 
 /* --------------------------------------------------------------------------
    Listing grid and the dashed tile that closes it
@@ -568,7 +658,7 @@ select.input {
 .listing-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-  gap: 20px;
+  gap: var(--gutter);
 }
 
 .grid-tile {
@@ -576,8 +666,8 @@ select.input {
   place-content: center;
   justify-items: center;
   gap: 8px;
-  min-height: 300px;
-  padding: 32px 24px;
+  min-height: 240px;
+  padding: var(--sp-6);
   text-align: center;
   border: 1.5px dashed var(--line-control);
   border-radius: var(--r-lg);
@@ -661,7 +751,7 @@ a.grid-tile:hover .grid-tile-icon {
   font-size: var(--fs-md);
   font-weight: 500;
   color: var(--text-soft);
-  padding: 13px 18px;
+  padding: 12px 16px;
   background: var(--s2);
   white-space: nowrap;
 }
@@ -670,7 +760,7 @@ a.grid-tile:hover .grid-tile-icon {
 .table thead th:last-child { border-radius: 0 var(--r-pill) var(--r-pill) 0; padding-right: 24px; }
 
 .table td {
-  padding: 16px 18px;
+  padding: 16px 16px;
   border-bottom: 1px solid var(--line);
   vertical-align: middle;
   font-size: var(--fs-md);
@@ -731,7 +821,7 @@ a.grid-tile:hover .grid-tile-icon {
   justify-items: center;
   gap: 8px;
   text-align: center;
-  padding: 72px 24px;
+  padding: 64px 24px;
   border-radius: var(--r-xl);
   background: var(--s2);
 }
@@ -742,7 +832,7 @@ a.grid-tile:hover .grid-tile-icon {
 }
 
 .empty p { color: var(--muted); }
-.empty .btn { margin-top: 14px; }
+.empty .btn { margin-top: 16px; }
 
 /* --------------------------------------------------------------------------
    Notices
@@ -753,7 +843,7 @@ a.grid-tile:hover .grid-tile-icon {
   align-items: center;
   gap: 12px;
   border-radius: var(--r-md);
-  padding: 14px 18px;
+  padding: 16px 16px;
   font-size: var(--fs-md);
   line-height: 1.5;
 }
@@ -788,7 +878,7 @@ a.grid-tile:hover .grid-tile-icon {
   background: var(--s2);
   border: 1px solid var(--line);
   border-radius: var(--r-xl);
-  padding: 28px;
+  padding: 32px;
   box-shadow: var(--shadow-float);
   animation: dialog-in var(--dur-slow) var(--ease-out);
 }
@@ -804,7 +894,7 @@ a.grid-tile:hover .grid-tile-icon {
   display: flex;
   justify-content: flex-end;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 12px;
   margin-top: 24px;
 }
 
@@ -874,7 +964,7 @@ a.grid-tile:hover .grid-tile-icon {
 .food-cell {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
 }
 
 .food-thumb {
@@ -883,8 +973,9 @@ a.grid-tile:hover .grid-tile-icon {
   height: 44px;
 }
 
+/* Photos take a small radius; circles are kept for people. */
 .food-thumb .food-photo {
-  border-radius: 50%;
+  border-radius: var(--r-sm);
 }
 
 .page-note {

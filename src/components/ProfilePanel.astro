@@ -20,6 +20,7 @@ const initial = role === 'seller' ? 'B' : username.charAt(0).toUpperCase();
         ? 'Buyers see your shop name on every listing.'
         : 'Sellers see "Seller account" here. Same screen for Buyer and Seller.'}
     </p>
+    <a class="btn btn-danger btn-block logout" href="/login">Log out of SecondServe</a>
   </aside>
 
   <div class="forms">
@@ -57,7 +58,6 @@ const initial = role === 'seller' ? 'B' : username.charAt(0).toUpperCase();
       </div>
     </form>
 
-    <a class="btn btn-danger logout" href="/login">Log out of SecondServe</a>
   </div>
 </div>
 
@@ -70,14 +70,15 @@ const initial = role === 'seller' ? 'B' : username.charAt(0).toUpperCase();
   .profile {
     display: grid;
     grid-template-columns: 300px minmax(0, 1fr);
-    gap: 24px;
-    align-items: start;
+    gap: var(--gutter);
+    align-items: stretch;
   }
 
   .identity {
-    display: grid;
-    justify-items: center;
-    gap: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
     text-align: center;
     padding: 32px 24px;
   }
@@ -85,7 +86,7 @@ const initial = role === 'seller' ? 'B' : username.charAt(0).toUpperCase();
   .avatar-lg {
     width: 84px;
     height: 84px;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
     background: var(--brick);
     color: #fff;
     font-size: 32px;
@@ -98,11 +99,11 @@ const initial = role === 'seller' ? 'B' : username.charAt(0).toUpperCase();
   }
 
   .note {
-    margin-top: 6px;
+    margin-top: 8px;
   }
 
   .block + .block {
-    margin-top: 16px;
+    margin-top: var(--gutter);
   }
 
   .form-foot {
@@ -119,7 +120,11 @@ const initial = role === 'seller' ? 'B' : username.charAt(0).toUpperCase();
   }
 
   .logout {
-    margin-top: 16px;
+    margin-top: auto;
+  }
+
+  .note {
+    margin-bottom: var(--sp-6);
   }
 
   @media (max-width: 1279px) {

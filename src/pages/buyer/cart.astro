@@ -89,7 +89,7 @@ const isEmpty = cart.length === 0;
   {
     !isEmpty && (
       <Fragment slot="rail">
-        <div class="panel summary" data-cart>
+        <div class="panel rail-panel summary" data-cart>
           <div class="panel-inset">
             <h2 class="summary-title">Pickups</h2>
             <ul class="pickups">
@@ -198,14 +198,14 @@ const isEmpty = cart.length === 0;
 <style>
   .lines {
     display: grid;
-    gap: 28px;
+    gap: 32px;
   }
 
   .shop-head {
     display: flex;
     align-items: center;
-    gap: 14px;
-    margin-bottom: 14px;
+    gap: 16px;
+    margin-bottom: 16px;
   }
 
   .shop-icon {
@@ -231,8 +231,8 @@ const isEmpty = cart.length === 0;
     display: grid;
     grid-template-columns: 72px minmax(0, 1fr) 170px 100px auto;
     align-items: center;
-    gap: 18px;
-    padding: 10px 14px 10px 10px;
+    gap: 16px;
+    padding: 12px 16px 12px 12px;
     border-radius: var(--r-lg);
     transition: background var(--dur-fast) var(--ease-out);
   }
@@ -256,7 +256,7 @@ const isEmpty = cart.length === 0;
 
   .item-expiry {
     display: grid;
-    gap: 6px;
+    gap: 8px;
     justify-items: start;
   }
 
@@ -271,16 +271,11 @@ const isEmpty = cart.length === 0;
     gap: 8px;
   }
 
-  .summary {
-    display: grid;
-    gap: 22px;
-    padding: 16px;
-  }
 
   .summary-title {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     font-size: var(--fs-h3);
     font-weight: 700;
   }
@@ -288,12 +283,12 @@ const isEmpty = cart.length === 0;
   .pickups {
     display: grid;
     gap: 12px;
-    margin-top: 14px;
+    margin-top: 16px;
   }
 
   .pickup {
     display: flex;
-    gap: 10px;
+    gap: 12px;
     font-size: var(--fs-md);
   }
 
@@ -309,18 +304,18 @@ const isEmpty = cart.length === 0;
 
   .summary-body {
     display: grid;
-    gap: 18px;
-    padding: 0 6px 4px;
+    gap: 16px;
+    padding: 0 8px 4px;
   }
 
   .totals {
     display: grid;
-    gap: 10px;
+    gap: 12px;
     font-size: var(--fs-md);
   }
 
   .grand {
-    margin-top: 6px;
+    margin-top: 8px;
     padding-top: 16px;
     border-top: 1.5px dashed var(--line-strong);
     font-size: var(--fs-h3);
@@ -342,7 +337,7 @@ const isEmpty = cart.length === 0;
       grid-auto-flow: column;
       align-items: center;
       justify-content: start;
-      gap: 10px;
+      gap: 12px;
     }
 
     .item-total { grid-column: 3; grid-row: 1; }
