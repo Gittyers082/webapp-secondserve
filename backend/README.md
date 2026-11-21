@@ -109,9 +109,27 @@ Copy the pattern in `routers/listings.py`:
 
 ## Status of what's built
 
-| Done and tested without a database | Written, needs testing against Supabase | Still TODO |
-| --- | --- | --- |
-| Token checking, eligibility rules, health check, login required on routes | Profile sign-up, listings CRUD + browse/filter/sort, reserve with row locking, notifications, admin approvals/bans | Image upload, checkout of a whole cart, ready/picked-up/cancel, reviews, receipts, moderation, stats, expiry job |
+| Done and tested without a database | Tested against Postgres | Written, needs testing against Supabase | Still TODO |
+| --- | --- | --- | --- |
+| Token checking, eligibility rules, photo compression, health check, login required on routes | Reserve with row locking (no overselling), whole-cart checkout (all or nothing, no deadlocks), cancel, pickup code, reviews, typo-tolerant search | Profile sign-up, listings CRUD, notifications, admin approvals/bans, photo upload to Storage, wishlist, Redis stock pub/sub | Receipts, moderation, stats, expiry job, seller rating on listing cards |
+
+### Running the Postgres tests
+
+Row locking can't be tested without a real database. Point `TEST_DATABASE_URL` at a
+**throwaway** database (its tables are dropped and recreated on every test), never Supabase:
+
+```powershell
+$env:TEST_DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5432/secondserve_test"
+pytest
+```
+
+Without it those tests are skipped and `pytest` still passes.
+
+### Live stock across instances
+
+With `REDIS_URL` set, stock changes go through Redis pub/sub and every API instance
+forwards them to its own WebSockets. Without it, only the instance that handled the
+request notifies its browsers. Postgres is always the source of truth for quantities.
 
 ## Deploying
 

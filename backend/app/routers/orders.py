@@ -8,11 +8,13 @@ import uuid
 from fastapi import APIRouter, HTTPException, Query, Request, status
 from sqlalchemy import select
 
-from app.core.deps import DB, ActiveBuyer, CurrentUser
+from app.core.deps import DB, ActiveBuyer, ActiveSeller, CurrentUser
 from app.core.rate_limit import limiter
 from app.models import Order, OrderStatus, Role
 from app.realtime.stock import stock
-from app.schemas.order import OrderCreate, OrderOut
+from app.schemas.order import CheckoutIn, OrderCreate, OrderOut, PickupIn
+from app.schemas.review import ReviewCreate, ReviewOut
+from app.services import orders as order_service
 from app.services.orders import get_order_or_404, place_order
 
 router = APIRouter(prefix="/api/orders", tags=["orders"])
@@ -50,12 +52,55 @@ async def order_detail(order_id: uuid.UUID, db: DB, user: CurrentUser) -> OrderO
     return OrderOut.from_model(order)
 
 
-# TODO(Role 3): POST /api/orders/checkout — reserve every cart line in ONE transaction
-#   (lock listings in id order to avoid deadlocks); all succeed or none do.
-# TODO(Role 3): POST /api/orders/{id}/ready      — seller marks it ready; notify buyer.
-# TODO(Role 3): POST /api/orders/{id}/picked-up  — seller enters the buyer's pickup code;
-#   mark payment paid, set picked_up_at; notify buyer (seller /handover screen).
-# TODO(Role 3): POST /api/orders/{id}/cancel     — buyer cancels while reserved; put the
-#   quantity back on the listing (lock it first) and publish the new stock.
-# TODO(Role 3): POST /api/orders/{id}/review     — after pickup only (FR-USER-B-15).
+@router.post("/checkout", response_model=list[OrderOut], status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/minute")
+async def checkout(
+    request: Request, data: CheckoutIn, db: DB, buyer: ActiveBuyer
+) -> list[OrderOut]:
+    """Reserve every cart line in one transaction. If any line fails, nothing is reserved."""
+    placed = await order_service.checkout(db, buyer, data)
+    for _, listing in placed:
+        await stock.publish(str(listing.id), listing.quantity_available, listing.status.value)
+    return [OrderOut.from_model(order) for order, _ in placed]
+
+
+@router.post("/{order_id}/ready", response_model=OrderOut)
+async def ready(order_id: uuid.UUID, db: DB, seller: ActiveSeller) -> OrderOut:
+    """Seller has the order set aside; tells the buyer."""
+    return OrderOut.from_model(await order_service.mark_ready(db, seller, order_id))
+
+
+@router.post("/{order_id}/picked-up", response_model=OrderOut)
+@limiter.limit("10/minute")
+async def picked_up(
+    request: Request, order_id: uuid.UUID, data: PickupIn, db: DB, seller: ActiveSeller
+) -> OrderOut:
+    """Seller enters the buyer's pickup code at the counter."""
+    order = await order_service.mark_picked_up(db, seller, order_id, data.code)
+    return OrderOut.from_model(order)
+
+
+@router.post("/{order_id}/cancel", response_model=OrderOut)
+async def cancel(order_id: uuid.UUID, db: DB, buyer: ActiveBuyer) -> OrderOut:
+    """Buyer cancels a reservation; the quantity goes back on sale."""
+    order, listing = await order_service.cancel_order(db, buyer, order_id)
+    await stock.publish(str(listing.id), listing.quantity_available, listing.status.value)
+    return OrderOut.from_model(order)
+
+
+@router.post("/{order_id}/review", response_model=ReviewOut, status_code=status.HTTP_201_CREATED)
+async def review(order_id: uuid.UUID, data: ReviewCreate, db: DB, buyer: ActiveBuyer) -> ReviewOut:
+    """Rate an order after pickup (FR-USER-B-15). One review per order."""
+    created = await order_service.create_review(db, buyer, order_id, data)
+    return ReviewOut(
+        id=created.id,
+        order_id=created.order_id,
+        listing_id=created.listing_id,
+        author=buyer.username,
+        rating=created.rating,
+        comment=created.comment,
+        created_at=created.created_at,
+    )
+
+
 # TODO(Role 1): GET /api/orders/{id}/receipt     — PDF/HTML receipt (FR-USER-S-11, B-13).

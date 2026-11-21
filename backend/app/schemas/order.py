@@ -14,6 +14,22 @@ class OrderCreate(Schema):
     payment_method: PaymentMethod = PaymentMethod.pay_on_pickup
 
 
+class CheckoutLine(Schema):
+    listing_id: UUID
+    quantity: int = Field(ge=1, le=100)
+
+
+class CheckoutIn(Schema):
+    """A whole cart. Every line is reserved, or none are."""
+
+    items: list[CheckoutLine] = Field(min_length=1, max_length=20)
+    payment_method: PaymentMethod = PaymentMethod.pay_on_pickup
+
+
+class PickupIn(Schema):
+    code: str = Field(min_length=4, max_length=8)
+
+
 class OrderOut(Schema):
     id: UUID
     listing_id: UUID
