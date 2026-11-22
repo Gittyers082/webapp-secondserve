@@ -2,6 +2,20 @@ node_modules/
 dist/
 .astro/
 .env
-.env.production
+.env.*
+!.env.example
 .DS_Store
 npm-debug.log*
+
+# Python / Backend
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Playwright E2E
+test-results/
+playwright-report/
