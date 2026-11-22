@@ -85,7 +85,17 @@ async def _lock_order(db: AsyncSession, order_id: uuid.UUID) -> Order | None:
 async def _reserve(
     db: AsyncSession, buyer: User, listing: Listing, quantity: int, method: PaymentMethod
 ) -> Order:
-    """Check one locked listing and reserve `quantity` of it. The caller commits."""
+    """Check one locked listing and reserve `quantity` of it. The caller commits.
+
+    TODO(Role 3): fulfillment and channels (FR-SYS-13, FR-SYS-14):
+    - pass the order's Fulfillment in; reject delivery when `listing.allows_delivery`
+      is false, and pickup when `listing.allows_pickup` is false
+    - for delivery: copy `delivery_address`, set `delivery_fee` from the listing and add it
+      to the total, set `delivery_status = DeliveryStatus.pending`, and hand off to the
+      simulated courier
+    - buyers may only reserve `ListingChannel.marketplace` listings; partner offers and
+      donations go through the partner routes
+    """
     if listing.status != ListingStatus.active:
         raise HTTPException(status.HTTP_409_CONFLICT, f"{listing.name} is no longer available.")
     if listing.expires_at <= datetime.now(timezone.utc):

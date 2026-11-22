@@ -2,13 +2,35 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
-from app.models import Order, OrderStatus, PaymentMethod, PaymentStatus
+from app.models import (
+    DeliveryStatus,
+    DistributionStatus,
+    FulfillmentType,
+    Order,
+    OrderStatus,
+    OrderType,
+    PaymentMethod,
+    PaymentStatus,
+)
 from app.schemas.common import Schema
 
 
-class OrderCreate(Schema):
+class Fulfillment(Schema):
+    """Pickup at the store, or delivery to an address (FR-SYS-13, FR-USER-B-11)."""
+
+    fulfillment_type: FulfillmentType = FulfillmentType.pickup
+    delivery_address: str | None = Field(default=None, min_length=5, max_length=255)
+
+    @model_validator(mode="after")
+    def delivery_needs_address(self) -> "Fulfillment":
+        if self.fulfillment_type == FulfillmentType.delivery and not self.delivery_address:
+            raise ValueError("Add a delivery address, or choose pickup.")
+        return self
+
+
+class OrderCreate(Fulfillment):
     listing_id: UUID
     quantity: int = Field(ge=1, le=100)
     payment_method: PaymentMethod = PaymentMethod.pay_on_pickup
@@ -19,8 +41,8 @@ class CheckoutLine(Schema):
     quantity: int = Field(ge=1, le=100)
 
 
-class CheckoutIn(Schema):
-    """A whole cart. Every line is reserved, or none are."""
+class CheckoutIn(Fulfillment):
+    """A whole cart. Every line is reserved, or none are, all with the same fulfillment."""
 
     items: list[CheckoutLine] = Field(min_length=1, max_length=20)
     payment_method: PaymentMethod = PaymentMethod.pay_on_pickup
@@ -47,8 +69,15 @@ class OrderOut(Schema):
     pickup_code: str
     expires_at: datetime
     status: OrderStatus
+    order_type: OrderType
+    fulfillment_type: FulfillmentType
+    delivery_address: str | None
+    delivery_fee: Decimal | None
+    delivery_status: DeliveryStatus | None
+    distribution_status: DistributionStatus | None
     payment_status: PaymentStatus | None
     picked_up_at: datetime | None
+    delivered_at: datetime | None
     created_at: datetime
 
     @classmethod
@@ -72,7 +101,14 @@ class OrderOut(Schema):
             pickup_code=order.pickup_code,
             expires_at=listing.expires_at,
             status=order.status,
+            order_type=order.order_type,
+            fulfillment_type=order.fulfillment_type,
+            delivery_address=order.delivery_address,
+            delivery_fee=order.delivery_fee,
+            delivery_status=order.delivery_status,
+            distribution_status=order.distribution_status,
             payment_status=order.payment.status if order.payment else None,
             picked_up_at=order.picked_up_at,
+            delivered_at=order.delivered_at,
             created_at=order.created_at,
         )

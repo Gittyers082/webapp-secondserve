@@ -28,5 +28,9 @@ celery_app.conf.update(
             "task": "app.workers.tasks.expire_listings",
             "schedule": crontab(minute="*/10"),
         },
+        "escalate-surplus": {
+            "task": "app.workers.tasks.escalate_surplus",
+            "schedule": crontab(minute="*/15"),
+        },
     },
 )

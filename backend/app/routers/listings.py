@@ -18,6 +18,7 @@ from app.core.rate_limit import limiter
 from app.models import (
     FoodCategory,
     Listing,
+    ListingChannel,
     ListingStatus,
     Order,
     OrderStatus,
@@ -69,7 +70,12 @@ async def browse(
     stmt = (
         select(Listing)
         .join(SellerProfile, SellerProfile.user_id == Listing.seller_id)
-        .where(Listing.status == ListingStatus.active, Listing.expires_at > now)
+        .where(
+            Listing.status == ListingStatus.active,
+            Listing.expires_at > now,
+            # Partner offers and donations only show on the partner Surplus Board.
+            Listing.channel == ListingChannel.marketplace,
+        )
     )
     if q:
         # Substring match, or pg_trgm's "similar enough" (%) so small typos still find things.
@@ -156,6 +162,9 @@ async def create_listing(
         expires_at=data.expires_at,
         pickup_location=pickup,
         art=data.art,
+        allows_pickup=data.allows_pickup,
+        allows_delivery=data.allows_delivery,
+        delivery_fee=data.delivery_fee,
         status=ListingStatus.active,
     )
     ensure_eligible(listing)

@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     celery_enabled: bool = False
 
     commission_rate: float = Field(default=0.07, ge=0, le=0.5)
+    # Unsold listings this close to expiry move to the partner Surplus Board (FR-SYS-14).
+    surplus_window_hours: int = Field(default=6, ge=1, le=48)
     # FR-BUS-3 / NFR-BUS-MV-1: discounts should land in this range.
     min_discount_percent: int = 15
     max_discount_percent: int = 90

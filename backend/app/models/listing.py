@@ -18,7 +18,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, Timestamps, UUIDPrimaryKey
-from app.models.enums import FoodCategory, ListingStatus, str_enum
+from app.models.enums import FoodCategory, ListingChannel, ListingStatus, str_enum
 from app.models.user import User
 
 Money = Numeric(10, 2)
@@ -32,6 +32,11 @@ class Listing(UUIDPrimaryKey, Timestamps, Base):
         CheckConstraint("discounted_price >= 0", name="price_not_negative"),
         CheckConstraint("quantity_available >= 0", name="quantity_not_negative"),
         CheckConstraint("quantity_available <= original_quantity", name="quantity_within_original"),
+        # Every listing offers at least one way to get it (FR-USER-S-12).
+        CheckConstraint("allows_pickup OR allows_delivery", name="has_fulfillment_option"),
+        CheckConstraint(
+            "delivery_fee IS NULL OR delivery_fee >= 0", name="delivery_fee_not_negative"
+        ),
         # Fuzzy search on the name (needs the pg_trgm extension, see the README).
         Index(
             "ix_listings_name_trgm",
@@ -40,6 +45,7 @@ class Listing(UUIDPrimaryKey, Timestamps, Base):
             postgresql_ops={"name": "gin_trgm_ops"},
         ),
         Index("ix_listings_status_expires", "status", "expires_at"),
+        Index("ix_listings_channel_status", "channel", "status"),
     )
 
     seller_id: Mapped[uuid.UUID] = mapped_column(
@@ -67,6 +73,20 @@ class Listing(UUIDPrimaryKey, Timestamps, Base):
     )
     flagged: Mapped[bool] = mapped_column(Boolean, default=False)
     flag_reason: Mapped[str | None] = mapped_column(Text)
+
+    # Fulfillment options the seller offers for this listing (FR-USER-S-12, FR-SYS-13).
+    allows_pickup: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    allows_delivery: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    delivery_fee: Mapped[Decimal | None] = mapped_column(Money)
+
+    # Who can see it: every buyer, or only partners (FR-SYS-14, FR-USER-S-13).
+    channel: Mapped[ListingChannel] = mapped_column(
+        str_enum(ListingChannel),
+        default=ListingChannel.marketplace,
+        server_default=ListingChannel.marketplace.value,
+    )
+    # When it moved to the partner Surplus Board, by the seller or the escalation job.
+    surplus_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     seller: Mapped[User] = relationship(lazy="joined")
 

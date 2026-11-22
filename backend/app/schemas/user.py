@@ -16,19 +16,32 @@ class SellerDetails(Schema):
     description: str | None = Field(default=None, max_length=2000)
 
 
+class PartnerDetails(Schema):
+    """An LGU, government agency, charity or shelter (FR-USER-P-1)."""
+
+    organization_name: str = Field(min_length=2, max_length=160)
+    organization_type: Literal["lgu", "government-agency", "charity", "shelter"]
+    contact_person: str = Field(min_length=2, max_length=120)
+    address: str = Field(min_length=5, max_length=255)
+    accreditation_url: str | None = Field(default=None, max_length=500)
+
+
 class ProfileCreate(Schema):
     """Sent right after Supabase sign-up to finish registration (UC-01)."""
 
-    role: Literal["buyer", "seller"]  # nobody can sign themselves up as admin
+    role: Literal["buyer", "seller", "partner"]  # nobody can sign themselves up as admin
     username: str = Field(min_length=3, max_length=50, pattern=r"^[A-Za-z0-9_.]+$")
     full_name: str = Field(min_length=2, max_length=120)
     phone: str | None = Field(default=None, max_length=30)
     seller: SellerDetails | None = None
+    partner: PartnerDetails | None = None
 
     @model_validator(mode="after")
-    def seller_needs_business(self) -> "ProfileCreate":
+    def role_needs_details(self) -> "ProfileCreate":
         if self.role == "seller" and self.seller is None:
             raise ValueError("Sellers must include their business details.")
+        if self.role == "partner" and self.partner is None:
+            raise ValueError("Partners must include their organization details.")
         return self
 
 
@@ -36,6 +49,7 @@ class ProfileUpdate(Schema):
     full_name: str | None = Field(default=None, min_length=2, max_length=120)
     phone: str | None = Field(default=None, max_length=30)
     seller: SellerDetails | None = None
+    partner: PartnerDetails | None = None
 
 
 class SellerProfileOut(Schema):
@@ -45,6 +59,15 @@ class SellerProfileOut(Schema):
     contact_phone: str
     description: str | None
     logo_url: str | None
+    verified_at: datetime | None
+
+
+class PartnerProfileOut(Schema):
+    organization_name: str
+    organization_type: str
+    contact_person: str
+    address: str
+    accreditation_url: str | None
     verified_at: datetime | None
 
 
@@ -58,6 +81,7 @@ class UserOut(Schema):
     status: AccountStatus
     created_at: datetime
     seller_profile: SellerProfileOut | None = None
+    partner_profile: PartnerProfileOut | None = None
 
 
 class DecisionIn(Schema):

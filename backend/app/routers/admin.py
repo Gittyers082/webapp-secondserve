@@ -63,6 +63,8 @@ async def decide(
     user.status = AccountStatus.active if approved else AccountStatus.declined
     if approved and user.seller_profile is not None:
         user.seller_profile.verified_at = datetime.now(timezone.utc)
+    if approved and user.partner_profile is not None:
+        user.partner_profile.verified_at = datetime.now(timezone.utc)
     db.add(
         AccountDecision(
             user_id=user.id, admin_id=admin.id, decision=data.decision, reason=data.reason
@@ -87,7 +89,7 @@ async def decide(
         request=request,
     )
     await db.commit()
-    await db.refresh(user, ["seller_profile"])
+    await db.refresh(user, ["seller_profile", "partner_profile"])
     return user
 
 
@@ -106,7 +108,11 @@ async def decisions(db: DB, admin: Admin) -> list[DecisionOut]:
             user_id=u.id,
             username=u.username,
             role=u.role,
-            shop_name=u.seller_profile.business_name if u.seller_profile else None,
+            shop_name=u.seller_profile.business_name
+            if u.seller_profile
+            else u.partner_profile.organization_name
+            if u.partner_profile
+            else None,
             decision=d.decision,
             reason=d.reason,
             created_at=d.created_at,
