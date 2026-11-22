@@ -1,15 +1,19 @@
 ---
 import AuthLayout from '../layouts/AuthLayout.astro';
 import Tip from '../components/Tip.astro';
+import { organizationTypeLabel } from '../data/types';
+import type { OrganizationType } from '../data/types';
+
+const organizationTypes = Object.entries(organizationTypeLabel) as [OrganizationType, string][];
 ---
 
 <AuthLayout
   title="Create Account"
   headline="Give good products a second chance."
   accent="a second chance."
-  lede="Create a seller account to list surplus, or a buyer account to find it."
+  lede="Create a seller account to list surplus, a buyer account to find it, or a partner account for your organization."
 >
-  <p class="note" slot="hero-extra">Business name field appears only when Seller is chosen (shown here).</p>
+  <p class="note" slot="hero-extra">Sellers add a shop name; partners add their organization's details.</p>
 
   <form class="register" method="post" data-demo-form data-next="/login">
     <h2 class="display-title">Create an account</h2>
@@ -28,7 +32,7 @@ import Tip from '../components/Tip.astro';
     <div class="field">
       <span class="field-label" id="account-type-label">
         Account type
-        <Tip about="Account type" text="Buyers reserve discounted food. Sellers list their shop’s surplus. An administrator approves every new account." />
+        <Tip about="Account type" text="Buyers reserve discounted food. Sellers list their shop’s surplus. Partners are LGUs, agencies, charities and shelters that buy or claim unsold surplus. An administrator approves every seller and partner." />
       </span>
       <div class="segmented" role="radiogroup" aria-labelledby="account-type-label">
         <button class="segment" type="button" role="radio" data-role="buyer" aria-checked="false" tabindex="-1">
@@ -37,7 +41,11 @@ import Tip from '../components/Tip.astro';
         <button class="segment" type="button" role="radio" data-role="seller" aria-checked="true" tabindex="0">
           Seller
         </button>
+        <button class="segment" type="button" role="radio" data-role="partner" aria-checked="false" tabindex="-1">
+          Partner
+        </button>
       </div>
+      <input type="hidden" name="role" value="seller" data-role-input />
     </div>
 
     <div class="field" data-shop-field>
@@ -48,7 +56,32 @@ import Tip from '../components/Tip.astro';
       <input class="input" id="shop" name="shop" value="Mang Ben's Bakery" required />
     </div>
 
-    <p class="notice notice-info">
+    <fieldset class="field partner-fields" data-partner-field hidden>
+      <legend class="sr-only">Organization details</legend>
+      <div class="field">
+        <label class="field-label" for="org-name">
+          Organization name
+          <Tip about="Organization" text="Shops see this on every order you place. An administrator checks it before approving the account." />
+        </label>
+        <input class="input" id="org-name" name="organizationName" data-partner-required />
+      </div>
+      <div class="field">
+        <label class="field-label" for="org-type">Organization type</label>
+        <select class="input" id="org-type" name="organizationType">
+          {organizationTypes.map(([value, label]) => <option value={value}>{label}</option>)}
+        </select>
+      </div>
+      <div class="field">
+        <label class="field-label" for="org-contact">Contact person</label>
+        <input class="input" id="org-contact" name="contactPerson" autocomplete="name" data-partner-required />
+      </div>
+      <div class="field">
+        <label class="field-label" for="org-address">Address</label>
+        <input class="input" id="org-address" name="address" autocomplete="street-address" data-partner-required />
+      </div>
+    </fieldset>
+
+    <p class="notice notice-info" data-approval-notice>
       <span><strong>Pending approval.</strong> Your account is pending admin approval. You can sign in once approved.</span>
     </p>
 
@@ -64,6 +97,10 @@ import Tip from '../components/Tip.astro';
 
   const shopField = document.querySelector<HTMLElement>('[data-shop-field]');
   const shopInput = shopField?.querySelector<HTMLInputElement>('input');
+  const partnerField = document.querySelector<HTMLElement>('[data-partner-field]');
+  const partnerInputs = Array.from(document.querySelectorAll<HTMLInputElement>('[data-partner-required]'));
+  const roleInput = document.querySelector<HTMLInputElement>('[data-role-input]');
+  const approvalNotice = document.querySelector<HTMLElement>('[data-approval-notice]');
   const options = Array.from(document.querySelectorAll<HTMLButtonElement>('.segment'));
 
   const choose = (option: HTMLButtonElement, moveFocus = false) => {
@@ -74,9 +111,16 @@ import Tip from '../components/Tip.astro';
     });
     if (moveFocus) option.focus();
 
-    const isSeller = option.dataset.role === 'seller';
+    const role = option.dataset.role ?? 'buyer';
+    const isSeller = role === 'seller';
+    const isPartner = role === 'partner';
+    if (roleInput) roleInput.value = role;
     if (shopField) shopField.hidden = !isSeller;
     if (shopInput) shopInput.required = isSeller;
+    if (partnerField) partnerField.hidden = !isPartner;
+    partnerInputs.forEach((input) => (input.required = isPartner));
+    // Buyers are active straight away; sellers and partners wait for an administrator.
+    if (approvalNotice) approvalNotice.hidden = role === 'buyer';
   };
 
   options.forEach((option, index) => {
@@ -106,6 +150,18 @@ import Tip from '../components/Tip.astro';
 
   .notice {
     margin-top: 16px;
+  }
+
+  .partner-fields {
+    display: grid;
+    gap: 16px;
+    border: 0;
+    margin: 0;
+    padding: 0;
+  }
+
+  .partner-fields[hidden] {
+    display: none;
   }
 
   .register .btn {
