@@ -51,7 +51,7 @@ const filters = [
     <tbody>
       {
         users.map((user) => (
-          <tr data-user={user.username} data-role={user.role} data-status={user.status}>
+          <tr data-user={user.username} data-user-id={user.id} data-role={user.role} data-status={user.status}>
             <td class="name">
               <span class="who">
                 <span class="avatar" aria-hidden="true">{user.username.charAt(0)}</span>
@@ -134,7 +134,7 @@ const filters = [
   };
 
   const save = async (row: HTMLElement, banned: boolean, button: HTMLButtonElement | null) => {
-    const user = await run(button, () => api.admin.setBanned(row.dataset.user ?? '', banned));
+    const user = await run(button, () => api.admin.setBanned(row.dataset.userId ?? '', banned));
     if (user) setBanned(row, banned);
     return Boolean(user);
   };
