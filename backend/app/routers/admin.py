@@ -75,7 +75,11 @@ async def decide(
         user_id=user.id,
         type=f"account.{data.decision.value}",
         title="Your account was approved" if approved else "Your account was not approved",
-        body="You can now start listing items."
+        body=(
+            "You can now start listing items."
+            if user.role == Role.seller
+            else "You can now use the Surplus Board."
+        )
         if approved
         else (data.reason or "Contact support."),
         email_to=user.email,
@@ -108,11 +112,13 @@ async def decisions(db: DB, admin: Admin) -> list[DecisionOut]:
             user_id=u.id,
             username=u.username,
             role=u.role,
-            shop_name=u.seller_profile.business_name
-            if u.seller_profile
-            else u.partner_profile.organization_name
-            if u.partner_profile
-            else None,
+            shop_name=(
+                u.seller_profile.business_name
+                if u.seller_profile
+                else u.partner_profile.organization_name
+                if u.partner_profile
+                else None
+            ),
             decision=d.decision,
             reason=d.reason,
             created_at=d.created_at,

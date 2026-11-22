@@ -1,4 +1,4 @@
-"""Users and their role-specific profiles (ERD: User, Seller, Buyer and Partner Profile)."""
+"""Users and their role-specific profiles (ERD: User, Seller Profile, Buyer Profile)."""
 
 import uuid
 from datetime import datetime
@@ -56,6 +56,23 @@ class SellerProfile(Timestamps, Base):
     user: Mapped[User] = relationship(back_populates="seller_profile")
 
 
+class PartnerProfile(Timestamps, Base):
+    """A food bank, NGO or reseller that buys or claims from the Surplus Board."""
+
+    __tablename__ = "partner_profiles"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    organization_name: Mapped[str] = mapped_column(String(120), index=True)
+    organization_type: Mapped[str] = mapped_column(String(50))  # ngo, food-bank, reseller, ...
+    address: Mapped[str] = mapped_column(String(255))
+    contact_phone: Mapped[str] = mapped_column(String(30))
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    user: Mapped[User] = relationship(back_populates="partner_profile")
+
+
 class BuyerProfile(Timestamps, Base):
     __tablename__ = "buyer_profiles"
 
@@ -66,26 +83,6 @@ class BuyerProfile(Timestamps, Base):
     preferences: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
 
     user: Mapped[User] = relationship(back_populates="buyer_profile")
-
-
-class PartnerProfile(Timestamps, Base):
-    """An LGU, government agency, charity or shelter that receives surplus (FR-USER-P-1)."""
-
-    __tablename__ = "partner_profiles"
-
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
-    )
-    organization_name: Mapped[str] = mapped_column(String(160), index=True)
-    # lgu, government-agency, charity, shelter
-    organization_type: Mapped[str] = mapped_column(String(40))
-    contact_person: Mapped[str] = mapped_column(String(120))
-    address: Mapped[str] = mapped_column(String(255))  # default pickup/delivery point
-    # Link to proof of accreditation, e.g. DSWD registration or an LGU office ID (FR-USER-P-2).
-    accreditation_url: Mapped[str | None] = mapped_column(String(500))
-    verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-
-    user: Mapped[User] = relationship(back_populates="partner_profile")
 
 
 class AccountDecision(UUIDPrimaryKey, Timestamps, Base):

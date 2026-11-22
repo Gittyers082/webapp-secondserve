@@ -13,12 +13,12 @@ from sqlalchemy import Enum as SAEnum
 class Role(str, enum.Enum):
     buyer = "buyer"
     seller = "seller"
-    partner = "partner"  # LGU, government agency, charity or shelter (FR-USER-P-1)
+    partner = "partner"  # NGO, food bank or reseller buying from the Surplus Board
     admin = "admin"
 
 
 class AccountStatus(str, enum.Enum):
-    pending = "pending"  # waiting for admin approval (sellers FR-BUS-7, partners FR-USER-P-2)
+    pending = "pending"  # waiting for admin approval (sellers, FR-BUS-7)
     active = "active"
     declined = "declined"
     banned = "banned"
@@ -42,17 +42,42 @@ class ListingStatus(str, enum.Enum):
     removed = "removed"  # admin moderation
 
 
+class ListingKind(str, enum.Enum):
+    retail = "retail"  # normal marketplace listing
+    partner_offer = "partner-offer"  # Surplus Board, discounted for partners
+    donation = "donation"  # Surplus Board, free for partners to claim
+
+
+class FulfillmentOption(str, enum.Enum):
+    """What a seller offers on a listing (FR-USER-S-12)."""
+
+    pickup = "pickup"
+    delivery = "delivery"
+    both = "both"
+
+
+class FulfillmentMethod(str, enum.Enum):
+    """What one order uses."""
+
+    pickup = "pickup"
+    delivery = "delivery"
+
+
+class DeliveryStatus(str, enum.Enum):
+    handed_off = "handed-off"  # given to the (simulated) delivery partner
+    out_for_delivery = "out-for-delivery"
+    delivered = "delivered"
+
+
 class OrderStatus(str, enum.Enum):
     reserved = "reserved"
     ready = "ready"
     picked_up = "picked-up"
-    delivered = "delivered"  # delivery orders end here instead of picked-up
     cancelled = "cancelled"
 
 
 class PaymentMethod(str, enum.Enum):
     pay_on_pickup = "pay-on-pickup"
-    cash_on_delivery = "cash-on-delivery"
     gcash_simulated = "gcash-simulated"
     card_simulated = "card-simulated"
 
@@ -62,44 +87,6 @@ class PaymentStatus(str, enum.Enum):
     paid = "paid"
     failed = "failed"
     refunded = "refunded"
-
-
-class FulfillmentType(str, enum.Enum):
-    """How an order reaches the buyer or partner (FR-SYS-13)."""
-
-    pickup = "pickup"
-    delivery = "delivery"  # through a partner courier; simulated in the prototype
-
-
-class DeliveryStatus(str, enum.Enum):
-    """Progress of a delivery order (FR-USER-B-12). Pickup orders leave it empty."""
-
-    pending = "pending"
-    preparing = "preparing"
-    out_for_delivery = "out-for-delivery"
-    delivered = "delivered"
-    cancelled = "cancelled"
-
-
-class OrderType(str, enum.Enum):
-    sale = "sale"  # a buyer's normal purchase
-    partner_purchase = "partner-purchase"  # an agency buys surplus (FR-USER-P-5)
-    donation = "donation"  # a charity claims a free item (FR-USER-P-6)
-
-
-class ListingChannel(str, enum.Enum):
-    """Who can see a listing (FR-SYS-14, FR-USER-S-13)."""
-
-    marketplace = "marketplace"  # every buyer
-    partner_offer = "partner-offer"  # partners only, at a further discount
-    donation = "donation"  # partners only, free
-
-
-class DistributionStatus(str, enum.Enum):
-    """Whether a partner has passed received items on (FR-USER-P-9)."""
-
-    pending = "pending"
-    distributed = "distributed"
 
 
 class Decision(str, enum.Enum):

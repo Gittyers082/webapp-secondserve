@@ -1,4 +1,7 @@
-"""Order placement (UC-10, FR-SYS-6, FR-SYS-7, FR-SYS-8).
+"""Order placement, delivery and hand-over (UC-10, 14, 15; FR-SYS-6, 7, 8, 13).
+
+Buyers order retail listings; partners order partner offers and claim donations from
+the Surplus Board. Both go through the same locked reservation below.
 
 The important part is the listing lock: every path that changes stock first runs
 SELECT ... FOR UPDATE on the listing row. If two buyers try to reserve the last
@@ -24,7 +27,11 @@ from sqlalchemy.orm import lazyload
 
 from app.core.config import get_settings
 from app.models import (
+    DeliveryStatus,
+    FulfillmentMethod,
+    FulfillmentOption,
     Listing,
+    ListingKind,
     ListingStatus,
     Order,
     OrderStatus,
@@ -32,11 +39,13 @@ from app.models import (
     PaymentStatus,
     PaymentTransaction,
     Review,
+    Role,
     User,
 )
-from app.schemas.order import CheckoutIn, OrderCreate
+from app.schemas.order import CheckoutIn, OrderCreate, OrderTerms
 from app.schemas.review import ReviewCreate
-from app.services import audit
+from app.services import audit, delivery
+from app.services.listings import lock_listings
 from app.services.notifications import notify
 
 CENT = Decimal("0.01")
@@ -58,19 +67,6 @@ async def get_order_or_404(db: AsyncSession, order_id: uuid.UUID) -> Order:
     return order
 
 
-async def _lock_listings(db: AsyncSession, ids: list[uuid.UUID]) -> dict[uuid.UUID, Listing]:
-    """Lock the listing rows (sorted by id) and return them with fresh values."""
-    stmt = (
-        select(Listing)
-        .options(lazyload("*"))  # no joins in a locking query
-        .where(Listing.id.in_(ids))
-        .order_by(Listing.id)
-        .with_for_update()
-        .execution_options(populate_existing=True)
-    )
-    return {listing.id: listing for listing in (await db.execute(stmt)).scalars()}
-
-
 async def _lock_order(db: AsyncSession, order_id: uuid.UUID) -> Order | None:
     stmt = (
         select(Order)
@@ -82,26 +78,34 @@ async def _lock_order(db: AsyncSession, order_id: uuid.UUID) -> Order | None:
     return (await db.execute(stmt)).scalar_one_or_none()
 
 
-async def _reserve(
-    db: AsyncSession, buyer: User, listing: Listing, quantity: int, method: PaymentMethod
-) -> Order:
-    """Check one locked listing and reserve `quantity` of it. The caller commits.
+def _check_who_and_how(customer: User, listing: Listing, terms: OrderTerms) -> None:
+    """Buyers get retail listings, partners get the Surplus Board; then pickup/delivery."""
+    on_board = listing.kind != ListingKind.retail
+    if customer.role == Role.partner and not on_board:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "Partners order from the Surplus Board, not the marketplace."
+        )
+    if customer.role != Role.partner and on_board:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, f"{listing.name} is for partners only.")
 
-    TODO(Role 3): fulfillment and channels (FR-SYS-13, FR-SYS-14):
-    - pass the order's Fulfillment in; reject delivery when `listing.allows_delivery`
-      is false, and pickup when `listing.allows_pickup` is false
-    - for delivery: copy `delivery_address`, set `delivery_fee` from the listing and add it
-      to the total, set `delivery_status = DeliveryStatus.pending`, and hand off to the
-      simulated courier
-    - buyers may only reserve `ListingChannel.marketplace` listings; partner offers and
-      donations go through the partner routes
-    """
+    if terms.fulfillment == FulfillmentMethod.delivery:
+        if listing.fulfillment == FulfillmentOption.pickup:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f"{listing.name} is pickup only.")
+    elif listing.fulfillment == FulfillmentOption.delivery:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"{listing.name} is delivery only.")
+
+
+async def _reserve(
+    db: AsyncSession, buyer: User, listing: Listing, quantity: int, terms: OrderTerms
+) -> Order:
+    """Check one locked listing and reserve `quantity` of it. The caller commits."""
     if listing.status != ListingStatus.active:
         raise HTTPException(status.HTTP_409_CONFLICT, f"{listing.name} is no longer available.")
     if listing.expires_at <= datetime.now(timezone.utc):
         raise HTTPException(status.HTTP_409_CONFLICT, f"{listing.name} has expired.")
     if listing.seller_id == buyer.id:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "You can't buy your own listing.")
+    _check_who_and_how(buyer, listing, terms)
     if quantity > listing.quantity_available:
         raise HTTPException(
             status.HTTP_409_CONFLICT,
@@ -114,9 +118,13 @@ async def _reserve(
         listing.status = ListingStatus.sold_out
 
     total = (listing.discounted_price * quantity).quantize(CENT, ROUND_HALF_UP)
+    # Commission is on the food only; the delivery fee is not ours to take a cut of.
     commission = (total * Decimal(str(get_settings().commission_rate))).quantize(
         CENT, ROUND_HALF_UP
     )
+    delivering = terms.fulfillment == FulfillmentMethod.delivery
+    fee = Decimal(str(get_settings().delivery_fee)).quantize(CENT) if delivering else Decimal("0")
+    amount = total + fee
 
     order = Order(
         buyer_id=buyer.id,
@@ -126,6 +134,9 @@ async def _reserve(
         unit_price=listing.discounted_price,
         original_unit_price=listing.original_price,
         total=total,
+        fulfillment_method=terms.fulfillment,
+        delivery_address=terms.delivery_address if delivering else None,
+        delivery_fee=fee,
         pickup_code=new_pickup_code(),
         status=OrderStatus.reserved,
     )
@@ -135,12 +146,13 @@ async def _reserve(
     db.add(
         PaymentTransaction(
             order_id=order.id,
-            amount=total,
+            amount=amount,
             commission=commission,
-            method=method,
+            method=terms.payment_method,
             # Simulated: online methods "succeed" instantly; pay-on-pickup waits for handover.
+            # Donations cost nothing, so there is nothing to wait for.
             status=PaymentStatus.pending
-            if method == PaymentMethod.pay_on_pickup
+            if terms.payment_method == PaymentMethod.pay_on_pickup and amount > 0
             else PaymentStatus.paid,
             reference=f"SIM-{secrets.token_hex(6).upper()}",
         )
@@ -152,7 +164,15 @@ async def _reserve(
         user_id=buyer.id,
         type="order.reserved",
         title="Reservation confirmed",
-        body=f"You reserved {quantity} × {listing.name}. Pickup code: {order.pickup_code}.",
+        body=(
+            f"You reserved {quantity} × {listing.name}. "
+            + (
+                f"It will be delivered to {order.delivery_address}. "
+                if delivering
+                else "Pick it up at the shop. "
+            )
+            + f"Order code: {order.pickup_code}."
+        ),
         link="/buyer/pending",
         email_to=buyer.email,
     )
@@ -178,11 +198,11 @@ async def _reserve(
 
 
 async def place_order(db: AsyncSession, buyer: User, data: OrderCreate) -> tuple[Order, Listing]:
-    listings = await _lock_listings(db, [data.listing_id])
+    listings = await lock_listings(db, [data.listing_id])
     listing = listings.get(data.listing_id)
     if listing is None:
         raise HTTPException(status.HTTP_409_CONFLICT, "This item is no longer available.")
-    order = await _reserve(db, buyer, listing, data.quantity, data.payment_method)
+    order = await _reserve(db, buyer, listing, data.quantity, data)
     await db.commit()
     return await get_order_or_404(db, order.id), listing
 
@@ -194,7 +214,7 @@ async def checkout(db: AsyncSession, buyer: User, data: CheckoutIn) -> list[tupl
     for line in data.items:
         wanted[line.listing_id] = wanted.get(line.listing_id, 0) + line.quantity
 
-    listings = await _lock_listings(db, list(wanted))
+    listings = await lock_listings(db, list(wanted))
     if len(listings) != len(wanted):
         raise HTTPException(
             status.HTTP_409_CONFLICT, "An item in your cart is no longer available."
@@ -203,7 +223,7 @@ async def checkout(db: AsyncSession, buyer: User, data: CheckoutIn) -> list[tupl
     placed: list[tuple[Order, Listing]] = []
     for listing_id, quantity in sorted(wanted.items()):
         listing = listings[listing_id]
-        order = await _reserve(db, buyer, listing, quantity, data.payment_method)
+        order = await _reserve(db, buyer, listing, quantity, data)
         placed.append((order, listing))
     await db.commit()  # an HTTPException above leaves the transaction to get_db's rollback
 
@@ -225,6 +245,10 @@ async def mark_ready(db: AsyncSession, seller: User, order_id: uuid.UUID) -> Ord
             status.HTTP_409_CONFLICT, f"This order is already {order.status.value}."
         )
     order.status = OrderStatus.ready
+    delivering = order.fulfillment_method == FulfillmentMethod.delivery
+    if delivering:  # simulated hand-off to the delivery partner
+        order.delivery_status = DeliveryStatus.handed_off
+        order.delivery_reference = delivery.hand_off()
 
     buyer = await db.get(User, order.buyer_id)
     listing = await db.get(Listing, order.listing_id)
@@ -233,8 +257,15 @@ async def mark_ready(db: AsyncSession, seller: User, order_id: uuid.UUID) -> Ord
             db,
             user_id=buyer.id,
             type="order.ready",
-            title="Your order is ready",
-            body=f"{listing.name} is ready for pickup. Show code {order.pickup_code}.",
+            title="Your order is on its way to the courier"
+            if delivering
+            else "Your order is ready",
+            body=(
+                f"{listing.name} was handed to the delivery partner. "
+                f"Tracking: {order.delivery_reference}."
+            )
+            if delivering
+            else f"{listing.name} is ready for pickup. Show code {order.pickup_code}.",
             link="/buyer/pending",
             email_to=buyer.email,
         )
@@ -250,6 +281,11 @@ async def mark_picked_up(db: AsyncSession, seller: User, order_id: uuid.UUID, co
     if order.status not in (OrderStatus.reserved, OrderStatus.ready):
         raise HTTPException(
             status.HTTP_409_CONFLICT, f"This order is already {order.status.value}."
+        )
+    if order.fulfillment_method == FulfillmentMethod.delivery:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Delivery orders finish when the delivery is marked delivered.",
         )
     if not secrets.compare_digest(code.strip().upper(), order.pickup_code):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "That pickup code doesn't match.")
@@ -277,6 +313,52 @@ async def mark_picked_up(db: AsyncSession, seller: User, order_id: uuid.UUID, co
     return await get_order_or_404(db, order.id)
 
 
+async def update_delivery(
+    db: AsyncSession, seller: User, order_id: uuid.UUID, new_status: DeliveryStatus
+) -> Order:
+    """Move a delivery along: handed-off, out-for-delivery, delivered (FR-SYS-13)."""
+    order = _own_order_or_404(await _lock_order(db, order_id), seller_id=seller.id)
+    current = order.delivery_status
+    if order.fulfillment_method != FulfillmentMethod.delivery or current is None:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "This order hasn't been handed to the delivery partner."
+        )
+    if delivery.NEXT_STATUS.get(current) != new_status:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"A delivery can't go from {current.value} to {new_status.value}.",
+        )
+    order.delivery_status = new_status
+
+    if new_status == DeliveryStatus.delivered:
+        order.status = OrderStatus.picked_up  # for delivery orders this means "delivered"
+        order.picked_up_at = datetime.now(timezone.utc)
+        payment = await db.scalar(
+            select(PaymentTransaction).where(PaymentTransaction.order_id == order.id)
+        )
+        if payment is not None and payment.status == PaymentStatus.pending:
+            payment.status = PaymentStatus.paid  # cash on delivery is settled at the door
+
+    notify(
+        db,
+        user_id=order.buyer_id,
+        type=f"order.{new_status.value}",
+        title="Your order was delivered"
+        if new_status == DeliveryStatus.delivered
+        else "Your order is out for delivery",
+        body=f"Tracking: {order.delivery_reference}.",
+    )
+    audit.record(
+        db,
+        actor_id=seller.id,
+        action=f"order.delivery.{new_status.value}",
+        entity_type="order",
+        entity_id=order.id,
+    )
+    await db.commit()
+    return await get_order_or_404(db, order.id)
+
+
 async def cancel_order(db: AsyncSession, buyer: User, order_id: uuid.UUID) -> tuple[Order, Listing]:
     """Buyer cancels a reservation and the quantity goes back on the listing."""
     order = _own_order_or_404(await _lock_order(db, order_id), buyer_id=buyer.id)
@@ -286,7 +368,7 @@ async def cancel_order(db: AsyncSession, buyer: User, order_id: uuid.UUID) -> tu
             "Only reservations that haven't been prepared can be cancelled.",
         )
 
-    listing = (await _lock_listings(db, [order.listing_id]))[order.listing_id]
+    listing = (await lock_listings(db, [order.listing_id]))[order.listing_id]
     listing.quantity_available += order.quantity
     # A seller may have restocked while this was reserved; keep available <= original.
     listing.original_quantity = max(listing.original_quantity, listing.quantity_available)

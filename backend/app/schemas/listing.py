@@ -5,7 +5,7 @@ from uuid import UUID
 
 from pydantic import Field, model_validator
 
-from app.models import FoodCategory, Listing, ListingChannel, ListingStatus
+from app.models import FoodCategory, FulfillmentOption, Listing, ListingKind, ListingStatus
 from app.schemas.common import Schema
 
 
@@ -17,21 +17,10 @@ class ListingCreate(Schema):
     discounted_price: Decimal = Field(ge=0, max_digits=10, decimal_places=2)
     quantity: int = Field(ge=1, le=10_000)
     expires_at: datetime
+    fulfillment: FulfillmentOption = FulfillmentOption.pickup
     # Defaults to the seller's business address when left out.
     pickup_location: str | None = Field(default=None, max_length=255)
     art: str | None = Field(default=None, max_length=40)
-    # How buyers can get it (FR-USER-S-12). At least one must be true.
-    allows_pickup: bool = True
-    allows_delivery: bool = False
-    delivery_fee: Decimal | None = Field(default=None, ge=0, max_digits=10, decimal_places=2)
-
-    @model_validator(mode="after")
-    def needs_a_fulfillment_option(self) -> "ListingCreate":
-        if not (self.allows_pickup or self.allows_delivery):
-            raise ValueError("Offer pickup, delivery, or both.")
-        if self.allows_delivery and self.delivery_fee is None:
-            raise ValueError("Set a delivery fee (it can be 0) when you offer delivery.")
-        return self
 
 
 class ListingUpdate(Schema):
@@ -44,10 +33,23 @@ class ListingUpdate(Schema):
     discounted_price: Decimal | None = Field(default=None, ge=0, max_digits=10, decimal_places=2)
     quantity: int | None = Field(default=None, ge=0, le=10_000)
     expires_at: datetime | None = None
+    fulfillment: FulfillmentOption | None = None
     pickup_location: str | None = Field(default=None, max_length=255)
-    allows_pickup: bool | None = None
-    allows_delivery: bool | None = None
-    delivery_fee: Decimal | None = Field(default=None, ge=0, max_digits=10, decimal_places=2)
+
+
+class ConvertIn(Schema):
+    """Move a listing to the partner Surplus Board (FR-USER-S-13)."""
+
+    kind: Literal["partner-offer", "donation"]
+    partner_price: Decimal | None = Field(default=None, gt=0, max_digits=10, decimal_places=2)
+
+    @model_validator(mode="after")
+    def price_matches_kind(self) -> "ConvertIn":
+        if self.kind == "partner-offer" and self.partner_price is None:
+            raise ValueError("A partner offer needs a partner price.")
+        if self.kind == "donation" and self.partner_price is not None:
+            raise ValueError("Donations are free; leave the partner price out.")
+        return self
 
 
 class ListingStatusIn(Schema):
@@ -70,10 +72,8 @@ class ListingOut(Schema):
     original_quantity: int
     expires_at: datetime
     pickup_location: str
-    allows_pickup: bool
-    allows_delivery: bool
-    delivery_fee: Decimal | None
-    channel: ListingChannel
+    fulfillment: FulfillmentOption
+    kind: ListingKind
     status: ListingStatus
     flagged: bool
     created_at: datetime
@@ -97,10 +97,8 @@ class ListingOut(Schema):
             original_quantity=listing.original_quantity,
             expires_at=listing.expires_at,
             pickup_location=listing.pickup_location,
-            allows_pickup=listing.allows_pickup,
-            allows_delivery=listing.allows_delivery,
-            delivery_fee=listing.delivery_fee,
-            channel=listing.channel,
+            fulfillment=listing.fulfillment,
+            kind=listing.kind,
             status=listing.status,
             flagged=listing.flagged,
             created_at=listing.created_at,

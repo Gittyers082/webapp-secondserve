@@ -1,8 +1,7 @@
 """Orders, simulated payments and reviews (ERD: Order, Payment Transaction, Review Rating).
 
-An order is collected at the store (pickup) or delivered through a partner courier
-(delivery, simulated in the prototype). Buyers place sales; partners place partner
-purchases and donation claims, so `buyer_id` holds whoever placed the order.
+An order is a reservation the customer collects, or has delivered (fulfillment_method).
+For delivery orders, status "picked-up" means "delivered".
 One order = one listing. Checking out a cart with three lines creates three orders.
 """
 
@@ -16,10 +15,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base, Timestamps, UUIDPrimaryKey
 from app.models.enums import (
     DeliveryStatus,
-    DistributionStatus,
-    FulfillmentType,
+    FulfillmentMethod,
     OrderStatus,
-    OrderType,
     PaymentMethod,
     PaymentStatus,
     str_enum,
@@ -32,14 +29,7 @@ class Order(UUIDPrimaryKey, Timestamps, Base):
     __table_args__ = (
         CheckConstraint("quantity > 0", name="quantity_positive"),
         CheckConstraint("total >= 0", name="total_not_negative"),
-        # A delivery order must say where it goes (FR-USER-B-11).
-        CheckConstraint(
-            "fulfillment_type <> 'delivery' OR delivery_address IS NOT NULL",
-            name="delivery_has_address",
-        ),
-        CheckConstraint(
-            "delivery_fee IS NULL OR delivery_fee >= 0", name="delivery_fee_not_negative"
-        ),
+        CheckConstraint("delivery_fee >= 0", name="delivery_fee_not_negative"),
     )
 
     buyer_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), index=True)
@@ -53,36 +43,21 @@ class Order(UUIDPrimaryKey, Timestamps, Base):
     total: Mapped[Decimal] = mapped_column(Money)
 
     # Short code the buyer shows at the counter (seller's /handover screen).
+    # Delivery (FR-SYS-13). The fee is charged on top of `total` and earns no commission.
+    fulfillment_method: Mapped[FulfillmentMethod] = mapped_column(
+        str_enum(FulfillmentMethod), default=FulfillmentMethod.pickup, server_default="pickup"
+    )
+    delivery_address: Mapped[str | None] = mapped_column(String(255))
+    delivery_fee: Mapped[Decimal] = mapped_column(Money, default=Decimal("0"), server_default="0")
+    delivery_status: Mapped[DeliveryStatus | None] = mapped_column(str_enum(DeliveryStatus))
+    delivery_reference: Mapped[str | None] = mapped_column(String(40))
+
     pickup_code: Mapped[str] = mapped_column(String(8), index=True)
     status: Mapped[OrderStatus] = mapped_column(
         str_enum(OrderStatus), default=OrderStatus.reserved, index=True
     )
     picked_up_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-
-    order_type: Mapped[OrderType] = mapped_column(
-        str_enum(OrderType, length=24),
-        default=OrderType.sale,
-        server_default=OrderType.sale.value,
-        index=True,
-    )
-
-    # Fulfillment (FR-SYS-13). Pickup orders leave the delivery fields empty.
-    fulfillment_type: Mapped[FulfillmentType] = mapped_column(
-        str_enum(FulfillmentType),
-        default=FulfillmentType.pickup,
-        server_default=FulfillmentType.pickup.value,
-    )
-    delivery_address: Mapped[str | None] = mapped_column(String(255))
-    delivery_fee: Mapped[Decimal | None] = mapped_column(Money)
-    delivery_status: Mapped[DeliveryStatus | None] = mapped_column(str_enum(DeliveryStatus))
-    delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-
-    # Partner orders only: whether the items were passed on (FR-USER-P-9).
-    distribution_status: Mapped[DistributionStatus | None] = mapped_column(
-        str_enum(DistributionStatus)
-    )
-    distributed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     listing: Mapped[Listing] = relationship(lazy="joined")
     payment: Mapped["PaymentTransaction | None"] = relationship(

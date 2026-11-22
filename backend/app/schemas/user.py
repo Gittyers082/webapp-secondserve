@@ -17,13 +17,10 @@ class SellerDetails(Schema):
 
 
 class PartnerDetails(Schema):
-    """An LGU, government agency, charity or shelter (FR-USER-P-1)."""
-
-    organization_name: str = Field(min_length=2, max_length=160)
-    organization_type: Literal["lgu", "government-agency", "charity", "shelter"]
-    contact_person: str = Field(min_length=2, max_length=120)
+    organization_name: str = Field(min_length=2, max_length=120)
+    organization_type: str = Field(min_length=2, max_length=50)  # ngo, food-bank, reseller
     address: str = Field(min_length=5, max_length=255)
-    accreditation_url: str | None = Field(default=None, max_length=500)
+    contact_phone: str = Field(min_length=7, max_length=30)
 
 
 class ProfileCreate(Schema):
@@ -49,7 +46,6 @@ class ProfileUpdate(Schema):
     full_name: str | None = Field(default=None, min_length=2, max_length=120)
     phone: str | None = Field(default=None, max_length=30)
     seller: SellerDetails | None = None
-    partner: PartnerDetails | None = None
 
 
 class SellerProfileOut(Schema):
@@ -65,9 +61,8 @@ class SellerProfileOut(Schema):
 class PartnerProfileOut(Schema):
     organization_name: str
     organization_type: str
-    contact_person: str
     address: str
-    accreditation_url: str | None
+    contact_phone: str
     verified_at: datetime | None
 
 

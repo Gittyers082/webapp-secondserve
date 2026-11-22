@@ -46,7 +46,7 @@ async def create_profile(request: Request, data: ProfileCreate, claims: TokenUse
         full_name=data.full_name,
         phone=data.phone,
         role=role,
-        # Sellers and partners wait for an admin to verify them (FR-BUS-7, FR-USER-P-2).
+        # Sellers and partners wait for an admin to verify them (FR-BUS-7).
         status=AccountStatus.pending
         if role in (Role.seller, Role.partner)
         else AccountStatus.active,
@@ -84,15 +84,8 @@ async def update_me(data: ProfileUpdate, user: CurrentUser, db: DB) -> User:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Only sellers have business details.")
         for field, value in data.seller.model_dump().items():
             setattr(user.seller_profile, field, value)
-    if data.partner is not None:
-        if user.role != Role.partner or user.partner_profile is None:
-            raise HTTPException(
-                status.HTTP_400_BAD_REQUEST, "Only partners have organization details."
-            )
-        for field, value in data.partner.model_dump().items():
-            setattr(user.partner_profile, field, value)
     await db.commit()
-    await db.refresh(user, ["seller_profile", "partner_profile"])
+    await db.refresh(user, ["seller_profile"])
     return user
 
 
