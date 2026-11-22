@@ -6,12 +6,13 @@
  * the seed data in src/data/store.ts, so the frontend stays usable before the
  * backend exists. The screens never know which one answered.
  */
-import type { ApiError, ListingInput, ReviewInput } from "./contract";
+import type { ApiError, ListingInput, PartnerOrderInput, ReviewInput } from "./contract";
 import type {
   AccountDecision,
   AppNotification,
   Listing,
   Order,
+  PartnerProfile,
   PendingAccount,
   Review,
   Session,
@@ -163,6 +164,49 @@ export const api = {
           } as Review),
   },
 
+  partner: {
+    // The backend answers with a page: { items, total, limit, offset }.
+    surplus: async () =>
+      isLive
+        ? (await request<{ items: Listing[] }>("GET", "/partners/surplus")).items
+        : offline(seed.surplusBoard),
+
+    orders: () =>
+      isLive
+        ? request<Order[]>("GET", "/partners/orders")
+        : offline(seed.partnerOrders),
+
+    // TODO(Role 3): buy, claim and distributed answer 501 until the backend implements them.
+    buy: (listingId: string, input: PartnerOrderInput) =>
+      isLive
+        ? request<Order>("POST", `/partners/surplus/${listingId}/buy`, input)
+        : offline(partnerOrderFromSeed(listingId, input, "partner-purchase")),
+
+    claim: (listingId: string, input: PartnerOrderInput) =>
+      isLive
+        ? request<Order>("POST", `/partners/surplus/${listingId}/claim`, input)
+        : offline(partnerOrderFromSeed(listingId, input, "donation")),
+
+    markDistributed: (orderId: string) =>
+      isLive
+        ? request<Order>("POST", `/partners/orders/${orderId}/distributed`)
+        : offline({
+            ...find(seed.partnerOrders, orderId),
+            distributionStatus: "distributed",
+          } as Order),
+
+    // TODO(Role 4): GET /me returns the user with the organization inside `partnerProfile`.
+    profile: () =>
+      isLive
+        ? request<PartnerProfile>("GET", "/me")
+        : offline(seed.partnerProfile),
+
+    updateProfile: (input: Partial<Omit<PartnerProfile, "verifiedAt">>) =>
+      isLive
+        ? request<PartnerProfile>("PATCH", "/me", { partner: input })
+        : offline({ ...seed.partnerProfile, ...input }),
+  },
+
   admin: {
     users: () =>
       isLive ? request<User[]>("GET", "/admin/users") : offline(seed.users),
@@ -223,6 +267,37 @@ export const api = {
       isLive ? request<null>("POST", "/notifications/read-all") : offline(null),
   },
 };
+
+/** What the seed fallback answers when a partner buys or claims surplus. */
+function partnerOrderFromSeed(
+  listingId: string,
+  input: PartnerOrderInput,
+  orderType: "partner-purchase" | "donation",
+): Order {
+  const listing = find(seed.surplusBoard, listingId);
+  const delivery = input.fulfillmentType === "delivery";
+  const deliveryFee = delivery ? (listing.deliveryFee ?? 0) : undefined;
+  return {
+    id: `o-${Date.now()}`,
+    listingId,
+    buyerUsername: seed.partner.username,
+    foodName: listing.name,
+    art: listing.art,
+    shopName: listing.shopName,
+    quantity: input.quantity,
+    total: orderType === "donation" ? 0 : listing.discountedPrice * input.quantity,
+    pickupLocation: listing.pickupLocation,
+    expiryLabel: listing.expiryLabel,
+    expiringSoon: false,
+    status: "reserved",
+    orderType,
+    fulfillmentType: input.fulfillmentType,
+    deliveryAddress: delivery ? input.deliveryAddress : undefined,
+    deliveryFee,
+    deliveryStatus: delivery ? "pending" : undefined,
+    distributionStatus: "pending",
+  };
+}
 
 /** A readable message for a failed call, for notices and announcements. */
 export function errorMessage(error: unknown): string {

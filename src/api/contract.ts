@@ -10,6 +10,7 @@ import type {
   AppNotification,
   Listing,
   ListingStatus,
+  FulfillmentType,
   Order,
   PendingAccount,
   Review,
@@ -39,6 +40,14 @@ export interface ListingInput {
   photoId?: string;
 }
 
+/** What a partner sends to buy surplus or claim a donation. */
+export interface PartnerOrderInput {
+  quantity: number;
+  fulfillmentType: FulfillmentType;
+  /** Required when fulfillmentType is "delivery". */
+  deliveryAddress?: string;
+}
+
 export interface ReviewInput {
   orderId: string;
   rating: number;
@@ -63,6 +72,17 @@ export interface Endpoints {
 
   // Buyer
   'POST /orders/:orderId/review': { body: ReviewInput; response: Review };
+
+  // Partner
+  'GET /partners/surplus': { response: { items: Listing[]; total: number; limit: number; offset: number } };
+  'GET /partners/orders': { response: Order[] };
+  'POST /partners/surplus/:id/buy': { body: PartnerOrderInput; response: Order };
+  'POST /partners/surplus/:id/claim': { body: PartnerOrderInput; response: Order };
+  'POST /partners/orders/:id/distributed': { response: Order };
+  'POST /listings/:id/offer-to-partners': {
+    body: { channel: 'partner-offer' | 'donation'; partnerPrice?: number };
+    response: Listing;
+  };
 
   // Administrator
   'GET /admin/users': { response: User[] };
