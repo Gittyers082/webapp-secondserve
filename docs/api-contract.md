@@ -94,6 +94,26 @@ Notifications already match: `GET /notifications`, `POST /notifications/:id/read
 Still to agree: listings for the Shop, cart, checkout, pending orders, order
 history and the wishlist. The buyer screens read seed data for these today.
 
+## Partner
+
+Partners are LGUs, government agencies, charities and shelters. An
+administrator approves them before they can sign in.
+
+| Method | Path | Body | Returns |
+| --- | --- | --- | --- |
+| GET | `/partners/surplus` | | `{ items: Listing[], total, limit, offset }` |
+| GET | `/partners/orders` | | `Order[]` |
+| POST | `/partners/surplus/:id/buy` | `{ quantity, fulfillmentType, deliveryAddress? }` | `Order` |
+| POST | `/partners/surplus/:id/claim` | `{ quantity, fulfillmentType, deliveryAddress? }` | `Order` |
+| POST | `/partners/orders/:id/distributed` | | `Order` |
+| POST | `/listings/:id/offer-to-partners` (seller) | `{ channel: "partner-offer" \| "donation", partnerPrice? }` | `Listing` |
+
+`fulfillmentType` is `"pickup"` or `"delivery"`; `deliveryAddress` is required
+for delivery. Buy, claim, distributed and offer-to-partners answer 501 until
+the backend implements them (Role 3). The partner screens are in
+`src/pages/partner/` and call these through `api.partner` in
+`src/api/client.ts`.
+
 ## Administrator
 
 | Method | Path | Body | Returns |
