@@ -15,7 +15,7 @@ from sqlalchemy import select
 
 from app.core.deps import DB, CurrentUser, TokenUser
 from app.core.rate_limit import limiter
-from app.models import AccountStatus, BuyerProfile, Role, SellerProfile, User
+from app.models import AccountStatus, BuyerProfile, PartnerProfile, Role, SellerProfile, User
 from app.schemas.user import ProfileCreate, ProfileUpdate, UserOut
 from app.services import audit
 
@@ -46,12 +46,16 @@ async def create_profile(request: Request, data: ProfileCreate, claims: TokenUse
         full_name=data.full_name,
         phone=data.phone,
         role=role,
-        # Sellers wait for an admin to verify the business (FR-BUS-7).
-        status=AccountStatus.pending if role == Role.seller else AccountStatus.active,
+        # Sellers and partners wait for an admin to verify them (FR-BUS-7, FR-USER-P-2).
+        status=AccountStatus.pending
+        if role in (Role.seller, Role.partner)
+        else AccountStatus.active,
     )
     db.add(user)
     if role == Role.seller and data.seller:
         db.add(SellerProfile(user_id=user.id, **data.seller.model_dump()))
+    elif role == Role.partner and data.partner:
+        db.add(PartnerProfile(user_id=user.id, **data.partner.model_dump()))
     else:
         db.add(BuyerProfile(user_id=user.id, preferences={}))
 
@@ -65,7 +69,7 @@ async def create_profile(request: Request, data: ProfileCreate, claims: TokenUse
         request=request,
     )
     await db.commit()
-    await db.refresh(user, ["seller_profile", "buyer_profile"])
+    await db.refresh(user, ["seller_profile", "buyer_profile", "partner_profile"])
     return user
 
 
@@ -80,8 +84,15 @@ async def update_me(data: ProfileUpdate, user: CurrentUser, db: DB) -> User:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Only sellers have business details.")
         for field, value in data.seller.model_dump().items():
             setattr(user.seller_profile, field, value)
+    if data.partner is not None:
+        if user.role != Role.partner or user.partner_profile is None:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST, "Only partners have organization details."
+            )
+        for field, value in data.partner.model_dump().items():
+            setattr(user.partner_profile, field, value)
     await db.commit()
-    await db.refresh(user, ["seller_profile"])
+    await db.refresh(user, ["seller_profile", "partner_profile"])
     return user
 
 
