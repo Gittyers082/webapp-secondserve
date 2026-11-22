@@ -47,27 +47,27 @@ export interface ReviewInput {
 
 export interface Endpoints {
   // Seller
-  'GET /seller/listings': { response: Listing[] };
-  'POST /seller/listings': { body: ListingInput; response: Listing };
-  'PATCH /seller/listings/:id': { body: Partial<ListingInput>; response: Listing };
-  'POST /seller/listings/:id/status': { body: { status: Extract<ListingStatus, 'sold' | 'withdrawn'> }; response: Listing };
-  'DELETE /seller/listings/:id': { response: null };
-  'GET /seller/orders': { response: Order[] };
-  'POST /seller/orders/:id/ready': { response: Order };
+  'GET /listings/mine': { response: Listing[] };
+  'POST /listings': { body: ListingInput; response: Listing };
+  'PATCH /listings/:id': { body: Partial<ListingInput>; response: Listing };
+  'POST /listings/:id/status': { body: { status: Extract<ListingStatus, 'sold' | 'withdrawn'> }; response: Listing };
+  'DELETE /listings/:id': { response: null };
+  'GET /orders/mine': { response: Order[] };
+  'POST /orders/:id/ready': { response: Order };
   'GET /seller/sales': { response: SaleRecord[] };
   'GET /seller/reviews': { response: Review[] };
-  'GET /seller/profile': { response: ShopProfile };
-  'PATCH /seller/profile': { body: Partial<Omit<ShopProfile, 'logoUrl'>>; response: ShopProfile };
+  'GET /me': { response: ShopProfile };
+  'PATCH /me': { body: Partial<Omit<ShopProfile, 'logoUrl'>>; response: ShopProfile };
   /** multipart/form-data with a "logo" file (PNG or JPG, up to 2 MB). */
   'POST /seller/profile/logo': { body: FormData; response: { logoUrl: string } };
 
   // Buyer
-  'POST /reviews': { body: ReviewInput; response: Review };
+  'POST /orders/:orderId/review': { body: ReviewInput; response: Review };
 
   // Administrator
   'GET /admin/users': { response: User[] };
-  'POST /admin/users/:username/ban': { response: User };
-  'POST /admin/users/:username/unban': { response: User };
+  'POST /admin/users/:userId/ban': { response: User };
+  'POST /admin/users/:userId/unban': { response: User };
   'GET /admin/approvals': { response: PendingAccount[] };
   'POST /admin/approvals/:id': { body: { decision: 'approved' | 'declined' }; response: AccountDecision };
   'GET /admin/decisions': { response: AccountDecision[] };

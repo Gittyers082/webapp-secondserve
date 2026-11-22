@@ -21,13 +21,6 @@ import type {
   User,
 } from './types';
 
-export const SERVER = {
-  host: '192.168.1.20',
-  port: '5050',
-} as const;
-
-export const serverAddress = `${SERVER.host}:${SERVER.port}`;
-
 /* -------------------------------------------------------------------------- */
 /* Users                                                                      */
 /* -------------------------------------------------------------------------- */

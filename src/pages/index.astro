@@ -1,89 +1,17 @@
 ---
-import AuthLayout from '../layouts/AuthLayout.astro';
-import { SERVER } from '../data/store';
+// The app talks to the hosted SecondServe API, so there is no server to pick.
+// The old "Connect to server" screen is gone; the root URL goes to sign-in.
 ---
 
-<AuthLayout
-  title="Connect to Server"
-  headline="Good products deserve a second chance."
-  accent="a second chance."
-  lede="Sellers list surplus products at a discount. Buyers find them, reserve them, and pick them up."
->
-  <form class="connect" method="post" action="/login" novalidate>
-    <h2 class="display-title">Connect to server</h2>
-    <p class="hint">Enter the address of your SecondServe server to begin.</p>
-
-    <div class="field">
-      <label class="field-label" for="host">Server address</label>
-      <input class="input" id="host" name="host" value={SERVER.host} autocomplete="off" required data-error="Enter the server address, for example 192.168.1.20." />
-    </div>
-
-    <div class="field">
-      <label class="field-label" for="port">Port</label>
-      <input
-        class="input"
-        id="port"
-        name="port"
-        value={SERVER.port}
-        inputmode="numeric"
-        autocomplete="off"
-        required
-        data-error="Enter the port number, for example 5050."
-      />
-    </div>
-
-    <p class="notice notice-error" id="connect-error" role="alert" data-connect-error hidden>
-      <span><strong>Connection failed.</strong> Could not reach server. Check the address and port.</span>
-    </p>
-
-    <button class="btn btn-primary btn-lg btn-block" type="submit">Connect</button>
-    <p class="caption">First screen of the desktop app</p>
-  </form>
-</AuthLayout>
-
-<script>
-  import { liveValidate, validate } from '../scripts/validate';
-
-  const form = document.querySelector<HTMLFormElement>('.connect');
-
-  // The port must be a whole number a server can listen on.
-  const portRule = (field: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement) => {
-    if (field.id !== 'port' || field.value.trim() === '') return null;
-    const port = Number(field.value);
-    return Number.isInteger(port) && port > 0 && port < 65536
-      ? null
-      : 'The port is a whole number from 1 to 65535, for example 5050.';
-  };
-
-  if (form) liveValidate(form, portRule);
-
-  form?.addEventListener('submit', (event) => {
-    event.preventDefault();
-    if (!validate(form, { extra: portRule })) return;
-
-    form.querySelector<HTMLButtonElement>('[type="submit"]')?.setAttribute('aria-busy', 'true');
-    // No server yet: a valid address moves straight on to sign-in.
-    window.location.assign('/login');
-  });
-</script>
-
-<style>
-  .connect .hint {
-    margin: 8px 0 24px;
-  }
-
-  .notice {
-    margin-top: 16px;
-  }
-
-  .connect .btn {
-    margin-top: 20px;
-  }
-
-  .caption {
-    margin-top: 16px;
-    text-align: center;
-    font-size: var(--fs-sm);
-    color: var(--muted);
-  }
-</style>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="refresh" content="0; url=/login" />
+    <link rel="canonical" href="/login" />
+    <title>SecondServe</title>
+  </head>
+  <body>
+    <p><a href="/login">Continue to sign in</a></p>
+  </body>
+</html>

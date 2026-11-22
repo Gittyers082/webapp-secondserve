@@ -60,5 +60,5 @@ Not: `update`, `fix`, `asdf`, `hell yeah`.
 - Never commit `.env` files, passwords or API keys. Use `.env.example` for the variable names.
 - Write a test for every backend rule you add.
 - Changing a database model? Generate a migration (`alembic revision --autogenerate`) in the same PR.
-- Changing an API response? Update `src/lib/api.ts` in the same PR, or tell Role 4.
+- Changing an API response? Update `src/api/client.ts` and `docs/api-contract.md` in the same PR, or tell Role 4.
 - Search the code for `TODO(Role N)` to find tasks assigned to your role.

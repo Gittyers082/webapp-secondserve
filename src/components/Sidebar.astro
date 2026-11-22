@@ -4,7 +4,6 @@ import Icon from './Icon.astro';
 import ThemeToggle from './ThemeToggle.astro';
 import type { NavItem } from '../data/nav';
 import { roleLabel } from '../data/nav';
-import { serverAddress } from '../data/store';
 import type { Role } from '../data/types';
 
 interface Props {
@@ -73,11 +72,6 @@ const initial = role === 'seller' ? 'B' : username.charAt(0).toUpperCase();
       </div>
       <ThemeToggle class="sidebar-theme" />
     </div>
-
-    <p class="connection" title={`Connected to ${serverAddress}`}>
-      <span class="dot" aria-hidden="true"></span>
-      <span class="connection-label">Connected &middot; {serverAddress}</span>
-    </p>
 
     <a class="nav-item logout" href="/login" title="Log out">
       <span class="nav-icon"><Icon name="logout" /></span>
@@ -211,24 +205,6 @@ const initial = role === 'seller' ? 'B' : username.charAt(0).toUpperCase();
     font-size: var(--fs-sm);
   }
 
-  .connection {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 0 12px;
-    color: var(--muted);
-    font-size: var(--fs-xs);
-  }
-
-  .dot {
-    flex: none;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--online);
-    box-shadow: 0 0 0 3px rgba(124, 196, 106, 0.18);
-  }
-
   .logout {
     color: var(--muted);
   }
@@ -269,8 +245,7 @@ const initial = role === 'seller' ? 'B' : username.charAt(0).toUpperCase();
     }
 
     .nav-label,
-    .account-copy,
-    .connection-label {
+    .account-copy {
       position: absolute;
       width: 1px;
       height: 1px;
@@ -289,8 +264,7 @@ const initial = role === 'seller' ? 'B' : username.charAt(0).toUpperCase();
       font-size: 11px;
     }
 
-    .who,
-    .connection {
+    .who {
       justify-content: center;
       padding: 0;
     }
