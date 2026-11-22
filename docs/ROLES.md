@@ -1,74 +1,71 @@
 # Team roles
 
-Search the code for `TODO(Role N)` to find what's assigned to you.
+Search the code for `TODO(Role N)` to find what's assigned to you. Spec IDs refer to the
+IT 313 document (v13). Cite the requirement and test case IDs in commit and PR messages.
 
-## Role 1 — Project Lead & Head Backend
+## Role 1 — Project Lead & Head Backend (El Steven D. Cruz)
 
-**Owns:** architecture, API contract, database schema and migrations, login and
-role permissions, user profiles, admin endpoints, notifications and emails, audit log,
-admin stats and data export.
+**Owns:** architecture, API contract, database schema and migrations (including the partner
+profile and order fulfillment fields), login and permissions for all four roles, sessions,
+rate limiting, accounts and partner registration, admin endpoints (seller and partner
+approvals, bans, moderation), audit logs, Celery and Resend notifications, the surplus
+escalation job and partner notifications, analytics, data export and impact reports.
 
-**Spec:** FR-SYS-1, 2, 3, 10, 11, 12 · FR-USER-S-1–3, S-10 · FR-USER-B-1–3 · FR-BUS-7, 11 ·
-NFR-SYS-S-1, 3, 6
+**Spec:** FR-SYS-1, 2, 3, 10, 11, 12, 14, 15 · FR-USER-S-1–3, S-10 · FR-USER-B-1–3 ·
+FR-USER-P-1–3, P-8 · FR-BUS-7, 11, 14 · NFR-SYS-S-1, 3, 6 · NFR-BUS-RA-1–3 · UC-16–18
 
 **Code:** `backend/app/core/`, `routers/me.py`, `routers/admin.py`, `routers/notifications.py`,
-`workers/`
+`workers/`, `alembic/`
 
-**Project management:** sprint plan and GitHub board, branch protection, PR reviews for the
-backend, merging `dev` → `main`, final say on scope.
+**Project management:** sprint plan and GitHub board, branch protection, backend PR reviews,
+merging `dev` into `main`, final say on scope.
 
-**First week:** create the Supabase project, run the first migration, share `.env` values
-privately, set up branch protection on `main` and `dev`.
-
-## Role 2 — Head Frontend & UI/UX Designer
+## Role 2 — Head Frontend & UI/UX Designer (Shanelle Margaret T. Navarro)
 
 **Owns:** the design system (`src/styles/global.css`), components and layouts, frontend PR
-reviews, accessibility and responsive layout, clear pricing display.
+reviews, accessibility, responsive layout and clear pricing.
 
-**Designs the missing screens:** listing detail page, wishlist and compare, reviews,
-notification center, seller analytics, FAQ/help. Removes the "connect to server" screen.
+**Designs:** the missing screens, the pickup or delivery choice at checkout, delivery status
+on orders, and the partner screens.
 
-**Builds:** seller and admin screens against the real API.
+**Builds:** seller screens (including fulfillment settings and Offer to Partners / Donate)
+and admin screens (including partner approvals).
 
-**Spec:** NFR-USER-U-1–10, NFR-USER-PERS-3
+**Spec:** FR-USER-S-8, S-12, S-13 (screens) · NFR-USER-U-1–10 · NFR-USER-PERS-3
 
-**First week:** remove the connect screen, list which screens are missing, agree with Role 4
-who builds which page.
+## Role 3 — Backend: Marketplace, Orders & Fulfillment (Ethan Christan M. Villegas)
 
-## Role 3 — Backend Developer: Marketplace & Orders
+**Owns:** listings, eligibility rules, per-listing fulfillment options, converting a listing
+to a partner offer or donation, image upload, search including Surplus Board filters,
+orders, partner purchases and donation claims with row locking, pickup and delivery
+(address, fee, simulated courier hand-off, delivery status), simulated payments and
+commission, live stock, reviews.
 
-**Owns:** listings, eligibility rules, image upload, search/filter/sort, orders and
-reservations, simulated payments, live stock over WebSockets, reviews and seller ratings.
+**Spec:** FR-SYS-4–9, 13 · FR-USER-S-4–7, S-12, S-13 · FR-USER-B-5, B-6, B-15 ·
+FR-USER-P-4–7, P-9 · FR-BUS-4, 8, 9, 13 · NFR-SYS-P-4
 
-**Spec:** FR-SYS-4–9 · FR-USER-S-4–7 · FR-USER-B-5–12, B-15 · FR-BUS-4, 8, 9 · NFR-SYS-P-4
+**Code:** `backend/app/routers/listings.py`, `routers/orders.py`, `routers/partners.py`,
+`services/orders.py`, `services/eligibility.py`, `services/images.py`, `realtime/`
 
-**Code:** `backend/app/routers/listings.py`, `routers/orders.py`, `services/orders.py`,
-`services/eligibility.py`, `realtime/`
+## Role 4 — Frontend: Buyer & Partner Flow, Integration (Hans Rainier M. Fernandez)
 
-**First week:** read `routers/listings.py` (the worked example) and `services/orders.py`
-(the row-locking pattern), then build image upload.
+**Owns:** the API client (`src/api/client.ts`), Supabase login for all roles including partner
+registration, the 25-minute session warning, all buyer screens (including the pickup or
+delivery choice at checkout and delivery status), the partner screens (Surplus Board, buy
+surplus, claim donation, claimed items, mark as distributed), live stock updates, form
+validation, offline caching and the last 10 searches.
 
-## Role 4 — Frontend Developer: Buyer Flow & Integration
+**Spec:** FR-USER-B-4–15 · FR-USER-P-4–7, P-9 (screens) · NFR-USER-R-1, R-4, R-5 ·
+NFR-USER-PERS-1
 
-**Owns:** the API client (`src/lib/api.ts`), Supabase login in the browser, replacing the
-sample data in `src/data/store.ts` with API calls, all buyer screens (shop, detail, search,
-wishlist/compare, cart, checkout, pending, history, reviews), live stock updates,
-form validation, loading/error states, offline caching, the 25-minute session warning.
+## Role 5 — QA, DevOps & Documentation (Denver C. Balunatse)
 
-**Spec:** FR-USER-B-4–15 · NFR-USER-R-1, R-4, R-5 · NFR-USER-PERS-1 · NFR-USER-PERF-1–3
+**Owns:** CI (`.github/workflows/ci.yml`), deployment (Vercel, Render including the Celery
+worker, Supabase, Upstash), test cases TC-01–56 and the traceability matrix, the Postman
+collection, integration tests (including the two-buyers-one-item and two-partners-one-donation
+races), Playwright tests for all four roles, usability and acceptance sessions, the use case,
+activity, ERD and DFD diagrams, the README, terms of service and privacy pages (including
+partner and donation terms and how delivery addresses are handled), the backup and
+disaster-recovery write-up, and bug triage.
 
-**First week:** install `@supabase/supabase-js`, wire up login and register, call
-`api.me.get()` to land each role on its own dashboard.
-
-## Role 5 — QA, DevOps & Documentation
-
-**Owns:** CI (`.github/workflows/ci.yml`), deployment (Vercel, Render via `render.yaml`,
-Supabase, Upstash), testing (Postman collection, pytest integration tests, Playwright
-end-to-end, usability and acceptance sessions), documentation (proposal updates in
-`docs/DECISIONS.md`, ERD/DFD/use-case diagrams, terms of service and privacy pages,
-backup and disaster-recovery write-up), bug triage.
-
-**Spec:** Section VI (Testing) · NFR-SYS-M-1, M-4 · NFR-SYS-A-1, A-2 · NFR-BUS-LC-1–5
-
-**First week:** deploy the frontend to Vercel and the API to Render, make CI pass on `dev`,
-start updating the proposal from `docs/DECISIONS.md`.
+**Spec:** NFR-SYS-M-1–4 · NFR-SYS-A-1, A-2 · NFR-BUS-LC-1–5
