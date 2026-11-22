@@ -75,7 +75,7 @@ jobs:
         run: mypy . --ignore-missing-imports
 
       - name: Run Pytest
-        if: steps.check_backend.outputs.exists == 'true'
+        if: always() && steps.check_backend.outputs.exists == 'true'
         working-directory: backend
         env:
           ENVIRONMENT: test
