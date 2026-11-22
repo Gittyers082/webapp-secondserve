@@ -1,6 +1,6 @@
 ---
 import Icon from './Icon.astro';
-import { faq, serverAddress } from '../data/store';
+import { faq } from '../data/store';
 import type { Role } from '../data/types';
 
 interface Props {
@@ -42,15 +42,11 @@ const entries = faq.filter((entry) => !entry.roles || entry.roles.includes(role)
     <p class="soft">
       {
         role === 'admin'
-          ? 'Server problems go to whoever runs the SecondServe server for your area.'
+          ? 'Platform problems go to the SecondServe team.'
           : 'An administrator can reset your password, unlock your account and look into an order.'
       }
     </p>
     <dl class="contact-facts">
-      <div>
-        <dt class="label">Server</dt>
-        <dd class="tnum">{serverAddress}</dd>
-      </div>
       <div>
         <dt class="label">Your role</dt>
         <dd>{role === 'buyer' ? 'Buyer' : role === 'seller' ? 'Seller' : 'Administrator'}</dd>

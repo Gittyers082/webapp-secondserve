@@ -8,7 +8,7 @@ endpoints are typed in `src/api/contract.ts`; the frontend calls them through
 ## Conventions
 
 - Base URL comes from `PUBLIC_API_BASE_URL` (for example
-  `http://192.168.1.20:5050/api`). Without it the frontend runs on seed data.
+  `http://localhost:8000/api` locally, the Render URL in production). Without it the frontend runs on seed data.
 - JSON in and out. Sessions use a cookie (`credentials: include`).
 - Errors return a status code and `{ "message": "…" }`. The frontend shows the
   message to the user, so write it for a person.

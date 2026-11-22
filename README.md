@@ -46,7 +46,7 @@ The dev server prints a local address, usually <http://localhost:4321>.
 
 | Route       | Screen                                                  |
 | ----------- | ------------------------------------------------------- |
-| `/`         | Connect to server — host and port, with a failure state |
+| `/`         | Redirects to sign-in                                    |
 | `/login`    | Sign in; each role lands on its own dashboard           |
 | `/register` | Create an account; sellers also give a business name    |
 
@@ -190,10 +190,10 @@ src/
 The API the frontend expects is written down in `docs/api-contract.md` and typed
 in `src/api/contract.ts`; please confirm or change it early.
 
-Set the server in a `.env` file at the project root:
+Point the frontend at the API in a `.env` file at the project root:
 
 ```
-PUBLIC_API_BASE_URL=http://192.168.1.20:5050/api
+PUBLIC_API_BASE_URL=http://localhost:8000/api
 ```
 
 With it set, the seller and administrator actions (publish, edit, mark sold,
