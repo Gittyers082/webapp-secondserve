@@ -15,7 +15,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from app.core.config import get_settings
 from app.core.rate_limit import limiter
 from app.realtime.stock import stock
-from app.routers import admin, health, listings, me, notifications, orders, ws
+from app.routers import admin, health, listings, me, notifications, orders, surplus, ws
 
 
 @asynccontextmanager
@@ -45,7 +45,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    for module in (health, me, listings, orders, notifications, admin, ws):
+    for module in (health, me, listings, orders, surplus, notifications, admin, ws):
         app.include_router(module.router)
 
     return app
