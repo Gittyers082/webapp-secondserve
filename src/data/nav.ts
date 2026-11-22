@@ -8,10 +8,13 @@ import {
   buyerNotifications,
   cartItemCount,
   handoverQueue,
+  partnerNotifications,
   pendingAccounts,
   pendingOrders,
   savedListingIds,
   sellerNotifications,
+  surplusBoard,
+  undistributedOrders,
   unreadCount,
 } from './store';
 
@@ -50,6 +53,14 @@ export const sellerNav: NavItem[] = [
   { label: 'Help & FAQ', href: '/seller/help', icon: 'help' },
 ];
 
+export const partnerNav: NavItem[] = [
+  { label: 'Surplus Board', href: '/partner', icon: 'bag', count: surplusBoard.length, countNoun: 'available' },
+  { label: 'My Orders', href: '/partner/orders', icon: 'receipt', count: undistributedOrders.length, countNoun: 'to distribute' },
+  { label: 'Notifications', href: '/partner/notifications', icon: 'bell', count: unreadCount(partnerNotifications), countNoun: 'unread' },
+  { label: 'Organization Profile', href: '/partner/profile', icon: 'store' },
+  { label: 'Help & FAQ', href: '/partner/help', icon: 'help' },
+];
+
 export const adminNav: NavItem[] = [
   { label: 'User Management', href: '/admin', icon: 'users' },
   { label: 'Pending Approvals', href: '/admin/approvals', icon: 'user-check', count: pendingAccounts.length },
@@ -63,12 +74,14 @@ export const adminNav: NavItem[] = [
 export function navFor(role: Role): NavItem[] {
   if (role === 'buyer') return buyerNav;
   if (role === 'seller') return sellerNav;
+  if (role === 'partner') return partnerNav;
   return adminNav;
 }
 
 export const roleLabel: Record<Role, string> = {
   buyer: 'Buyer',
   seller: 'Seller',
+  partner: 'Partner',
   admin: 'Administrator',
 };
 
@@ -76,11 +89,13 @@ export const roleLabel: Record<Role, string> = {
 export const notificationsHref: Record<Role, string> = {
   buyer: '/buyer/notifications',
   seller: '/seller/notifications',
+  partner: '/partner/notifications',
   admin: '/admin/notifications',
 };
 
 export const notificationsFor: Record<Role, typeof buyerNotifications> = {
   buyer: buyerNotifications,
   seller: sellerNotifications,
+  partner: partnerNotifications,
   admin: adminNotifications,
 };

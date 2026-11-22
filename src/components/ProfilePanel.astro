@@ -1,25 +1,33 @@
 ---
-import type { Role } from '../data/types';
+import type { SignupRole } from '../data/types';
 
 interface Props {
   username: string;
-  role: Exclude<Role, 'admin'>;
+  role: SignupRole;
 }
 
 const { username, role } = Astro.props;
 const initial = role === 'seller' ? 'B' : username.charAt(0).toUpperCase();
+
+const accountLabel: Record<SignupRole, string> = {
+  buyer: 'Buyer account',
+  seller: 'Seller account',
+  partner: 'Partner account',
+};
+
+const note: Record<SignupRole, string> = {
+  buyer: 'Sellers see "Seller account" here. Same screen for Buyer and Seller.',
+  seller: 'Buyers see your shop name on every listing.',
+  partner: 'Shops see your organization name on every order you place.',
+};
 ---
 
 <div class="profile">
   <aside class="identity panel">
     <span class="avatar avatar-lg" aria-hidden="true">{initial}</span>
     <p class="username">{username}</p>
-    <p class="pill pill-neutral">{role === 'seller' ? 'Seller account' : 'Buyer account'}</p>
-    <p class="hint note">
-      {role === 'seller'
-        ? 'Buyers see your shop name on every listing.'
-        : 'Sellers see "Seller account" here. Same screen for Buyer and Seller.'}
-    </p>
+    <p class="pill pill-neutral">{accountLabel[role]}</p>
+    <p class="hint note">{note[role]}</p>
     <a class="btn btn-danger btn-block logout" href="/login">Log out of SecondServe</a>
   </aside>
 

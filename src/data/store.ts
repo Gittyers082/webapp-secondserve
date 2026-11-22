@@ -16,6 +16,7 @@ import type {
   CartLine,
   Listing,
   Order,
+  PartnerProfile,
   PendingAccount,
   Session,
   User,
@@ -57,10 +58,18 @@ export const users: User[] = [
     status: 'banned',
     shopName: 'Spam Listings',
   },
+  {
+    id: 'u-008',
+    username: 'bayanihan_pantry',
+    role: 'partner',
+    status: 'active',
+    organizationName: 'Bayanihan Community Pantry',
+  },
 ];
 
 export const buyer: User = users[0]!;
 export const seller: User = users[1]!;
+export const partner: User = users[7]!;
 export const admin: User = {
   id: 'u-000',
   username: 'admin_ana',
@@ -499,6 +508,14 @@ export const pendingAccounts: PendingAccount[] = [
     decision: 'pending',
   },
   { id: 'p-04', username: 'carol.m', role: 'buyer', requestedAt: 'Nov 3, 8:30 PM', decision: 'pending' },
+  {
+    id: 'p-05',
+    username: 'kalinga_shelter',
+    role: 'partner',
+    organizationName: 'Kalinga Shelter for Children',
+    requestedAt: 'Nov 3, 4:15 PM',
+    decision: 'pending',
+  },
 ];
 
 export const accountDecisions: AccountDecision[] = [
@@ -536,6 +553,14 @@ export const accountDecisions: AccountDecision[] = [
   },
   { id: 'd-06', username: 'ally.p', role: 'buyer', decision: 'approved', decidedAt: 'Oct 28, 6:31 PM' },
   { id: 'd-07', username: 'test_acct_1', role: 'buyer', decision: 'declined', decidedAt: 'Oct 27, 3:05 PM' },
+  {
+    id: 'd-08',
+    username: 'bayanihan_pantry',
+    role: 'partner',
+    organizationName: 'Bayanihan Community Pantry',
+    decision: 'approved',
+    decidedAt: 'Oct 26, 11:20 AM',
+  },
 ];
 
 export const activeSessions: Session[] = [
@@ -662,6 +687,169 @@ export const reviewsForShop = (shopName: string) => reviews.filter((review) => r
 export const savedListingIds: string[] = ['l-002', 'l-004'];
 
 /* -------------------------------------------------------------------------- */
+/* Partners: the Surplus Board and partner orders                              */
+/* -------------------------------------------------------------------------- */
+
+/** The signed-in partner organization. */
+export const partnerProfile: PartnerProfile = {
+  organizationName: 'Bayanihan Community Pantry',
+  organizationType: 'charity',
+  contactPerson: 'Rosa Bautista',
+  address: 'Barangay Hall, Aurora Hill, Baguio',
+  verifiedAt: 'Oct 26, 11:20 AM',
+};
+
+/**
+ * Food that went unsold on the marketplace and was moved to the Surplus Board,
+ * either at a further discount (partner offer) or for free (donation).
+ */
+export const surplusBoard: Listing[] = [
+  {
+    id: 'l-101',
+    sellerId: 'u-002',
+    shopName: "Mang Ben's Bakery",
+    name: 'Pan de Sal (dozen)',
+    description: 'Yesterday afternoon’s batch. Good for toasting or merienda today.',
+    category: 'bread',
+    art: 'pandesal-plain',
+    originalPrice: 60,
+    discountedPrice: 20,
+    quantity: 15,
+    expiresAt: '2026-11-05T20:00',
+    expiryLabel: 'Tomorrow, 8:00 PM',
+    pickupLocation: "Mang Ben's Bakery, Session Road, Baguio",
+    status: 'active',
+    channel: 'partner-offer',
+    allowsPickup: true,
+    allowsDelivery: true,
+    deliveryFee: 50,
+  },
+  {
+    id: 'l-102',
+    sellerId: 'u-003',
+    shopName: 'Kape Atbp Café',
+    name: 'Assorted Pastry Box',
+    description: 'Croissants and cheese rolls left at closing, about ten pieces to a box.',
+    category: 'pastries',
+    art: 'croissant',
+    originalPrice: 250,
+    discountedPrice: 0,
+    quantity: 4,
+    expiresAt: '2026-11-05T12:00',
+    expiryLabel: 'Tomorrow, 12:00 PM',
+    pickupLocation: 'Kape Atbp Café, Upper Session Rd, Baguio',
+    status: 'active',
+    channel: 'donation',
+    allowsPickup: true,
+    allowsDelivery: false,
+  },
+  {
+    id: 'l-103',
+    sellerId: 'u-002',
+    shopName: "Mang Ben's Bakery",
+    name: 'Monay Loaf',
+    description: 'Dense monay loaves, still soft. Slice and share.',
+    category: 'bread',
+    art: 'monay',
+    originalPrice: 70,
+    discountedPrice: 25,
+    quantity: 12,
+    expiresAt: '2026-11-06T18:00',
+    expiryLabel: 'Nov 6, 6:00 PM',
+    pickupLocation: "Mang Ben's Bakery, Session Road, Baguio",
+    status: 'active',
+    channel: 'partner-offer',
+    allowsPickup: true,
+    allowsDelivery: true,
+    deliveryFee: 0,
+  },
+  {
+    id: 'l-104',
+    sellerId: 'u-003',
+    shopName: 'Kape Atbp Café',
+    name: 'Fruit Cups (tray of 6)',
+    description: 'Mixed fruit cups made this morning. Keep chilled.',
+    category: 'fruit-cups',
+    art: 'strawberry-cup',
+    originalPrice: 270,
+    discountedPrice: 0,
+    quantity: 3,
+    expiresAt: '2026-11-04T21:00',
+    expiryLabel: 'Today, 9:00 PM',
+    pickupLocation: 'Kape Atbp Café, Upper Session Rd, Baguio',
+    status: 'active',
+    channel: 'donation',
+    allowsPickup: true,
+    allowsDelivery: true,
+    deliveryFee: 30,
+  },
+];
+
+/** What the signed-in partner has bought or claimed from the Surplus Board. */
+export const partnerOrders: Order[] = [
+  {
+    id: 'o-301',
+    listingId: 'l-105',
+    buyerUsername: 'bayanihan_pantry',
+    foodName: 'Ensaymada (pack of 3)',
+    art: 'ensaymada',
+    shopName: "Mang Ben's Bakery",
+    quantity: 6,
+    total: 0,
+    pickupLocation: "Mang Ben's Bakery, Session Road, Baguio",
+    expiryLabel: 'Today, 6:00 PM',
+    expiringSoon: true,
+    status: 'ready',
+    orderType: 'donation',
+    fulfillmentType: 'pickup',
+    distributionStatus: 'pending',
+  },
+  {
+    id: 'o-302',
+    listingId: 'l-106',
+    buyerUsername: 'bayanihan_pantry',
+    foodName: 'Cheese Roll (box of 4)',
+    art: 'cheese-roll',
+    shopName: "Mang Ben's Bakery",
+    quantity: 5,
+    total: 150,
+    pickupLocation: "Mang Ben's Bakery, Session Road, Baguio",
+    expiryLabel: 'Tomorrow, 7:00 PM',
+    expiringSoon: false,
+    status: 'reserved',
+    orderType: 'partner-purchase',
+    fulfillmentType: 'delivery',
+    deliveryAddress: 'Barangay Hall, Aurora Hill, Baguio',
+    deliveryFee: 50,
+    deliveryStatus: 'out-for-delivery',
+    distributionStatus: 'pending',
+  },
+  {
+    id: 'o-303',
+    listingId: 'l-107',
+    buyerUsername: 'bayanihan_pantry',
+    foodName: 'Empanada (pack of 4)',
+    art: 'empanada',
+    shopName: 'Kape Atbp Café',
+    quantity: 8,
+    total: 0,
+    pickupLocation: 'Kape Atbp Café, Upper Session Rd, Baguio',
+    expiryLabel: 'Nov 3, 8:00 PM',
+    expiringSoon: false,
+    status: 'delivered',
+    orderType: 'donation',
+    fulfillmentType: 'delivery',
+    deliveryAddress: 'Barangay Hall, Aurora Hill, Baguio',
+    deliveryFee: 30,
+    deliveryStatus: 'delivered',
+    distributionStatus: 'distributed',
+  },
+];
+
+/** Partner orders still waiting to be handed on to the people the partner serves. */
+export const undistributedOrders = partnerOrders.filter((order) => order.distributionStatus !== 'distributed');
+
+/* -------------------------------------------------------------------------- */
 /* Notifications                                                               */
 /* -------------------------------------------------------------------------- */
 
@@ -742,12 +930,41 @@ export const sellerNotifications: AppNotification[] = [
   },
 ];
 
+export const partnerNotifications: AppNotification[] = [
+  {
+    id: 'n-p1',
+    kind: 'listing',
+    title: 'New donation on the Surplus Board',
+    body: 'Kape Atbp Café is giving away 3 trays of fruit cups. Claim them before 9:00 PM today.',
+    time: '10 min ago',
+    read: false,
+    href: '/partner',
+  },
+  {
+    id: 'n-p2',
+    kind: 'order',
+    title: 'Your delivery is on the way',
+    body: 'Cheese Roll (box of 4) × 5 from Mang Ben’s Bakery is out for delivery to Aurora Hill.',
+    time: '35 min ago',
+    read: false,
+    href: '/partner/orders',
+  },
+  {
+    id: 'n-p3',
+    kind: 'account',
+    title: 'Organization verified',
+    body: 'An administrator approved Bayanihan Community Pantry. You can now buy and claim surplus.',
+    time: 'Oct 26',
+    read: true,
+  },
+];
+
 export const adminNotifications: AppNotification[] = [
   {
     id: 'n-a1',
     kind: 'account',
-    title: '4 accounts waiting',
-    body: 'Two sellers and two buyers asked to join. Review them in Pending Approvals.',
+    title: '5 accounts waiting',
+    body: 'Two sellers, two buyers and a partner organization asked to join. Review them in Pending Approvals.',
     time: '5 min ago',
     read: false,
     href: '/admin/approvals',
@@ -845,13 +1062,30 @@ export const faq: FaqEntry[] = [
     roles: ['admin'],
   },
   {
+    question: 'What is the Surplus Board?',
+    answer:
+      'Food that did not sell on the marketplace in time. Shops offer it to partner organizations at a further discount, or give it away as a donation. Buy or claim what you can use before it expires.',
+    roles: ['partner'],
+  },
+  {
+    question: 'Can the food be delivered to us?',
+    answer:
+      'When the shop offers delivery, choose Delivery and enter your address. The delivery fee is shown before you confirm. Otherwise, collect the food from the shop yourself.',
+    roles: ['partner'],
+  },
+  {
+    question: 'Why do I mark food as distributed?',
+    answer:
+      'So the shop and SecondServe know the food reached the people you serve. It also counts toward the food rescued in our reports.',
+    roles: ['partner'],
+  },
+  {
     question: 'I forgot my password.',
-    answer: 'Ask an administrator to reset it. Passwords cannot be recovered by email in the desktop app.',
+    answer: 'Ask an administrator to reset it.',
   },
   {
     question: 'The app says it cannot reach the server.',
-    answer:
-      'Check that this computer is on the same network as the SecondServe server, then confirm the address and port on the Connect screen.',
+    answer: 'Check that you are online, then refresh the page. If it keeps happening, tell an administrator.',
   },
 ];
 

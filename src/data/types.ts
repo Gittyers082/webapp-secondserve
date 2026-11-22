@@ -5,13 +5,34 @@
  * listings produce orders, and both sides of an order can see it.
  */
 
-export type Role = 'buyer' | 'seller' | 'admin';
+export type Role = 'buyer' | 'seller' | 'partner' | 'admin';
+
+/** Roles a person can sign up for; administrators are created by the team. */
+export type SignupRole = Exclude<Role, 'admin'>;
 
 export type UserStatus = 'active' | 'banned';
 
 export type ListingStatus = 'active' | 'sold' | 'withdrawn' | 'expired';
 
-export type OrderStatus = 'reserved' | 'ready' | 'picked-up';
+export type OrderStatus = 'reserved' | 'ready' | 'picked-up' | 'delivered';
+
+/** How an order reaches the buyer or partner. */
+export type FulfillmentType = 'pickup' | 'delivery';
+
+/** Where a delivery order is, set by the (simulated) courier. */
+export type DeliveryStatus = 'pending' | 'preparing' | 'out-for-delivery' | 'delivered' | 'cancelled';
+
+/** A buyer's purchase, a partner's surplus purchase, or a free donation claim. */
+export type OrderType = 'sale' | 'partner-purchase' | 'donation';
+
+/** Where a listing is shown: the marketplace, or the partners' Surplus Board. */
+export type ListingChannel = 'marketplace' | 'partner-offer' | 'donation';
+
+/** Whether a partner has handed its food on to the people it serves. */
+export type DistributionStatus = 'pending' | 'distributed';
+
+/** Kinds of organization that can register as a partner. */
+export type OrganizationType = 'lgu' | 'government-agency' | 'charity' | 'shelter';
 
 export type ApprovalDecision = 'pending' | 'approved' | 'declined';
 
@@ -37,6 +58,20 @@ export interface User {
   status: UserStatus;
   /** Only sellers carry a shop name. */
   shopName?: string;
+  /** Only partners carry an organization name. */
+  organizationName?: string;
+}
+
+/** What a partner organization tells SecondServe about itself. */
+export interface PartnerProfile {
+  organizationName: string;
+  organizationType: OrganizationType;
+  contactPerson: string;
+  address: string;
+  /** Link to the accreditation or registration document, if given. */
+  accreditationUrl?: string;
+  /** Set once an administrator has approved the organization. */
+  verifiedAt?: string;
 }
 
 export interface Listing {
@@ -59,6 +94,13 @@ export interface Listing {
   /** How many units are currently held by reservations. */
   reserved?: number;
   flagged?: boolean;
+  /** Fulfillment options; pickup only when omitted. */
+  allowsPickup?: boolean;
+  allowsDelivery?: boolean;
+  /** Set when delivery is offered; 0 means free delivery. */
+  deliveryFee?: number;
+  /** Marketplace when omitted. */
+  channel?: ListingChannel;
 }
 
 export interface Order {
@@ -76,6 +118,15 @@ export interface Order {
   status: OrderStatus;
   /** Present once the order has been collected. */
   pickedUpAt?: string;
+  /** A sale when omitted. */
+  orderType?: OrderType;
+  /** Pickup when omitted. */
+  fulfillmentType?: FulfillmentType;
+  deliveryAddress?: string;
+  deliveryFee?: number;
+  deliveryStatus?: DeliveryStatus;
+  /** Partner orders only. */
+  distributionStatus?: DistributionStatus;
 }
 
 export interface CartLine {
@@ -94,8 +145,9 @@ export interface CartLine {
 export interface PendingAccount {
   id: string;
   username: string;
-  role: Exclude<Role, 'admin'>;
+  role: SignupRole;
   shopName?: string;
+  organizationName?: string;
   requestedAt: string;
   decision: ApprovalDecision;
 }
@@ -103,8 +155,9 @@ export interface PendingAccount {
 export interface AccountDecision {
   id: string;
   username: string;
-  role: Exclude<Role, 'admin'>;
+  role: SignupRole;
   shopName?: string;
+  organizationName?: string;
   decision: Exclude<ApprovalDecision, 'pending'>;
   decidedAt: string;
 }
@@ -115,6 +168,14 @@ export interface Session {
   connectedSince: string;
   clientAddress: string;
 }
+
+/** Readable names for each organization type. */
+export const organizationTypeLabel: Record<OrganizationType, string> = {
+  lgu: 'Local government unit',
+  'government-agency': 'Government agency',
+  charity: 'Charity',
+  shelter: 'Shelter',
+};
 
 /** Formats a peso amount the way every screen in the wireframes does. */
 export function peso(amount: number): string {
