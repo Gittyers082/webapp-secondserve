@@ -3,7 +3,9 @@ import AppLayout from '../../layouts/AppLayout.astro';
 import FoodArt from '../../components/FoodArt.astro';
 import Icon from '../../components/Icon.astro';
 import { buyer, cart, cartItemCount, cartShopCount, cartTotal } from '../../data/store';
-import { peso } from '../../data/types';
+
+const cartSavings = cart.reduce((sum, line) => sum + line.quantity * (line.originalUnitPrice - line.unitPrice), 0);
+import { discountPercent, peso } from '../../data/types';
 import type { CartLine } from '../../data/types';
 
 /** The cart groups by shop, because each shop is a separate pickup. */
@@ -52,8 +54,16 @@ const isEmpty = cart.length === 0;
                   </span>
                   <div class="item-copy">
                     <p class="item-name" data-line-name>{line.foodName}</p>
-                    <p class="small muted">
-                      {peso(line.unitPrice)} each &middot; <span class="tnum" data-qty={line.quantity}>&times; {line.quantity}</span>
+                    <p class="small muted line-price">
+                      <span class="price">
+                        <del><span class="sr-only">Was </span>{peso(line.originalUnitPrice)}</del>
+                        <span><span class="sr-only">Now </span>{peso(line.unitPrice)} each</span>
+                      </span>
+                      <span class="discount">{discountPercent({ originalPrice: line.originalUnitPrice, discountedPrice: line.unitPrice })}% off</span>
+                      <span class="tnum" data-qty={line.quantity}>&times; {line.quantity}</span>
+                    </p>
+                    <p class="line-savings" data-line-savings={line.quantity * (line.originalUnitPrice - line.unitPrice)}>
+                      You save {peso(line.quantity * (line.originalUnitPrice - line.unitPrice))}
                     </p>
                   </div>
                   <div class="item-expiry">
@@ -120,6 +130,10 @@ const isEmpty = cart.length === 0;
                 </dt>
                 <dd class="tnum" data-subtotal>{peso(cartTotal)}</dd>
               </div>
+              <div class="row-between savings-row">
+                <dt>You save</dt>
+                <dd class="tnum" data-savings>{peso(cartSavings)}</dd>
+              </div>
               <div class="row-between grand">
                 <dt>Total</dt>
                 <dd class="tnum" data-total>{peso(cartTotal)}</dd>
@@ -145,10 +159,12 @@ const isEmpty = cart.length === 0;
   const recalculate = () => {
     let total = 0;
     let items = 0;
+    let savings = 0;
 
     rows().forEach((row) => {
       total += Number(row.querySelector<HTMLElement>('[data-line-total]')?.dataset.lineTotal ?? 0);
       items += Number(row.querySelector<HTMLElement>('[data-qty]')?.dataset.qty ?? 0);
+      savings += Number(row.querySelector<HTMLElement>('[data-line-savings]')?.dataset.lineSavings ?? 0);
     });
 
     const shops = document.querySelectorAll('.shop-group:not([hidden])').length;
@@ -161,6 +177,7 @@ const isEmpty = cart.length === 0;
     set('[data-subtotal]', peso(total));
     set('[data-item-count]', String(items));
     set('[data-shop-count]', String(shops));
+    set('[data-savings]', peso(savings));
 
     return { total, items };
   };
@@ -249,6 +266,26 @@ const isEmpty = cart.length === 0;
 
   .item-name {
     font-weight: 700;
+  }
+
+  .line-savings {
+    margin-top: 2px;
+    color: var(--brick-text);
+    font-size: var(--fs-sm);
+    font-weight: 600;
+  }
+
+  .savings-row {
+    color: var(--brick-text);
+    font-weight: 700;
+  }
+
+  .line-price {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    margin-top: 4px;
   }
 
   .item-expiry {
@@ -341,5 +378,23 @@ const isEmpty = cart.length === 0;
     .item-total { grid-column: 3; grid-row: 1; }
     .item-actions { grid-column: 4; grid-row: 1; }
     .item-photo { grid-row: span 2; }
+  }
+
+  @media (max-width: 599px) {
+    .item {
+      grid-template-columns: 56px minmax(0, 1fr);
+      gap: 8px 12px;
+    }
+
+    .item-photo { grid-row: span 1; }
+
+    .item-expiry,
+    .item-total,
+    .item-actions {
+      grid-column: 2;
+      grid-row: auto;
+    }
+
+    .item-total { text-align: left; }
   }
 </style>

@@ -128,13 +128,18 @@ import { peso } from '../../data/types';
 
 <script>
   import { announce } from '../../scripts/announce';
+  import { run } from '../../scripts/request';
+  import { api } from '../../api/client';
 
   document.querySelectorAll<HTMLButtonElement>('[data-ready]').forEach((button) => {
-    button.addEventListener('click', () => {
+    button.addEventListener('click', async () => {
       const row = button.closest<HTMLElement>('[data-order]');
       const chip = row?.querySelector<HTMLElement>('[data-status-chip]');
       const cell = button.parentElement;
       if (!chip || !cell) return;
+
+      const order = await run(button, () => api.seller.markReady(button.dataset.ready ?? ''));
+      if (!order) return;
 
       chip.className = 'pill pill-ok';
       chip.textContent = 'Ready for pickup';
@@ -144,7 +149,16 @@ import { peso } from '../../data/types';
       waiting.textContent = 'Waiting for buyer';
       cell.replaceChildren(waiting);
 
-      const food = row?.querySelector<HTMLElement>('.name')?.textContent ?? 'Order';
+      // The button is gone; move to the next order to hand over.
+      const next = document.querySelector<HTMLElement>('[data-ready]');
+      if (next) {
+        next.focus();
+      } else {
+        waiting.tabIndex = -1;
+        waiting.focus();
+      }
+
+      const food = row?.querySelector<HTMLElement>('.name')?.textContent?.trim() ?? 'Order';
       announce(`${food} is ready for pickup. The buyer can see it now.`);
     });
   });

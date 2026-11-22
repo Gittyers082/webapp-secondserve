@@ -5,7 +5,6 @@ import FoodArt from '../../components/FoodArt.astro';
 import Dialog from '../../components/Dialog.astro';
 import Icon from '../../components/Icon.astro';
 import { seller, sellerListings } from '../../data/store';
-import { peso } from '../../data/types';
 
 const first = sellerListings[0]!;
 ---
@@ -36,7 +35,7 @@ const first = sellerListings[0]!;
     <div class="panel rail-panel" role="toolbar" aria-label="Selected listing" data-selection>
       <h2 class="panel-title">Selected listing</h2>
       <div class="rail-photo">
-        <img class="photo" src={`/photos/${first.art}.jpg`} alt="" data-selection-photo />
+        <img class="photo" src={`/photos/480/${first.art}.jpg`} alt="" data-selection-photo />
       </div>
       <div>
         <p class="rail-name" data-selection-name>{first.name}</p>
@@ -81,33 +80,33 @@ const first = sellerListings[0]!;
         <div class="field-row">
           <div>
             <label class="field-label" for="edit-qty">Quantity</label>
-            <input class="input" id="edit-qty" value={first.quantity} inputmode="numeric" />
+            <input class="input" id="edit-qty" name="quantity" type="number" min="0" step="1" value={first.quantity} />
           </div>
           <div>
-            <label class="field-label" for="edit-original">Original price</label>
-            <input class="input" id="edit-original" value={peso(first.originalPrice)} />
+            <label class="field-label" for="edit-original">Original price (₱)</label>
+            <input class="input" id="edit-original" name="originalPrice" type="number" min="1" step="0.01" value={first.originalPrice.toFixed(2)} />
           </div>
         </div>
 
         <div class="field-row">
           <div>
-            <label class="field-label" for="edit-discounted">Discounted price</label>
-            <input class="input" id="edit-discounted" value={peso(first.discountedPrice)} />
+            <label class="field-label" for="edit-discounted">Discounted price (₱)</label>
+            <input class="input" id="edit-discounted" name="discountedPrice" type="number" min="0" step="0.01" value={first.discountedPrice.toFixed(2)} />
           </div>
           <div>
             <label class="field-label" for="edit-date">Expiry date</label>
-            <input class="input" id="edit-date" value="Nov 5, 2026" />
+            <input class="input" id="edit-date" name="expiryDate" type="date" value="2026-11-05" />
           </div>
         </div>
 
         <div class="field-row">
           <div>
             <label class="field-label" for="edit-time">Expiry time</label>
-            <input class="input" id="edit-time" value="6:00 PM" />
+            <input class="input" id="edit-time" name="expiryTime" type="time" value="18:00" />
           </div>
           <div>
             <label class="field-label" for="edit-pickup">Pickup location</label>
-            <input class="input" id="edit-pickup" value={first.pickupLocation} />
+            <input class="input" id="edit-pickup" name="pickup" value={first.pickupLocation} />
           </div>
         </div>
       </div>
@@ -136,6 +135,8 @@ const first = sellerListings[0]!;
   import { announce } from '../../scripts/announce';
   import { closeDialog } from '../../scripts/dialog';
   import { setupSelection } from '../../scripts/selection';
+  import { run } from '../../scripts/request';
+  import { api } from '../../api/client';
 
   const cards = () => Array.from(document.querySelectorAll<HTMLElement>('article[data-listing]'));
   const deleteTitle = document.querySelector<HTMLElement>('[data-dialog="delete-listing"] [data-dialog-title]');
@@ -168,34 +169,51 @@ const first = sellerListings[0]!;
     },
   });
 
-  const setState = (label: string, tone: string) => {
+  const setState = async (button: HTMLButtonElement, status: 'sold' | 'withdrawn') => {
     const card = selection.selected();
     const chip = card?.querySelector<HTMLElement>('[data-state]');
     if (!card || !chip) return;
-    chip.className = `pill ${tone}`;
+    const saved = await run(button, () => api.seller.setStatus(card.dataset.listing ?? '', status));
+    if (!saved) return;
+    const label = status === 'sold' ? 'Sold' : 'Withdrawn';
+    card.dataset.status = status;
+    chip.className = 'pill pill-neutral';
     chip.textContent = label;
     announce(`${nameOf(card)} marked ${label.toLowerCase()}.`);
   };
 
-  document.querySelector<HTMLButtonElement>('[data-mark-sold]')?.addEventListener('click', () =>
-    setState('Sold', 'pill-neutral'),
-  );
+  const markSold = document.querySelector<HTMLButtonElement>('[data-mark-sold]');
+  markSold?.addEventListener('click', () => setState(markSold, 'sold'));
 
-  document.querySelector<HTMLButtonElement>('[data-withdraw]')?.addEventListener('click', () =>
-    setState('Withdrawn', 'pill-neutral'),
-  );
+  const withdraw = document.querySelector<HTMLButtonElement>('[data-withdraw]');
+  withdraw?.addEventListener('click', () => setState(withdraw, 'withdrawn'));
 
-  document.querySelector<HTMLFormElement>('[data-edit-form]')?.addEventListener('submit', (event) => {
+  const editForm = document.querySelector<HTMLFormElement>('[data-edit-form]');
+  editForm?.addEventListener('submit', async (event) => {
     event.preventDefault();
+    const card = selection.selected();
+    if (!card || !editForm.reportValidity()) return;
+    const name = editForm.querySelector<HTMLInputElement>('[name="name"]')?.value.trim() ?? '';
+    const saved = await run(editForm.querySelector<HTMLButtonElement>('[type="submit"]'), () =>
+      api.seller.updateListing(card.dataset.listing ?? '', { name }),
+    );
+    if (saved === undefined) return;
+    const title = card.querySelector<HTMLElement>('[data-card-name]');
+    if (title && name) title.textContent = name;
     closeDialog();
     announce('Changes saved.');
   });
 
-  document.querySelector<HTMLButtonElement>('[data-confirm-delete]')?.addEventListener('click', () => {
+  document.querySelector<HTMLButtonElement>('[data-confirm-delete]')?.addEventListener('click', async (event) => {
     const card = selection.selected();
     const name = nameOf(card);
+    if (!card) return;
+    const done = await run(event.currentTarget as HTMLButtonElement, () =>
+      api.seller.deleteListing(card.dataset.listing ?? ''),
+    );
+    if (done === undefined) return;
     closeDialog();
-    card?.remove();
+    card.remove();
     syncToolbar();
     // The opener was removed with nothing selected; keep focus in the grid.
     document.querySelector<HTMLElement>('[data-select]')?.focus();

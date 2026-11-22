@@ -1,0 +1,397 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import Icon from '../../components/Icon.astro';
+import ShopLogo from '../../components/ShopLogo.astro';
+import Tip from '../../components/Tip.astro';
+import { seller, sellerProfile } from '../../data/store';
+import { shopTags } from '../../data/types';
+
+const profile = sellerProfile;
+---
+
+<AppLayout
+  role="seller"
+  username={seller.username}
+  section="Shop Profile"
+  heading="Shop Profile"
+  subtitle="What buyers see about your shop on every listing."
+  highlight="every listing"
+>
+  <form class="panel profile-form" method="post" data-profile-form novalidate>
+    <section class="block" aria-labelledby="logo-title">
+      <h2 class="panel-title" id="logo-title">Logo</h2>
+      <div class="logo-row">
+        <ShopLogo name={profile.shopName} logoUrl={profile.logoUrl} size={88} class="logo-preview" />
+        <div class="logo-actions">
+          <label class="btn" for="logo-file">
+            <Icon name="upload" />
+            Upload logo
+          </label>
+          <input class="sr-only" id="logo-file" name="logo" type="file" accept="image/png, image/jpeg" aria-describedby="logo-rule" />
+          <button class="btn btn-danger" type="button" data-remove-logo hidden>
+            <Icon name="trash" />
+            Remove
+          </button>
+          <p class="hint" id="logo-rule">Square PNG or JPG, up to 2 MB. Without one, buyers see your initials.</p>
+          <p class="field-error" data-logo-error hidden></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" aria-labelledby="about-title">
+      <h2 class="panel-title" id="about-title">About your shop</h2>
+
+      <div class="field">
+        <label class="field-label" for="shop-name">Shop name</label>
+        <input class="input" id="shop-name" name="shopName" value={profile.shopName} required maxlength="60" data-error="Enter your shop’s name. Buyers see it on every listing." />
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="shop-location">
+          Area
+          <Tip about="Area" text="The street or neighbourhood buyers will recognise. Exact pickup places are set on each listing." />
+        </label>
+        <input class="input" id="shop-location" name="location" value={profile.location} required maxlength="80" data-error="Enter your area, for example Session Road, Baguio." />
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="shop-description">
+          Description
+          <Tip about="Description" text="A sentence or two: what you bake or cook, and when your surplus is usually listed." />
+        </label>
+        <textarea class="input" id="shop-description" name="description" maxlength="280" required aria-describedby="description-count" data-error="Write a short description so buyers know what you sell.">{profile.description}</textarea>
+        <p class="hint field-hint" id="description-count" data-count>{profile.description.length} of 280 characters</p>
+      </div>
+    </section>
+
+    <fieldset class="block tags" aria-describedby="tags-hint">
+      <legend class="panel-title">Category tags</legend>
+      <p class="hint" id="tags-hint">Choose up to 4. Buyers use these to find shops like yours.</p>
+      <div class="tag-list">
+        {
+          shopTags.map((tag) => (
+            <label class="tag">
+              <input type="checkbox" name="tags" value={tag} checked={profile.tags.includes(tag)} />
+              <span>{tag}</span>
+            </label>
+          ))
+        }
+      </div>
+    </fieldset>
+
+    <div class="form-actions">
+      <button class="btn btn-primary btn-lg" type="submit">Save profile</button>
+      <p class="form-status" data-form-status hidden></p>
+    </div>
+  </form>
+
+  <!-- Live preview ---------------------------------------------------------- -->
+  <Fragment slot="rail">
+    <div class="panel rail-panel">
+      <h2 class="panel-title">How buyers see it</h2>
+      <article class="preview" aria-label="Preview of your public shop profile">
+        <div class="preview-head">
+          <ShopLogo name={profile.shopName} logoUrl={profile.logoUrl} size={56} class="preview-logo" />
+          <div>
+            <p class="preview-name" data-preview-name>{profile.shopName}</p>
+            <p class="small muted" data-preview-location>{profile.location}</p>
+          </div>
+        </div>
+        <p class="preview-description" data-preview-description>{profile.description}</p>
+        <ul class="preview-tags" data-preview-tags>
+          {profile.tags.map((tag) => <li class="pill pill-neutral">{tag}</li>)}
+        </ul>
+      </article>
+      <p class="hint">Shown on your listings’ detail pages, above the reviews of your shop.</p>
+    </div>
+  </Fragment>
+</AppLayout>
+
+<script>
+  import { announce } from '../../scripts/announce';
+  import { run } from '../../scripts/request';
+  import { liveValidate, validate } from '../../scripts/validate';
+  import { api } from '../../api/client';
+
+  const MAX_TAGS = 4;
+  const MAX_LOGO_BYTES = 2 * 1024 * 1024;
+
+  const form = document.querySelector<HTMLFormElement>('[data-profile-form]');
+  const tags = Array.from(document.querySelectorAll<HTMLInputElement>('input[name="tags"]'));
+  const status = document.querySelector<HTMLElement>('[data-form-status]');
+  const logoInput = document.querySelector<HTMLInputElement>('#logo-file');
+  const logoError = document.querySelector<HTMLElement>('[data-logo-error]');
+  const removeLogo = document.querySelector<HTMLButtonElement>('[data-remove-logo]');
+  let logoFile: File | null = null;
+
+  const initials = (name: string) =>
+    name
+      .replace(/[^A-Za-z\s]/g, '')
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((word) => word[0]!.toUpperCase())
+      .join('');
+
+  /** Shows a logo (or initials) in both the editor and the preview. */
+  const paintLogo = (url: string | null, name: string) => {
+    document.querySelectorAll<HTMLElement>('[data-shop-logo]').forEach((box) => {
+      box.replaceChildren();
+      if (url) {
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = `${name} logo`;
+        box.append(img);
+      } else {
+        const span = document.createElement('span');
+        span.setAttribute('aria-hidden', 'true');
+        span.textContent = initials(name);
+        box.append(span);
+      }
+    });
+  };
+
+  const syncPreview = () => {
+    if (!form) return;
+    const data = new FormData(form);
+    const name = String(data.get('shopName') || 'Your shop');
+    const set = (key: string, value: string) => {
+      const node = document.querySelector<HTMLElement>(`[data-preview-${key}]`);
+      if (node) node.textContent = value;
+    };
+    set('name', name);
+    set('location', String(data.get('location') ?? ''));
+    set('description', String(data.get('description') ?? ''));
+
+    const list = document.querySelector<HTMLElement>('[data-preview-tags]');
+    list?.replaceChildren(
+      ...tags
+        .filter((tag) => tag.checked)
+        .map((tag) => {
+          const item = document.createElement('li');
+          item.className = 'pill pill-neutral';
+          item.textContent = tag.value;
+          return item;
+        }),
+    );
+
+    const count = document.querySelector<HTMLElement>('[data-count]');
+    const description = form.querySelector<HTMLTextAreaElement>('#shop-description');
+    if (count && description) count.textContent = `${description.value.length} of 280 characters`;
+
+    if (!logoFile) paintLogo(null, name);
+  };
+
+  // At most four tags: the rest disable once four are chosen.
+  const syncTags = () => {
+    const chosen = tags.filter((tag) => tag.checked).length;
+    tags.forEach((tag) => (tag.disabled = !tag.checked && chosen >= MAX_TAGS));
+  };
+
+  logoInput?.addEventListener('change', () => {
+    const file = logoInput.files?.[0];
+    if (!file) return;
+    const problem = !['image/png', 'image/jpeg'].includes(file.type)
+      ? 'That file is not a PNG or JPG. Choose an image file.'
+      : file.size > MAX_LOGO_BYTES
+        ? `That image is ${(file.size / 1024 / 1024).toFixed(1)} MB. Choose one under 2 MB.`
+        : null;
+    if (logoError) {
+      logoError.textContent = problem ?? '';
+      logoError.hidden = !problem;
+    }
+    if (problem) {
+      logoInput.value = '';
+      return;
+    }
+    logoFile = file;
+    paintLogo(URL.createObjectURL(file), String(new FormData(form!).get('shopName') ?? ''));
+    if (removeLogo) removeLogo.hidden = false;
+    announce('Logo added to the preview. Save the profile to keep it.');
+  });
+
+  removeLogo?.addEventListener('click', () => {
+    logoFile = null;
+    if (logoInput) logoInput.value = '';
+    removeLogo.hidden = true;
+    paintLogo(null, String(new FormData(form!).get('shopName') ?? ''));
+    document.querySelector<HTMLElement>('label[for="logo-file"]')?.focus();
+    announce('Logo removed. Buyers will see your initials.');
+  });
+
+  if (form) liveValidate(form);
+  form?.addEventListener('input', syncPreview);
+  form?.addEventListener('change', () => {
+    syncTags();
+    syncPreview();
+  });
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!validate(form)) return;
+    const data = new FormData(form);
+    const submit = form.querySelector<HTMLButtonElement>('[type="submit"]');
+
+    const saved = await run(submit, async () => {
+      if (logoFile) await api.seller.uploadLogo(logoFile);
+      return api.seller.updateProfile({
+        shopName: String(data.get('shopName')).trim(),
+        location: String(data.get('location')).trim(),
+        description: String(data.get('description')).trim(),
+        tags: data.getAll('tags').map(String) as never,
+      });
+    });
+
+    if (saved && status) {
+      status.textContent = 'Profile saved. Buyers see the changes now.';
+      status.hidden = false;
+      announce('Profile saved.');
+    }
+  });
+
+  syncTags();
+</script>
+
+<style>
+  .profile-form {
+    display: grid;
+    gap: var(--sp-8);
+    max-width: 760px;
+  }
+
+  .block .panel-title {
+    margin-bottom: var(--sp-4);
+  }
+
+  .logo-row {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-5);
+    flex-wrap: wrap;
+  }
+
+  .logo-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-2) var(--sp-3);
+    flex: 1;
+    min-width: 220px;
+  }
+
+  .logo-actions .hint,
+  .logo-actions .field-error {
+    flex-basis: 100%;
+  }
+
+  label.btn {
+    cursor: pointer;
+  }
+
+  .logo-actions:has(input:focus-visible) label.btn {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .tags {
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .tags legend {
+    padding: 0;
+  }
+
+  .tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+    margin-top: var(--sp-4);
+  }
+
+  .tag {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--target);
+    padding: 0 var(--sp-4);
+    border-radius: var(--r-pill);
+    background: var(--s3);
+    color: var(--text-soft);
+    font-size: var(--fs-md);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+  }
+
+  .tag input {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .tag:hover {
+    background: var(--s4);
+  }
+
+  .tag:has(input:checked) {
+    background: var(--contrast);
+    color: var(--contrast-text);
+  }
+
+  .tag:has(input:disabled) {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .tag:has(input:focus-visible) {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .form-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--sp-4);
+  }
+
+  .form-status {
+    color: var(--ok);
+    font-weight: 600;
+  }
+
+  .preview {
+    display: grid;
+    gap: var(--sp-3);
+    padding: var(--sp-5);
+    border-radius: var(--r-lg);
+    background: var(--s3);
+  }
+
+  .preview-head {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+  }
+
+  .preview-name {
+    font-size: var(--fs-lg);
+    font-weight: 700;
+  }
+
+  .preview-description {
+    color: var(--text-soft);
+    font-size: var(--fs-md);
+    line-height: 1.55;
+  }
+
+  .preview-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+</style>

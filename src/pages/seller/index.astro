@@ -3,7 +3,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
 import ListingCard from '../../components/ListingCard.astro';
 import FoodArt from '../../components/FoodArt.astro';
 import Icon from '../../components/Icon.astro';
-import { expiringWithinThreeDays, handoverQueue, seller, sellerListings } from '../../data/store';
+import ShopLogo from '../../components/ShopLogo.astro';
+import { expiringWithinThreeDays, handoverQueue, seller, sellerListings, sellerProfile } from '../../data/store';
 
 const nextToExpire = expiringWithinThreeDays[0]!;
 const laterCount = sellerListings.length - expiringWithinThreeDays.length;
@@ -80,6 +81,15 @@ const stats = [
           {nextToExpire.expiryLabel}
         </p>
       </article>
+
+      <div class="shop-mini">
+        <ShopLogo name={sellerProfile.shopName} logoUrl={sellerProfile.logoUrl} size={44} />
+        <div class="shop-mini-copy">
+          <p class="shop-mini-name">{sellerProfile.shopName}</p>
+          <p class="small muted">{sellerProfile.tags.join(' · ')}</p>
+        </div>
+        <a class="btn btn-sm" href="/seller/shop-profile">Edit shop profile</a>
+      </div>
 
       <div class="reserved">
         <div class="row-between">
@@ -167,6 +177,7 @@ const stats = [
   .toggle {
     display: inline-flex;
     align-items: center;
+    min-height: var(--target);
     gap: 12px;
     flex: none;
     cursor: pointer;
@@ -252,6 +263,24 @@ const stats = [
     font-size: var(--fs-md);
   }
 
+  .shop-mini {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr);
+    align-items: center;
+    gap: var(--sp-2) var(--sp-3);
+    padding: var(--sp-4);
+    border-radius: var(--r-lg);
+    background: var(--s3);
+  }
+
+  .shop-mini .btn {
+    grid-column: 1 / -1;
+  }
+
+  .shop-mini-name {
+    font-weight: 700;
+  }
+
   .reserved {
     display: grid;
     gap: 16px;
@@ -285,5 +314,15 @@ const stats = [
 
   @media (max-width: 1279px) {
     .stat { padding: 16px 20px; }
+  }
+
+  @media (max-width: 599px) {
+    .stats {
+      grid-template-columns: 1fr;
+    }
+
+    .stat {
+      padding: 16px 20px;
+    }
   }
 </style>
