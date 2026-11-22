@@ -10,6 +10,8 @@ Typical route:
 - `CurrentUser`   the logged-in user's row (401 if not logged in, 403 if banned/no profile)
 - `ActiveSeller`  a seller whose account was approved (FR-BUS-7)
 - `ActiveBuyer`   a buyer
+- `ActivePartner` a partner whose account was approved (Surplus Board)
+- `ActiveCustomer` a buyer or a partner (anyone who can place an order)
 - `Admin`         an administrator
 """
 
@@ -74,4 +76,6 @@ def require_role(*roles: Role, must_be_active: bool = True):
 
 ActiveSeller = Annotated[User, Depends(require_role(Role.seller))]
 ActiveBuyer = Annotated[User, Depends(require_role(Role.buyer))]
+ActivePartner = Annotated[User, Depends(require_role(Role.partner))]
+ActiveCustomer = Annotated[User, Depends(require_role(Role.buyer, Role.partner))]
 Admin = Annotated[User, Depends(require_role(Role.admin))]

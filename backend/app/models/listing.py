@@ -18,7 +18,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, Timestamps, UUIDPrimaryKey
-from app.models.enums import FoodCategory, ListingStatus, str_enum
+from app.models.enums import FoodCategory, FulfillmentOption, ListingKind, ListingStatus, str_enum
 from app.models.user import User
 
 Money = Numeric(10, 2)
@@ -64,6 +64,13 @@ class Listing(UUIDPrimaryKey, Timestamps, Base):
 
     status: Mapped[ListingStatus] = mapped_column(
         str_enum(ListingStatus), default=ListingStatus.active
+    )
+    fulfillment: Mapped[FulfillmentOption] = mapped_column(
+        str_enum(FulfillmentOption), default=FulfillmentOption.pickup, server_default="pickup"
+    )
+    # Retail listings show in the marketplace; the other kinds show on the partner Surplus Board.
+    kind: Mapped[ListingKind] = mapped_column(
+        str_enum(ListingKind), default=ListingKind.retail, server_default="retail", index=True
     )
     flagged: Mapped[bool] = mapped_column(Boolean, default=False)
     flag_reason: Mapped[str | None] = mapped_column(Text)

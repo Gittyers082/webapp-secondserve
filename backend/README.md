@@ -67,8 +67,27 @@ Browser ──(Bearer token from supabase-js)──▶ FastAPI
   require_role(...)  buyer / seller / admin, and account approved   → 403
 ```
 
-Sellers start as `pending` and can't list anything until an admin approves them
-(FR-BUS-7). Buyers are active right away.
+Sellers and partners start as `pending` and can't list or order until an admin approves
+them (FR-BUS-7). Buyers are active right away.
+
+## Partners, donations and delivery
+
+- **Partners** (food banks, NGOs, resellers) sign up with `role: "partner"` plus a `partner`
+  block, and need admin approval like sellers.
+- A seller can **convert** an active listing with `POST /api/listings/{id}/convert`
+  (`partner-offer` with a lower `partnerPrice`, or `donation`, which is free). It leaves the
+  marketplace for good and shows on the **Surplus Board**, `GET /api/surplus`
+  (partners only; filters: `kind`, `category`, `q`, `maxPrice`, `minQuantity`,
+  `expiringSoon`, `expiresBefore`, `sort`).
+- Buyers order retail listings and partners order Surplus Board listings, both with the
+  same `POST /api/orders` and `/api/orders/checkout`. Each locks the listing row, so two
+  partners can't both claim the last donation.
+- Each listing has `fulfillment`: `pickup`, `delivery` or `both`. An order picks
+  `fulfillment` and, for delivery, a `deliveryAddress`. Delivery adds a flat
+  `DELIVERY_FEE` (no commission on it). `amountDue` is `total + deliveryFee`.
+- Delivery is simulated. The seller marks the order ready (handed to the "courier", gets a
+  `DLV-` reference), then `POST /api/orders/{id}/delivery` with `out-for-delivery`, then
+  `delivered`. For delivery orders, order status `picked-up` means delivered.
 
 ## Folder layout
 
@@ -92,7 +111,7 @@ tests/                 pytest
 | Area | Files | Owner |
 | --- | --- | --- |
 | Auth, profiles, admin, notifications, audit, emails, reports | `core/`, `routers/me.py`, `routers/admin.py`, `routers/notifications.py`, `workers/` | Role 1, Project Lead |
-| Listings, search, images, orders, payments, live stock, reviews | `routers/listings.py`, `routers/orders.py`, `services/orders.py`, `realtime/` | Role 3, Backend Developer |
+| Listings, search, images, orders, payments, delivery, Surplus Board, live stock, reviews | `routers/listings.py`, `routers/orders.py`, `routers/surplus.py`, `services/orders.py`, `services/search.py`, `services/delivery.py`, `realtime/` | Role 3, Backend Developer |
 | Tests, CI, deployment | `tests/`, `.github/workflows/`, `render.yaml` | Role 5, QA & DevOps |
 
 Search the code for `TODO(Role N)` to find your next task.
@@ -111,7 +130,7 @@ Copy the pattern in `routers/listings.py`:
 
 | Done and tested without a database | Tested against Postgres | Written, needs testing against Supabase | Still TODO |
 | --- | --- | --- | --- |
-| Token checking, eligibility rules, photo compression, health check, login required on routes | Reserve with row locking (no overselling), whole-cart checkout (all or nothing, no deadlocks), cancel, pickup code, reviews, typo-tolerant search | Profile sign-up, listings CRUD, notifications, admin approvals/bans, photo upload to Storage, wishlist, Redis stock pub/sub | Receipts, moderation, stats, expiry job, seller rating on listing cards |
+| Token checking, eligibility rules, photo compression, partner and delivery input rules, health check, login required on routes | Reserve with row locking (no overselling, also for donation claims), whole-cart checkout (all or nothing, no deadlocks), cancel, pickup code, reviews, typo-tolerant search, convert to partner offer or donation, Surplus Board filters, delivery flow | Profile sign-up, listings CRUD, notifications, admin approvals/bans, photo upload to Storage, wishlist, Redis stock pub/sub | Receipts, moderation, stats, expiry job, seller rating on listing cards |
 
 ### Running the Postgres tests
 

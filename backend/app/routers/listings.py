@@ -6,11 +6,11 @@ schemas in, eligibility check, audit record, commit, schema out.
 """
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from decimal import Decimal
 
 from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile, status
-from sqlalchemy import delete, func, or_, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.core.deps import DB, ActiveBuyer, ActiveSeller
@@ -18,17 +18,18 @@ from app.core.rate_limit import limiter
 from app.models import (
     FoodCategory,
     Listing,
+    ListingKind,
     ListingStatus,
     Order,
     OrderStatus,
     Review,
     SavedItem,
-    SellerProfile,
     User,
 )
 from app.realtime.stock import stock
 from app.schemas.common import Page
 from app.schemas.listing import (
+    ConvertIn,
     ListingCreate,
     ListingOut,
     ListingStatusIn,
@@ -37,18 +38,10 @@ from app.schemas.listing import (
 )
 from app.schemas.review import ReviewOut, ReviewsOut
 from app.services import audit, images
-from app.services.listings import ensure_eligible, get_listing_or_404
+from app.services.listings import ensure_eligible, get_listing_or_404, lock_listings
+from app.services.search import listing_query, sort_clauses
 
 router = APIRouter(prefix="/api/listings", tags=["listings"])
-
-_discount = 1 - Listing.discounted_price / Listing.original_price
-_SORTS = {
-    "newest": Listing.created_at.desc(),
-    "price-asc": Listing.discounted_price.asc(),
-    "price-desc": Listing.discounted_price.desc(),
-    "discount": _discount.desc(),
-    "expiring": Listing.expires_at.asc(),
-}
 
 
 @router.get("", response_model=Page[ListingOut])
@@ -64,44 +57,19 @@ async def browse(
     limit: int = Query(default=24, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
 ) -> Page[ListingOut]:
-    """Public marketplace feed (UC-07, UC-08, FR-USER-B-4/5/6). Only active, unexpired items."""
-    now = datetime.now(timezone.utc)
-    stmt = (
-        select(Listing)
-        .join(SellerProfile, SellerProfile.user_id == Listing.seller_id)
-        .where(Listing.status == ListingStatus.active, Listing.expires_at > now)
+    """Public marketplace feed (UC-07, UC-08, FR-USER-B-4/5/6). Retail items only; the
+    partner Surplus Board is /api/surplus."""
+    stmt = listing_query(
+        kinds=(ListingKind.retail,),
+        q=q,
+        category=category,
+        min_price=min_price,
+        max_price=max_price,
+        min_discount=min_discount,
+        expires_before=expires_before,
     )
-    if q:
-        # Substring match, or pg_trgm's "similar enough" (%) so small typos still find things.
-        # Both can use the trigram index on listings.name.
-        stmt = stmt.where(
-            or_(
-                Listing.name.icontains(q, autoescape=True),
-                SellerProfile.business_name.icontains(q, autoescape=True),
-                Listing.name.op("%")(q),
-                SellerProfile.business_name.op("%")(q),
-            )
-        )
-    if category:
-        stmt = stmt.where(Listing.category == category)
-    if min_price is not None:
-        stmt = stmt.where(Listing.discounted_price >= min_price)
-    if max_price is not None:
-        stmt = stmt.where(Listing.discounted_price <= max_price)
-    if min_discount is not None:
-        stmt = stmt.where(_discount * 100 >= min_discount)
-    if expires_before is not None:
-        stmt = stmt.where(Listing.expires_at <= expires_before)
-
     total = await db.scalar(stmt.with_only_columns(func.count(Listing.id)).order_by(None))
-    if sort == "relevance" and q:
-        score = func.greatest(
-            func.similarity(Listing.name, q), func.similarity(SellerProfile.business_name, q)
-        )
-        order_by = (score.desc(), Listing.created_at.desc())
-    else:
-        order_by = (_SORTS.get(sort, Listing.created_at.desc()),)
-    rows = await db.execute(stmt.order_by(*order_by).limit(limit).offset(offset))
+    rows = await db.execute(stmt.order_by(*sort_clauses(sort, q)).limit(limit).offset(offset))
     items = [ListingOut.from_model(listing) for listing in rows.unique().scalars()]
     return Page(items=items, total=total or 0, limit=limit, offset=offset)
 
@@ -154,6 +122,7 @@ async def create_listing(
         quantity_available=data.quantity,
         original_quantity=data.quantity,
         expires_at=data.expires_at,
+        fulfillment=data.fulfillment,
         pickup_location=pickup,
         art=data.art,
         status=ListingStatus.active,
@@ -226,6 +195,50 @@ async def set_status(
     )
     await db.commit()
     await stock.publish(str(listing.id), listing.quantity_available, listing.status.value)
+    return ListingOut.from_model(await get_listing_or_404(db, listing.id))
+
+
+@router.post("/{listing_id}/convert", response_model=ListingOut)
+async def convert_listing(
+    listing_id: uuid.UUID, data: ConvertIn, request: Request, db: DB, seller: ActiveSeller
+) -> ListingOut:
+    """Move an unsold listing to the partner Surplus Board as an offer or a donation (S-13).
+
+    The listing leaves the marketplace for good: its price becomes the partner price
+    (or 0 for a donation). Existing reservations keep the price they were made at.
+    """
+    await _own_listing(db, listing_id, seller.id)
+    # Lock it so a buyer reserving at the old price can't slip in during the switch.
+    listing = (await lock_listings(db, [listing_id]))[listing_id]
+    if listing.status != ListingStatus.active:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Only active listings can be converted.")
+    if listing.kind != ListingKind.retail:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "This listing is already on the Surplus Board."
+        )
+
+    if data.kind == "donation":
+        price = Decimal("0")
+    else:
+        price = data.partner_price
+        if price >= listing.discounted_price:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                ["The partner price must be lower than the current price."],
+            )
+    listing.kind = ListingKind(data.kind)
+    listing.discounted_price = price
+    ensure_eligible(listing)
+    audit.record(
+        db,
+        actor_id=seller.id,
+        action=f"listing.convert.{data.kind}",
+        entity_type="listing",
+        entity_id=listing.id,
+        details={"price": str(price)},
+        request=request,
+    )
+    await db.commit()
     return ListingOut.from_model(await get_listing_or_404(db, listing.id))
 
 

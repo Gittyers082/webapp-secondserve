@@ -1,6 +1,7 @@
 """Orders, simulated payments and reviews (ERD: Order, Payment Transaction, Review Rating).
 
-Pickup only: an order is a reservation the buyer collects in person.
+An order is a reservation the customer collects, or has delivered (fulfillment_method).
+For delivery orders, status "picked-up" means "delivered".
 One order = one listing. Checking out a cart with three lines creates three orders.
 """
 
@@ -12,7 +13,14 @@ from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, String, T
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, Timestamps, UUIDPrimaryKey
-from app.models.enums import OrderStatus, PaymentMethod, PaymentStatus, str_enum
+from app.models.enums import (
+    DeliveryStatus,
+    FulfillmentMethod,
+    OrderStatus,
+    PaymentMethod,
+    PaymentStatus,
+    str_enum,
+)
 from app.models.listing import Listing, Money
 
 
@@ -21,6 +29,7 @@ class Order(UUIDPrimaryKey, Timestamps, Base):
     __table_args__ = (
         CheckConstraint("quantity > 0", name="quantity_positive"),
         CheckConstraint("total >= 0", name="total_not_negative"),
+        CheckConstraint("delivery_fee >= 0", name="delivery_fee_not_negative"),
     )
 
     buyer_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), index=True)
@@ -34,6 +43,15 @@ class Order(UUIDPrimaryKey, Timestamps, Base):
     total: Mapped[Decimal] = mapped_column(Money)
 
     # Short code the buyer shows at the counter (seller's /handover screen).
+    # Delivery (FR-SYS-13). The fee is charged on top of `total` and earns no commission.
+    fulfillment_method: Mapped[FulfillmentMethod] = mapped_column(
+        str_enum(FulfillmentMethod), default=FulfillmentMethod.pickup, server_default="pickup"
+    )
+    delivery_address: Mapped[str | None] = mapped_column(String(255))
+    delivery_fee: Mapped[Decimal] = mapped_column(Money, default=Decimal("0"), server_default="0")
+    delivery_status: Mapped[DeliveryStatus | None] = mapped_column(str_enum(DeliveryStatus))
+    delivery_reference: Mapped[str | None] = mapped_column(String(40))
+
     pickup_code: Mapped[str] = mapped_column(String(8), index=True)
     status: Mapped[OrderStatus] = mapped_column(
         str_enum(OrderStatus), default=OrderStatus.reserved, index=True

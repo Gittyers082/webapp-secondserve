@@ -58,3 +58,41 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     asyncio.run(run_migrations_online())
+# Copy this file to backend/.env and fill in the values.
+# NEVER commit .env. Ask the project lead for the real values.
+
+ENVIRONMENT=development
+
+# Comma-separated list of frontend origins allowed to call the API.
+CORS_ORIGINS=http://localhost:4321
+
+# --- Database (Supabase Postgres) ---
+# Supabase dashboard > Connect > "Session pooler" connection string.
+# Change the scheme to postgresql+asyncpg://
+DATABASE_URL=postgresql+asyncpg://postgres.glcwsiulaqiympfesdwa:secondSERVEXx2026@aws-1-ap-northeast-1.pooler.supabase.com:5432/postgres
+
+# --- Supabase Auth ---
+SUPABASE_URL=https://glcwsiulaqiympfesdwa.supabase.co
+# Leave empty if the project uses the new JWT signing keys (JWKS is used automatically).
+# Fill in only if the project still uses the legacy shared JWT secret.
+SUPABASE_JWT_SECRET=
+# Server-side key, used only for Storage uploads. Keep secret.
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdsY3dzaXVsYXFpeW1wZmVzZHdhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5NTM0MzAwOSwiZXhwIjoyMTEwOTE5MDA5fQ.rp2Xq2eWyVfbxdOnH5YRZagF1c0prSLbbjw5_E640wM
+SUPABASE_STORAGE_BUCKET=listing-images
+
+# --- Redis (Upstash) ---
+# Upstash dashboard > your database > "Redis" connection string (rediss://...)
+REDIS_URL=
+
+# --- Email (Resend) ---
+RESEND_API_KEY=
+EMAIL_FROM=SecondServe <onboarding@resend.dev>
+
+# Set to true once a Celery worker is running; otherwise emails are skipped
+# (in-app notifications are still saved).
+CELERY_ENABLED=false
+
+# --- Business rules ---
+COMMISSION_RATE=0.07
+# Hours before expiry when unsold listings move to the partner Surplus Board.
+SURPLUS_WINDOW_HOURS=6

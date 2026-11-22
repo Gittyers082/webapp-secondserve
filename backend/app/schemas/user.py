@@ -16,19 +16,29 @@ class SellerDetails(Schema):
     description: str | None = Field(default=None, max_length=2000)
 
 
+class PartnerDetails(Schema):
+    organization_name: str = Field(min_length=2, max_length=120)
+    organization_type: str = Field(min_length=2, max_length=50)  # ngo, food-bank, reseller
+    address: str = Field(min_length=5, max_length=255)
+    contact_phone: str = Field(min_length=7, max_length=30)
+
+
 class ProfileCreate(Schema):
     """Sent right after Supabase sign-up to finish registration (UC-01)."""
 
-    role: Literal["buyer", "seller"]  # nobody can sign themselves up as admin
+    role: Literal["buyer", "seller", "partner"]  # nobody can sign themselves up as admin
     username: str = Field(min_length=3, max_length=50, pattern=r"^[A-Za-z0-9_.]+$")
     full_name: str = Field(min_length=2, max_length=120)
     phone: str | None = Field(default=None, max_length=30)
     seller: SellerDetails | None = None
+    partner: PartnerDetails | None = None
 
     @model_validator(mode="after")
-    def seller_needs_business(self) -> "ProfileCreate":
+    def role_needs_details(self) -> "ProfileCreate":
         if self.role == "seller" and self.seller is None:
             raise ValueError("Sellers must include their business details.")
+        if self.role == "partner" and self.partner is None:
+            raise ValueError("Partners must include their organization details.")
         return self
 
 
@@ -48,6 +58,14 @@ class SellerProfileOut(Schema):
     verified_at: datetime | None
 
 
+class PartnerProfileOut(Schema):
+    organization_name: str
+    organization_type: str
+    address: str
+    contact_phone: str
+    verified_at: datetime | None
+
+
 class UserOut(Schema):
     id: UUID
     email: str
@@ -58,6 +76,7 @@ class UserOut(Schema):
     status: AccountStatus
     created_at: datetime
     seller_profile: SellerProfileOut | None = None
+    partner_profile: PartnerProfileOut | None = None
 
 
 class DecisionIn(Schema):

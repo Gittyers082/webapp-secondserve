@@ -13,6 +13,7 @@ from sqlalchemy import Enum as SAEnum
 class Role(str, enum.Enum):
     buyer = "buyer"
     seller = "seller"
+    partner = "partner"  # NGO, food bank or reseller buying from the Surplus Board
     admin = "admin"
 
 
@@ -39,6 +40,33 @@ class ListingStatus(str, enum.Enum):
     withdrawn = "withdrawn"  # seller took it down (UC-05)
     expired = "expired"  # expiry passed
     removed = "removed"  # admin moderation
+
+
+class ListingKind(str, enum.Enum):
+    retail = "retail"  # normal marketplace listing
+    partner_offer = "partner-offer"  # Surplus Board, discounted for partners
+    donation = "donation"  # Surplus Board, free for partners to claim
+
+
+class FulfillmentOption(str, enum.Enum):
+    """What a seller offers on a listing (FR-USER-S-12)."""
+
+    pickup = "pickup"
+    delivery = "delivery"
+    both = "both"
+
+
+class FulfillmentMethod(str, enum.Enum):
+    """What one order uses."""
+
+    pickup = "pickup"
+    delivery = "delivery"
+
+
+class DeliveryStatus(str, enum.Enum):
+    handed_off = "handed-off"  # given to the (simulated) delivery partner
+    out_for_delivery = "out-for-delivery"
+    delivered = "delivered"
 
 
 class OrderStatus(str, enum.Enum):

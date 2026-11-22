@@ -34,6 +34,9 @@ class User(Timestamps, Base):
     buyer_profile: Mapped["BuyerProfile | None"] = relationship(
         back_populates="user", uselist=False, lazy="selectin"
     )
+    partner_profile: Mapped["PartnerProfile | None"] = relationship(
+        back_populates="user", uselist=False, lazy="selectin"
+    )
 
 
 class SellerProfile(Timestamps, Base):
@@ -51,6 +54,23 @@ class SellerProfile(Timestamps, Base):
     verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     user: Mapped[User] = relationship(back_populates="seller_profile")
+
+
+class PartnerProfile(Timestamps, Base):
+    """A food bank, NGO or reseller that buys or claims from the Surplus Board."""
+
+    __tablename__ = "partner_profiles"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    organization_name: Mapped[str] = mapped_column(String(120), index=True)
+    organization_type: Mapped[str] = mapped_column(String(50))  # ngo, food-bank, reseller, ...
+    address: Mapped[str] = mapped_column(String(255))
+    contact_phone: Mapped[str] = mapped_column(String(30))
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    user: Mapped[User] = relationship(back_populates="partner_profile")
 
 
 class BuyerProfile(Timestamps, Base):

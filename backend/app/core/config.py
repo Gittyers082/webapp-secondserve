@@ -30,6 +30,10 @@ class Settings(BaseSettings):
     # FR-BUS-3 / NFR-BUS-MV-1: discounts should land in this range.
     min_discount_percent: int = 15
     max_discount_percent: int = 90
+    # Delivery orders add this flat fee (simulated delivery partner, FR-BUS-13).
+    delivery_fee: float = Field(default=50.0, ge=0)
+    # Hours before expiry that count as "expiring soon" on the partner Surplus Board.
+    surplus_window_hours: int = Field(default=6, ge=1)
 
     @property
     def cors_origin_list(self) -> list[str]:
