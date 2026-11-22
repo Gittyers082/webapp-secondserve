@@ -91,4 +91,4 @@ def discount_percent(original: Decimal, discounted: Decimal) -> int:
     return round((1 - discounted / original) * 100)
 
 
-SortOption = Literal["newest", "price-asc", "price-desc", "discount", "expiring"]
+SortOption = Literal["newest", "price-asc", "price-desc", "discount", "expiring", "relevance"]

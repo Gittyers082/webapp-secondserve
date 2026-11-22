@@ -9,11 +9,23 @@ import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from fastapi import APIRouter, HTTPException, Query, Request, status
-from sqlalchemy import func, or_, select
+from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile, status
+from sqlalchemy import delete, func, or_, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-from app.core.deps import DB, ActiveSeller
-from app.models import FoodCategory, Listing, ListingStatus, Order, OrderStatus, SellerProfile
+from app.core.deps import DB, ActiveBuyer, ActiveSeller
+from app.core.rate_limit import limiter
+from app.models import (
+    FoodCategory,
+    Listing,
+    ListingStatus,
+    Order,
+    OrderStatus,
+    Review,
+    SavedItem,
+    SellerProfile,
+    User,
+)
 from app.realtime.stock import stock
 from app.schemas.common import Page
 from app.schemas.listing import (
@@ -23,7 +35,8 @@ from app.schemas.listing import (
     ListingUpdate,
     SortOption,
 )
-from app.services import audit
+from app.schemas.review import ReviewOut, ReviewsOut
+from app.services import audit, images
 from app.services.listings import ensure_eligible, get_listing_or_404
 
 router = APIRouter(prefix="/api/listings", tags=["listings"])
@@ -59,10 +72,15 @@ async def browse(
         .where(Listing.status == ListingStatus.active, Listing.expires_at > now)
     )
     if q:
-        # TODO(Role 3): rank by pg_trgm similarity() for typo-tolerant search.
-        pattern = f"%{q}%"
+        # Substring match, or pg_trgm's "similar enough" (%) so small typos still find things.
+        # Both can use the trigram index on listings.name.
         stmt = stmt.where(
-            or_(Listing.name.ilike(pattern), SellerProfile.business_name.ilike(pattern))
+            or_(
+                Listing.name.icontains(q, autoescape=True),
+                SellerProfile.business_name.icontains(q, autoescape=True),
+                Listing.name.op("%")(q),
+                SellerProfile.business_name.op("%")(q),
+            )
         )
     if category:
         stmt = stmt.where(Listing.category == category)
@@ -76,7 +94,14 @@ async def browse(
         stmt = stmt.where(Listing.expires_at <= expires_before)
 
     total = await db.scalar(stmt.with_only_columns(func.count(Listing.id)).order_by(None))
-    rows = await db.execute(stmt.order_by(_SORTS[sort]).limit(limit).offset(offset))
+    if sort == "relevance" and q:
+        score = func.greatest(
+            func.similarity(Listing.name, q), func.similarity(SellerProfile.business_name, q)
+        )
+        order_by = (score.desc(), Listing.created_at.desc())
+    else:
+        order_by = (_SORTS.get(sort, Listing.created_at.desc()),)
+    rows = await db.execute(stmt.order_by(*order_by).limit(limit).offset(offset))
     items = [ListingOut.from_model(listing) for listing in rows.unique().scalars()]
     return Page(items=items, total=total or 0, limit=limit, offset=offset)
 
@@ -86,6 +111,18 @@ async def my_listings(db: DB, seller: ActiveSeller) -> list[ListingOut]:
     """Seller dashboard and Manage Listings (UC-06, FR-USER-S-8)."""
     rows = await db.execute(
         select(Listing).where(Listing.seller_id == seller.id).order_by(Listing.created_at.desc())
+    )
+    return [ListingOut.from_model(listing) for listing in rows.unique().scalars()]
+
+
+@router.get("/saved", response_model=list[ListingOut])
+async def saved_listings(db: DB, buyer: ActiveBuyer) -> list[ListingOut]:
+    """The buyer's wishlist, newest first (FR-USER-B-8). The compare view reads this too."""
+    rows = await db.execute(
+        select(Listing)
+        .join(SavedItem, SavedItem.listing_id == Listing.id)
+        .where(SavedItem.buyer_id == buyer.id)
+        .order_by(SavedItem.created_at.desc())
     )
     return [ListingOut.from_model(listing) for listing in rows.unique().scalars()]
 
@@ -219,10 +256,94 @@ async def delete_listing(listing_id: uuid.UUID, db: DB, seller: ActiveSeller) ->
     await stock.publish(str(listing_id), 0, ListingStatus.withdrawn.value)
 
 
-# TODO(Role 3): POST /api/listings/{id}/image — upload to Supabase Storage, compress to
-#   <=1600px WebP, save the public URL in listing.image_url (FR-USER-S-4, NFR-SYS-P-4).
-# TODO(Role 3): GET /api/listings/{id}/reviews and the seller's average rating (FR-BUS-9).
-# TODO(Role 3): POST/DELETE /api/listings/{id}/save — wishlist (FR-USER-B-8).
+@router.post("/{listing_id}/image", response_model=ListingOut)
+@limiter.limit("20/minute")
+async def upload_image(
+    request: Request,
+    listing_id: uuid.UUID,
+    db: DB,
+    seller: ActiveSeller,
+    file: UploadFile = File(...),
+) -> ListingOut:
+    """Upload a photo (JPEG, PNG or WebP, up to 5 MB). Stored as a <=1600px WebP."""
+    listing = await _own_listing(db, listing_id, seller.id)
+    if file.content_type not in images.ALLOWED_TYPES:
+        raise HTTPException(
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, "Use a JPEG, PNG or WebP photo."
+        )
+    raw = await file.read(images.MAX_UPLOAD_BYTES + 1)
+    if len(raw) > images.MAX_UPLOAD_BYTES:
+        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Photos can be up to 5 MB.")
+
+    listing.image_url = await images.process_and_store(listing.id, raw)
+    audit.record(
+        db, actor_id=seller.id, action="listing.image", entity_type="listing", entity_id=listing.id
+    )
+    await db.commit()
+    return ListingOut.from_model(await get_listing_or_404(db, listing.id))
+
+
+@router.get("/{listing_id}/reviews", response_model=ReviewsOut)
+async def listing_reviews(
+    listing_id: uuid.UUID,
+    db: DB,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+) -> ReviewsOut:
+    """Reviews of this listing, plus the average across all of the seller's reviews (FR-BUS-9)."""
+    listing = await get_listing_or_404(db, listing_id)
+    rows = await db.execute(
+        select(Review, User.username)
+        .join(User, User.id == Review.buyer_id)
+        .where(Review.listing_id == listing_id)
+        .order_by(Review.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    items = [
+        ReviewOut(
+            id=review.id,
+            order_id=review.order_id,
+            listing_id=review.listing_id,
+            author=username,
+            rating=review.rating,
+            comment=review.comment,
+            created_at=review.created_at,
+        )
+        for review, username in rows.all()
+    ]
+    average, count = (
+        await db.execute(
+            select(func.avg(Review.rating), func.count(Review.id)).where(
+                Review.seller_id == listing.seller_id
+            )
+        )
+    ).one()
+    return ReviewsOut(
+        items=items,
+        seller_average=round(float(average), 1) if average is not None else None,
+        seller_review_count=count,
+    )
+
+
+@router.post("/{listing_id}/save", status_code=status.HTTP_204_NO_CONTENT)
+async def save_listing(listing_id: uuid.UUID, db: DB, buyer: ActiveBuyer) -> None:
+    """Add to the wishlist. Saving twice is fine."""
+    await get_listing_or_404(db, listing_id)
+    await db.execute(
+        pg_insert(SavedItem)
+        .values(buyer_id=buyer.id, listing_id=listing_id)
+        .on_conflict_do_nothing()
+    )
+    await db.commit()
+
+
+@router.delete("/{listing_id}/save", status_code=status.HTTP_204_NO_CONTENT)
+async def unsave_listing(listing_id: uuid.UUID, db: DB, buyer: ActiveBuyer) -> None:
+    await db.execute(
+        delete(SavedItem).where(SavedItem.buyer_id == buyer.id, SavedItem.listing_id == listing_id)
+    )
+    await db.commit()
 
 
 async def _own_listing(db: DB, listing_id: uuid.UUID, seller_id: uuid.UUID) -> Listing:
