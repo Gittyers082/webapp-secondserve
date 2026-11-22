@@ -3,8 +3,9 @@ import AppLayout from '../../layouts/AppLayout.astro';
 import FoodArt from '../../components/FoodArt.astro';
 import Dialog from '../../components/Dialog.astro';
 import Icon from '../../components/Icon.astro';
+import Tip from '../../components/Tip.astro';
 import { seller, sellerListings } from '../../data/store';
-import { peso } from '../../data/types';
+import { discountPercent, peso } from '../../data/types';
 
 const draft = sellerListings[0]!;
 ---
@@ -17,65 +18,155 @@ const draft = sellerListings[0]!;
   subtitle="Turn tomorrow's surplus into today's sale."
   highlight="today's sale"
 >
+  <a class="btn" href="/seller/help" slot="actions">
+    <Icon name="help" />
+    Listing help
+  </a>
+
   <div class="add">
-    <!-- Listing details -------------------------------------------------- -->
-    <form class="form panel" method="post" data-demo-form data-next="/seller/listed-items">
-      <div class="field">
-        <label class="field-label" for="food-name">Food name</label>
-        <input class="input" id="food-name" name="name" value={draft.name} required />
-      </div>
+    <!-- Step-by-step listing (NFR-USER-U-1) --------------------------------- -->
+    <ol class="steps" aria-label="Listing steps">
+      <li class="step" data-step-marker="1" aria-current="step"><span class="step-num">1</span> Food</li>
+      <li class="step" data-step-marker="2"><span class="step-num">2</span> Price</li>
+      <li class="step" data-step-marker="3"><span class="step-num">3</span> Pickup</li>
+      <li class="step" data-step-marker="4"><span class="step-num">4</span> Review</li>
+    </ol>
 
-      <div class="field-row">
-        <div>
-          <label class="field-label" for="quantity">Quantity</label>
-          <input class="input" id="quantity" name="quantity" value={draft.quantity} inputmode="numeric" required />
-        </div>
-        <div>
-          <label class="field-label" for="original-price">Original price</label>
-          <input class="input" id="original-price" name="originalPrice" value={peso(draft.originalPrice)} />
-        </div>
-      </div>
+    <form class="form panel" method="post" data-listing-form novalidate>
+      <!-- Step 1 -->
+      <section class="wizard-step" data-step="1" aria-labelledby="step-1-title">
+        <h2 class="panel-title" id="step-1-title" tabindex="-1">What are you listing?</h2>
+        <p class="hint step-lede">Name it the way a buyer would search for it.</p>
 
-      <div class="field-row">
-        <div>
-          <label class="field-label" for="discounted-price">Discounted price</label>
-          <input
-            class="input"
-            id="discounted-price"
-            name="discountedPrice"
-            value={peso(draft.discountedPrice)}
-            aria-describedby="eligibility"
-            required
-          />
+        <div class="field">
+          <label class="field-label" for="food-name">
+            Food name
+            <Tip about="Food name" text="Include the amount or size, for example “Ube Cheese Pandesal (box of 6)”." />
+          </label>
+          <input class="input" id="food-name" name="name" value={draft.name} required data-error="Enter the food’s name, for example Ube Cheese Pandesal (box of 6)." />
         </div>
-        <div>
-          <label class="field-label" for="expiry-date">Expiry date</label>
-          <input class="input" id="expiry-date" name="expiryDate" value="Nov 5, 2026" />
-        </div>
-      </div>
 
-      <div class="field-row">
-        <div>
-          <label class="field-label" for="expiry-time">Expiry time</label>
-          <input class="input" id="expiry-time" name="expiryTime" value="6:00 PM" />
+        <div class="field">
+          <label class="field-label" for="category">Category</label>
+          <select class="input" id="category" name="category" required>
+            <option value="bread" selected>Bread</option>
+            <option value="pastries">Pastries</option>
+            <option value="savory">Savory</option>
+            <option value="cakes">Cakes</option>
+            <option value="fruit-cups">Fruit cups</option>
+          </select>
         </div>
-        <div>
-          <label class="field-label" for="pickup">Pickup location</label>
-          <input class="input" id="pickup" name="pickup" value={draft.pickupLocation} />
-        </div>
-      </div>
 
-      <p class="hint eligibility" id="eligibility">
-        Eligible products: surplus food that is still safe to eat and not yet expired. The discounted price must
-        be lower than the original price.
-      </p>
+        <div class="field">
+          <label class="field-label" for="description">
+            Description <span class="optional">(optional)</span>
+          </label>
+          <textarea class="input" id="description" name="description" maxlength="240">{draft.description}</textarea>
+        </div>
+      </section>
+
+      <!-- Step 2 -->
+      <section class="wizard-step" data-step="2" aria-labelledby="step-2-title" hidden>
+        <h2 class="panel-title" id="step-2-title" tabindex="-1">Price and quantity</h2>
+        <p class="hint step-lede">Buyers see both prices, the discount and how much they save.</p>
+
+        <div class="field">
+          <label class="field-label" for="quantity">
+            Quantity
+            <Tip about="Quantity" text="How many units you can hand over before the expiry time. Buyers cannot reserve more than this." />
+          </label>
+          <input class="input" id="quantity" name="quantity" type="number" min="1" step="1" value={draft.quantity} required />
+        </div>
+
+        <div class="field-row">
+          <div>
+            <label class="field-label" for="original-price">
+              Original price (₱)
+              <Tip about="Original price" text="What this normally sells for in your shop. It is shown struck through." />
+            </label>
+            <input class="input" id="original-price" name="originalPrice" type="number" min="1" step="0.01" value={draft.originalPrice.toFixed(2)} required />
+          </div>
+          <div>
+            <label class="field-label" for="discounted-price">
+              Discounted price (₱)
+              <Tip about="Discounted price" text="What buyers pay. It must be lower than the original price; most shops take 30–50% off." />
+            </label>
+            <input
+              class="input"
+              id="discounted-price"
+              name="discountedPrice"
+              type="number"
+              min="0"
+              step="0.01"
+              value={draft.discountedPrice.toFixed(2)}
+              aria-describedby="eligibility"
+              required
+            />
+          </div>
+        </div>
+
+        <p class="price-preview" aria-live="polite" data-price-preview>
+          Buyers see <strong data-preview-price>{peso(draft.discountedPrice)}</strong>,
+          <span data-preview-percent>{discountPercent(draft)}% off</span>, saving
+          <strong data-preview-save>{peso(draft.originalPrice - draft.discountedPrice)}</strong>.
+        </p>
+
+        <p class="hint eligibility" id="eligibility">
+          Eligible products: surplus food that is still safe to eat and not yet expired.
+        </p>
+      </section>
+
+      <!-- Step 3 -->
+      <section class="wizard-step" data-step="3" aria-labelledby="step-3-title" hidden>
+        <h2 class="panel-title" id="step-3-title" tabindex="-1">Pickup and expiry</h2>
+        <p class="hint step-lede">Buyers must collect before this time.</p>
+
+        <div class="field-row">
+          <div>
+            <label class="field-label" for="expiry-date">
+              Expiry date
+              <Tip about="Expiry date" text="The last day the food is good to eat or sell. The listing leaves the Shop after this." />
+            </label>
+            <input class="input" id="expiry-date" name="expiryDate" type="date" min="2026-11-04" value="2026-11-05" required data-error="Choose the last day the food is good." />
+          </div>
+          <div>
+            <label class="field-label" for="expiry-time">Expiry time</label>
+            <input class="input" id="expiry-time" name="expiryTime" type="time" value="18:00" required data-error="Choose a time, for example 6:00 PM." />
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field-label" for="pickup">
+            Pickup location
+            <Tip about="Pickup location" text="Where buyers collect and pay. Include the street, for example “Mang Ben’s Bakery, Session Road, Baguio”." />
+          </label>
+          <input class="input" id="pickup" name="pickup" value={draft.pickupLocation} required data-error="Enter where buyers collect the food." />
+        </div>
+      </section>
+
+      <!-- Step 4 -->
+      <section class="wizard-step" data-step="4" aria-labelledby="step-4-title" hidden>
+        <h2 class="panel-title" id="step-4-title" tabindex="-1">Check and publish</h2>
+        <p class="hint step-lede">This is how your listing will read in the Shop. Go back to change anything.</p>
+
+        <dl class="review-list" data-review-list>
+          <div><dt class="label">Food</dt><dd data-review="name"></dd></div>
+          <div><dt class="label">Category</dt><dd data-review="category"></dd></div>
+          <div><dt class="label">Price</dt><dd data-review="price"></dd></div>
+          <div><dt class="label">Quantity</dt><dd data-review="quantity"></dd></div>
+          <div><dt class="label">Collect before</dt><dd data-review="expiry"></dd></div>
+          <div><dt class="label">Pickup</dt><dd data-review="pickup"></dd></div>
+          <div><dt class="label">Photo</dt><dd data-review="photo"></dd></div>
+        </dl>
+      </section>
 
       <div class="form-actions">
-        <button class="btn btn-primary" type="submit">Publish listing</button>
-        <button class="btn" type="reset">Clear form</button>
+        <button class="btn" type="button" data-wizard-back hidden>Back</button>
+        <button class="btn btn-primary" type="button" data-wizard-next>Next: price</button>
+        <button class="btn btn-primary" type="submit" data-wizard-publish hidden>Publish listing</button>
+        <span class="small muted step-count" data-step-count>Step 1 of 4</span>
       </div>
     </form>
-
   </div>
 
   <Fragment slot="rail">
@@ -93,7 +184,7 @@ const draft = sellerListings[0]!;
           <FoodArt art={draft.art} ratio="4 / 3" />
         </div>
 
-        <p class="photo-name">{draft.name}</p>
+        <p class="photo-name" data-photo-name>{draft.name}</p>
         <p class="small muted">
           {draft.shopName} &middot; {peso(draft.discountedPrice)} &middot; {draft.quantity} left
         </p>
@@ -184,9 +275,144 @@ const draft = sellerListings[0]!;
 <script>
   import { announce } from '../../scripts/announce';
   import { closeDialog, openDialog } from '../../scripts/dialog';
-  import { initDemoForms } from '../../scripts/demo-forms';
+  import { run, showError } from '../../scripts/request';
+  import { liveValidate, validate } from '../../scripts/validate';
+  import { api } from '../../api/client';
 
-  initDemoForms();
+  // The four-step listing form (NFR-USER-U-1). Each step is checked before
+  // moving on; the last one shows everything for a final look, then publishes
+  // through the API client.
+  const form = document.querySelector<HTMLFormElement>('[data-listing-form]');
+  const steps = Array.from(document.querySelectorAll<HTMLElement>('[data-step]'));
+  const markers = Array.from(document.querySelectorAll<HTMLElement>('[data-step-marker]'));
+  const back = document.querySelector<HTMLButtonElement>('[data-wizard-back]');
+  const next = document.querySelector<HTMLButtonElement>('[data-wizard-next]');
+  const publish = document.querySelector<HTMLButtonElement>('[data-wizard-publish]');
+  const count = document.querySelector<HTMLElement>('[data-step-count]');
+  const nextLabels = ['Next: price', 'Next: pickup', 'Next: review'];
+  let current = 1;
+
+  const priceRule = (field: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement) => {
+    if (field.id !== 'discounted-price' || !form) return null;
+    const original = Number(new FormData(form).get('originalPrice'));
+    const sale = Number(field.value);
+    return original > 0 && field.value !== '' && sale >= original
+      ? `Make the discounted price lower than the original price of ₱${original.toFixed(2)}.`
+      : null;
+  };
+
+  const peso = (value: number) =>
+    `₱${value.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  const updatePreview = () => {
+    if (!form) return;
+    const data = new FormData(form);
+    const original = Number(data.get('originalPrice'));
+    const sale = Number(data.get('discountedPrice'));
+    const set = (key: string, value: string) => {
+      const node = document.querySelector<HTMLElement>(`[data-preview-${key}]`);
+      if (node) node.textContent = value;
+    };
+    if (original > 0 && sale >= 0 && sale < original) {
+      set('price', peso(sale));
+      set('percent', `${Math.round((1 - sale / original) * 100)}% off`);
+      set('save', peso(original - sale));
+    }
+  };
+
+  const fillReview = () => {
+    if (!form) return;
+    const data = new FormData(form);
+    const category = form.querySelector<HTMLSelectElement>('#category');
+    const original = Number(data.get('originalPrice'));
+    const sale = Number(data.get('discountedPrice'));
+    const date = new Date(`${data.get('expiryDate')}T${data.get('expiryTime')}`);
+    const values: Record<string, string> = {
+      name: String(data.get('name')),
+      category: category?.selectedOptions[0]?.textContent ?? '',
+      price: `${peso(sale)} (was ${peso(original)}, ${Math.round((1 - sale / original) * 100)}% off)`,
+      quantity: `${data.get('quantity')} left`,
+      expiry: date.toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' }),
+      pickup: String(data.get('pickup')),
+      photo: document.querySelector('[data-photo-added]:not([hidden])') ? 'Added' : 'Missing: add one in the photo panel',
+    };
+    Object.entries(values).forEach(([key, value]) => {
+      const node = document.querySelector<HTMLElement>(`[data-review="${key}"]`);
+      if (node) node.textContent = value;
+    });
+  };
+
+  const show = (step: number) => {
+    current = step;
+    steps.forEach((section) => (section.hidden = Number(section.dataset.step) !== step));
+    markers.forEach((marker) => {
+      const n = Number(marker.dataset.stepMarker);
+      marker.classList.toggle('is-done', n < step);
+      if (n === step) marker.setAttribute('aria-current', 'step');
+      else marker.removeAttribute('aria-current');
+    });
+    if (back) back.hidden = step === 1;
+    if (next) {
+      next.hidden = step === 4;
+      next.textContent = nextLabels[step - 1] ?? 'Next';
+    }
+    if (publish) publish.hidden = step !== 4;
+    if (count) count.textContent = `Step ${step} of 4`;
+    if (step === 4) fillReview();
+    document.getElementById(`step-${step}-title`)?.focus();
+  };
+
+  if (form) liveValidate(form, priceRule);
+  form?.addEventListener('input', () => {
+    updatePreview();
+    const photoName = document.querySelector<HTMLElement>('[data-photo-name]');
+    const nameField = form.querySelector<HTMLInputElement>('#food-name');
+    if (photoName && nameField) photoName.textContent = nameField.value || 'Your listing';
+  });
+
+  next?.addEventListener('click', () => {
+    const section = steps[current - 1];
+    if (form && section && validate(form, { within: section, extra: priceRule })) show(current + 1);
+  });
+
+  back?.addEventListener('click', () => show(current - 1));
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!validate(form, { extra: priceRule })) {
+      // Jump to the step that holds the first problem.
+      const bad = form.querySelector<HTMLElement>('[aria-invalid="true"]');
+      const step = Number(bad?.closest<HTMLElement>('[data-step]')?.dataset.step ?? current);
+      show(step);
+      bad?.focus();
+      return;
+    }
+    if (!document.querySelector('[data-photo-added]:not([hidden])')) {
+      showError('Add a photo before publishing. Use Take photo or Upload in the photo panel.');
+      document.querySelector<HTMLElement>('[data-photo-empty] button')?.focus();
+      return;
+    }
+    const data = new FormData(form);
+    const created = await run(publish, () =>
+      api.seller.createListing({
+        name: String(data.get('name')).trim(),
+        description: String(data.get('description') ?? '').trim(),
+        category: String(data.get('category')) as 'bread' | 'pastries' | 'savory' | 'cakes' | 'fruit-cups',
+        quantity: Number(data.get('quantity')),
+        originalPrice: Number(data.get('originalPrice')),
+        discountedPrice: Number(data.get('discountedPrice')),
+        expiresAt: `${data.get('expiryDate')}T${data.get('expiryTime')}`,
+        pickupLocation: String(data.get('pickup')).trim(),
+      }),
+    );
+    if (created) {
+      // Confirmation on screen before moving on (NFR-USER-R-2).
+      announce('Listing published. Taking you to My Listed Items.');
+      publish?.setAttribute('aria-busy', 'true');
+      if (publish) publish.textContent = 'Published';
+      window.setTimeout(() => window.location.assign('/seller/listed-items'), 900);
+    }
+  });
 
   const added = document.querySelector<HTMLElement>('[data-photo-added]');
   const empty = document.querySelector<HTMLElement>('[data-photo-empty]');
@@ -221,6 +447,116 @@ const draft = sellerListings[0]!;
     max-width: 860px;
   }
 
+  .steps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-5);
+    counter-reset: none;
+  }
+
+  .step {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    min-height: 40px;
+    padding: 0 var(--sp-4) 0 6px;
+    border-radius: var(--r-pill);
+    background: var(--s3);
+    color: var(--muted);
+    font-size: var(--fs-md);
+    font-weight: 600;
+  }
+
+  .step-num {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--s4);
+    color: var(--text);
+    font-size: var(--fs-sm);
+  }
+
+  .step[aria-current='step'] {
+    background: var(--contrast);
+    color: var(--contrast-text);
+  }
+
+  .step[aria-current='step'] .step-num,
+  .step.is-done .step-num {
+    background: var(--brick);
+    color: #fff;
+  }
+
+  .step.is-done {
+    color: var(--text-soft);
+  }
+
+  .wizard-step .panel-title:focus {
+    outline: none;
+  }
+
+  .step-lede {
+    margin: 4px 0 var(--sp-5);
+  }
+
+  .optional {
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  .field-label :global(.tip) {
+    margin-left: 4px;
+  }
+
+  .price-preview {
+    margin-top: var(--sp-5);
+    padding: var(--sp-4);
+    border-radius: var(--r-md);
+    background: var(--s3);
+    color: var(--text-soft);
+  }
+
+  .price-preview strong {
+    color: var(--text);
+  }
+
+  .price-preview span {
+    color: var(--brick-text);
+    font-weight: 700;
+  }
+
+  .review-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--sp-4) var(--sp-6);
+    padding: var(--sp-5);
+    border-radius: var(--r-lg);
+    background: var(--s3);
+  }
+
+  .review-list dd {
+    margin-top: 2px;
+    font-weight: 600;
+  }
+
+  .step-count {
+    margin-left: auto;
+    align-self: center;
+  }
+
+  @media (max-width: 599px) {
+    .review-list {
+      grid-template-columns: 1fr;
+    }
+
+    .step {
+      padding-right: var(--sp-3);
+    }
+  }
+
   .eligibility {
     margin-top: 16px;
     max-width: 64ch;
@@ -228,6 +564,7 @@ const draft = sellerListings[0]!;
 
   .form-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 12px;
     margin-top: 24px;
   }

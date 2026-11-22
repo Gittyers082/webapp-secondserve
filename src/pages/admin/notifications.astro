@@ -1,0 +1,18 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import NotificationCenter from '../../components/NotificationCenter.astro';
+import { admin, adminNotifications, unreadCount } from '../../data/store';
+
+const unread = unreadCount(adminNotifications);
+---
+
+<AppLayout
+  role="admin"
+  username={admin.username}
+  section="Notifications"
+  heading="Notifications"
+  subtitle={`${unread} unread. Orders, listings and account news in one place.`}
+  highlight={`${unread} unread`}
+>
+  <NotificationCenter items={adminNotifications} />
+</AppLayout>

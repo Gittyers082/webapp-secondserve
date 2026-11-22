@@ -1,5 +1,6 @@
 ---
 import AuthLayout from '../layouts/AuthLayout.astro';
+import Tip from '../components/Tip.astro';
 ---
 
 <AuthLayout
@@ -15,16 +16,20 @@ import AuthLayout from '../layouts/AuthLayout.astro';
 
     <div class="field">
       <label class="field-label" for="new-username">Username</label>
-      <input class="input" id="new-username" name="username" value="mangben_owner" autocomplete="username" required />
+      <input class="input" id="new-username" name="username" value="mangben_owner" autocomplete="username" required minlength="3" data-error="Choose a username. Buyers and sellers will see it." />
     </div>
 
     <div class="field">
       <label class="field-label" for="new-password">Password</label>
-      <input class="input" id="new-password" name="password" type="password" value="secondserve" autocomplete="new-password" required />
+      <input class="input" id="new-password" name="password" type="password" value="secondserve" autocomplete="new-password" required minlength="8" aria-describedby="password-rule" />
+      <p class="hint field-hint" id="password-rule">At least 8 characters.</p>
     </div>
 
     <div class="field">
-      <span class="field-label" id="account-type-label">Account type</span>
+      <span class="field-label" id="account-type-label">
+        Account type
+        <Tip about="Account type" text="Buyers reserve discounted food. Sellers list their shop’s surplus. An administrator approves every new account." />
+      </span>
       <div class="segmented" role="radiogroup" aria-labelledby="account-type-label">
         <button class="segment" type="button" role="radio" data-role="buyer" aria-checked="false" tabindex="-1">
           Buyer
@@ -36,7 +41,10 @@ import AuthLayout from '../layouts/AuthLayout.astro';
     </div>
 
     <div class="field" data-shop-field>
-      <label class="field-label" for="shop">Shop / business name</label>
+      <label class="field-label" for="shop">
+        Shop / business name
+        <Tip about="Shop name" text="Buyers see this on every listing. You can add a logo and description later from your profile." />
+      </label>
       <input class="input" id="shop" name="shop" value="Mang Ben's Bakery" required />
     </div>
 

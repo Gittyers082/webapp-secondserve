@@ -1,86 +1,17 @@
 ---
-import AuthLayout from '../layouts/AuthLayout.astro';
-import { SERVER } from '../data/store';
+// The app talks to the hosted SecondServe API, so there is no server to pick.
+// The old "Connect to server" screen is gone; the root URL goes to sign-in.
 ---
 
-<AuthLayout
-  title="Connect to Server"
-  headline="Good products deserve a second chance."
-  accent="a second chance."
-  lede="Sellers list surplus products at a discount. Buyers find them, reserve them, and pick them up."
->
-  <form class="connect" method="post" action="/login" novalidate>
-    <h2 class="display-title">Connect to server</h2>
-    <p class="hint">Enter the address of your SecondServe server to begin.</p>
-
-    <div class="field">
-      <label class="field-label" for="host">Server address</label>
-      <input class="input" id="host" name="host" value={SERVER.host} autocomplete="off" required aria-describedby="connect-error" />
-    </div>
-
-    <div class="field">
-      <label class="field-label" for="port">Port</label>
-      <input
-        class="input"
-        id="port"
-        name="port"
-        value={SERVER.port}
-        inputmode="numeric"
-        autocomplete="off"
-        required
-        aria-describedby="connect-error"
-      />
-    </div>
-
-    <p class="notice notice-error" id="connect-error" role="alert" data-connect-error hidden>
-      <span><strong>Connection failed.</strong> Could not reach server. Check the address and port.</span>
-    </p>
-
-    <button class="btn btn-primary btn-lg btn-block" type="submit">Connect</button>
-    <p class="caption">First screen of the desktop app</p>
-  </form>
-</AuthLayout>
-
-<script>
-  const form = document.querySelector<HTMLFormElement>('.connect');
-  const error = document.querySelector<HTMLElement>('[data-connect-error]');
-
-  form?.addEventListener('submit', (event) => {
-    event.preventDefault();
-
-    const fields = Array.from(form.querySelectorAll<HTMLInputElement>('#host, #port'));
-    const missing = fields.filter((field) => field.value.trim() === '');
-
-    fields.forEach((field) => field.setAttribute('aria-invalid', String(missing.includes(field))));
-    if (error) error.hidden = missing.length === 0;
-
-    if (missing.length > 0) {
-      missing[0]?.focus();
-      return;
-    }
-
-    // No server yet: a reachable address moves straight on to sign-in.
-    window.location.assign('/login');
-  });
-</script>
-
-<style>
-  .connect .hint {
-    margin: 8px 0 24px;
-  }
-
-  .notice {
-    margin-top: 16px;
-  }
-
-  .connect .btn {
-    margin-top: 20px;
-  }
-
-  .caption {
-    margin-top: 16px;
-    text-align: center;
-    font-size: var(--fs-sm);
-    color: var(--muted);
-  }
-</style>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="refresh" content="0; url=/login" />
+    <link rel="canonical" href="/login" />
+    <title>SecondServe</title>
+  </head>
+  <body>
+    <p><a href="/login">Continue to sign in</a></p>
+  </body>
+</html>

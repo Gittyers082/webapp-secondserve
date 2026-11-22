@@ -1,0 +1,269 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import FoodArt from '../../components/FoodArt.astro';
+import Stars from '../../components/Stars.astro';
+import { buyer, listings, reviewsForShop } from '../../data/store';
+import { averageRating, discountPercent, peso } from '../../data/types';
+
+
+const columns = listings.map((listing) => {
+  const shopReviews = reviewsForShop(listing.shopName);
+  return {
+    listing,
+    rating: averageRating(shopReviews.map((review) => review.rating)),
+    reviewCount: shopReviews.length,
+    percent: discountPercent(listing),
+  };
+});
+---
+
+<AppLayout
+  role="buyer"
+  username={buyer.username}
+  section="Compare"
+  heading="Compare"
+  subtitle="Prices, discounts and pickup details side by side."
+  highlight="side by side"
+  activeHref="/buyer/wishlist"
+>
+  <a class="btn" href="/buyer/wishlist" slot="actions">Back to Wishlist</a>
+
+  <div class="table-wrap">
+    <table class="table compare" data-compare>
+      <caption class="sr-only">Listings compared side by side</caption>
+      <thead>
+        <tr>
+          <th scope="col"><span class="sr-only">Detail</span></th>
+          {
+            columns.map(({ listing }) => (
+              <th
+                scope="col"
+                data-col={listing.id}
+                data-price={listing.discountedPrice}
+                data-percent={discountPercent(listing)}
+                data-active={String(listing.status === 'active')}
+              >
+                {listing.name}
+              </th>
+            ))
+          }
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row">Photo</th>
+          {
+            columns.map(({ listing }) => (
+              <td data-col={listing.id}>
+                <span class="compare-photo">
+                  <FoodArt art={listing.art} ratio="4 / 3" />
+                </span>
+              </td>
+            ))
+          }
+        </tr>
+        <tr>
+          <th scope="row">Price</th>
+          {
+            columns.map(({ listing }) => (
+              <td data-col={listing.id}>
+                <span class="price">
+                  <del>
+                    <span class="sr-only">Was </span>
+                    {peso(listing.originalPrice)}
+                  </del>
+                  <ins>
+                    <span class="sr-only">Now </span>
+                    {peso(listing.discountedPrice)}
+                  </ins>
+                </span>
+                <span class="pill pill-ok best" data-best="price" hidden>
+                  Lowest price here
+                </span>
+              </td>
+            ))
+          }
+        </tr>
+        <tr>
+          <th scope="row">Discount</th>
+          {
+            columns.map(({ listing, percent }) => (
+              <td data-col={listing.id}>
+                <span class="discount">{percent}% off</span>
+                <span class="pill pill-ok best" data-best="percent" hidden>
+                  Biggest discount here
+                </span>
+              </td>
+            ))
+          }
+        </tr>
+        <tr>
+          <th scope="row">You save</th>
+          {
+            columns.map(({ listing }) => (
+              <td data-col={listing.id} class="save-cell tnum">
+                {peso(listing.originalPrice - listing.discountedPrice)}
+              </td>
+            ))
+          }
+        </tr>
+        <tr>
+          <th scope="row">Shop</th>
+          {columns.map(({ listing }) => <td data-col={listing.id}>{listing.shopName}</td>)}
+        </tr>
+        <tr>
+          <th scope="row">Shop rating</th>
+          {
+            columns.map(({ listing, rating, reviewCount }) => (
+              <td data-col={listing.id}>
+                {reviewCount > 0 ? (
+                  <span class="rating">
+                    <Stars rating={rating} showValue />
+                    <span class="small muted">{reviewCount} reviews</span>
+                  </span>
+                ) : (
+                  <span class="muted">No reviews yet</span>
+                )}
+              </td>
+            ))
+          }
+        </tr>
+        <tr>
+          <th scope="row">Expires</th>
+          {columns.map(({ listing }) => <td data-col={listing.id}>{listing.expiryLabel}</td>)}
+        </tr>
+        <tr>
+          <th scope="row">In stock</th>
+          {columns.map(({ listing }) => <td data-col={listing.id} class="tnum">{listing.quantity} left</td>)}
+        </tr>
+        <tr>
+          <th scope="row">Pickup</th>
+          {columns.map(({ listing }) => <td data-col={listing.id}>{listing.pickupLocation}</td>)}
+        </tr>
+        <tr>
+          <th scope="row"><span class="sr-only">Actions</span></th>
+          {
+            columns.map(({ listing }) => (
+              <td data-col={listing.id}>
+                {listing.status === 'active' ? (
+                  <a class="btn btn-sm btn-primary" href={`/buyer/listing/${listing.id}`}>
+                    View and reserve
+                  </a>
+                ) : (
+                  <span class="pill pill-danger">Expired</span>
+                )}
+              </td>
+            ))
+          }
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="empty" data-compare-empty hidden>
+    <h2>Pick something to compare.</h2>
+    <p>Choose two or three saved items on your Wishlist, then select Compare.</p>
+    <a class="btn btn-primary" href="/buyer/wishlist">Open Wishlist</a>
+  </div>
+</AppLayout>
+
+<script>
+  import { savedIds } from '../../scripts/wishlist';
+
+  // Shows the columns named in ?ids=, or the first three saved items.
+  const fromQuery = new URLSearchParams(window.location.search).get('ids');
+  const ids = (fromQuery ? fromQuery.split(',') : savedIds()).filter(Boolean).slice(0, 3);
+  const known = new Set(Array.from(document.querySelectorAll<HTMLElement>('thead [data-col]')).map((cell) => cell.dataset.col));
+  const shown = ids.filter((id) => known.has(id));
+
+  document.querySelectorAll<HTMLElement>('[data-col]').forEach((cell) => {
+    cell.hidden = !shown.includes(cell.dataset.col ?? '');
+  });
+
+  // Mark the best price and discount among the items actually compared.
+  const heads = Array.from(document.querySelectorAll<HTMLElement>('thead [data-col]')).filter(
+    (cell) => shown.includes(cell.dataset.col ?? '') && cell.dataset.active === 'true',
+  );
+  if (heads.length > 1) {
+    const lowest = Math.min(...heads.map((cell) => Number(cell.dataset.price)));
+    const biggest = Math.max(...heads.map((cell) => Number(cell.dataset.percent)));
+    heads.forEach((cell) => {
+      const id = cell.dataset.col;
+      const mark = (kind: string, on: boolean) => {
+        const pill = document.querySelector<HTMLElement>(`td[data-col="${id}"] [data-best="${kind}"]`);
+        if (pill) pill.hidden = !on;
+      };
+      mark('price', Number(cell.dataset.price) === lowest);
+      mark('percent', Number(cell.dataset.percent) === biggest);
+    });
+  }
+
+  if (shown.length === 0) {
+    document.querySelector<HTMLElement>('[data-compare]')?.closest('.table-wrap')?.setAttribute('hidden', '');
+    const empty = document.querySelector<HTMLElement>('[data-compare-empty]');
+    if (empty) empty.hidden = false;
+  }
+</script>
+
+<style>
+  .compare {
+    min-width: 560px;
+    table-layout: fixed;
+  }
+
+  .compare thead th:first-child,
+  .compare tbody th {
+    width: 140px;
+  }
+
+  .compare tbody th {
+    padding: 14px 16px 14px 24px;
+    background: var(--s2);
+    border-radius: var(--r-lg) 0 0 var(--r-lg);
+    color: var(--muted);
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  .compare tbody td:first-of-type {
+    border-radius: 0;
+    padding-left: 16px;
+  }
+
+  .compare thead th:not(:first-child) {
+    color: var(--text);
+    font-weight: 700;
+    white-space: normal;
+  }
+
+  .compare-photo {
+    display: block;
+    max-width: 220px;
+  }
+
+  .best {
+    margin-top: 6px;
+  }
+
+  .compare td {
+    vertical-align: top;
+  }
+
+  .compare td .price + .best,
+  .compare td .discount + .best {
+    display: flex;
+    width: max-content;
+  }
+
+  .save-cell {
+    color: var(--brick-text);
+    font-weight: 700;
+  }
+
+  .rating {
+    display: grid;
+    gap: 4px;
+  }
+</style>

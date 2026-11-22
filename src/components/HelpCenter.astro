@@ -1,0 +1,155 @@
+---
+import Icon from './Icon.astro';
+import { faq } from '../data/store';
+import type { Role } from '../data/types';
+
+interface Props {
+  role: Role;
+}
+
+const { role } = Astro.props;
+const entries = faq.filter((entry) => !entry.roles || entry.roles.includes(role));
+---
+
+<div class="help">
+  <div class="faq-col">
+    <div class="search">
+      <label class="sr-only" for="faq-search">Search help</label>
+      <input class="input" id="faq-search" type="search" placeholder="Search questions" data-search />
+      <span class="search-button" aria-hidden="true"><Icon name="search" /></span>
+    </div>
+
+    <ul class="faq" aria-label="Frequently asked questions">
+      {
+        entries.map((entry, index) => (
+          <li data-faq data-text={`${entry.question} ${entry.answer}`.toLowerCase()}>
+            <details class="faq-item" open={index === 0}>
+              <summary>
+                <span>{entry.question}</span>
+                <Icon name="chevron-right" size={18} class="faq-chev" />
+              </summary>
+              <p>{entry.answer}</p>
+            </details>
+          </li>
+        ))
+      }
+    </ul>
+    <p class="no-results" data-no-results hidden>No question matches that. Try another word, or ask an administrator.</p>
+  </div>
+
+  <aside class="panel contact" aria-labelledby="contact-title">
+    <h2 class="panel-title" id="contact-title">Still stuck?</h2>
+    <p class="soft">
+      {
+        role === 'admin'
+          ? 'Platform problems go to the SecondServe team.'
+          : 'An administrator can reset your password, unlock your account and look into an order.'
+      }
+    </p>
+    <dl class="contact-facts">
+      <div>
+        <dt class="label">Your role</dt>
+        <dd>{role === 'buyer' ? 'Buyer' : role === 'seller' ? 'Seller' : 'Administrator'}</dd>
+      </div>
+    </dl>
+    <p class="hint">Tell them your username, what you were doing and what the screen said.</p>
+  </aside>
+</div>
+
+<script>
+  import { setupFilters } from '../scripts/filters';
+
+  setupFilters({
+    items: () => Array.from(document.querySelectorAll<HTMLElement>('[data-faq]')),
+    noun: 'question',
+    matches: (item, _filter, term) => term === '' || (item.dataset.text ?? '').includes(term),
+  });
+</script>
+
+<style>
+  .help {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: var(--gutter);
+    align-items: start;
+  }
+
+  .faq {
+    display: grid;
+    gap: 8px;
+    margin-top: var(--sp-5);
+  }
+
+  .faq-item {
+    border-radius: var(--r-lg);
+    background: var(--s2);
+    -webkit-backdrop-filter: var(--blur);
+    backdrop-filter: var(--blur);
+  }
+
+  .faq-item summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-4);
+    min-height: 56px;
+    padding: var(--sp-3) var(--sp-5);
+    font-weight: 600;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .faq-item summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .faq-item summary :global(.faq-chev) {
+    flex: none;
+    color: var(--muted);
+    transition: transform var(--dur) var(--ease-out);
+  }
+
+  .faq-item[open] summary :global(.faq-chev) {
+    transform: rotate(90deg);
+  }
+
+  .faq-item summary:hover {
+    color: var(--brick-text);
+  }
+
+  .faq-item p {
+    padding: 0 var(--sp-5) var(--sp-5);
+    color: var(--text-soft);
+    line-height: 1.6;
+    max-width: 68ch;
+  }
+
+  .contact {
+    display: grid;
+    gap: var(--sp-4);
+    position: sticky;
+    top: var(--sp-8);
+  }
+
+  .contact-facts {
+    display: grid;
+    gap: var(--sp-3);
+    padding: var(--sp-4);
+    border-radius: var(--r-md);
+    background: var(--s3);
+  }
+
+  .contact-facts dd {
+    font-weight: 600;
+  }
+
+  @media (max-width: 1099px) {
+    .help {
+      grid-template-columns: 1fr;
+    }
+
+    .contact {
+      position: static;
+    }
+  }
+</style>

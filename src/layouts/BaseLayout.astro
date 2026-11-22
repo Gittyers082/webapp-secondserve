@@ -49,9 +49,12 @@ const { title, description = 'Good products deserve a second chance.' } = Astro.
       <slot />
     </div>
     <p class="sr-only" role="status" aria-live="polite" aria-atomic="true" data-announcer></p>
+    <p class="toast" data-toast hidden></p>
     <script>
       import { initThemeToggles } from '../scripts/theme';
+      import { initTips } from '../scripts/tips';
       initThemeToggles();
+      initTips();
     </script>
   </body>
 </html>

@@ -1,0 +1,37 @@
+# Render Blueprint for the SecondServe API.
+# Render dashboard > New > Blueprint > pick this repo.
+# Secret values (sync: false) are typed into the dashboard, never committed.
+services:
+  - type: web
+    name: secondserve-api
+    runtime: python
+    plan: free
+    region: singapore
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    # The free plan has no pre-deploy step, so migrations are run by hand
+    # (alembic upgrade head from backend/) before merging a new one into main.
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    # Deploy releases only: dev is merged into main when it is ready to ship.
+    branch: main
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: ENVIRONMENT
+        value: production
+      - key: CORS_ORIGINS
+        sync: false # e.g. https://secondserve.vercel.app
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: CELERY_ENABLED
+        value: "false"

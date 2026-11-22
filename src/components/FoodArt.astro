@@ -7,17 +7,30 @@ interface Props {
   muted?: boolean;
   /** Width and height ratio of the frame, e.g. "4 / 3" or "1 / 1". */
   ratio?: string;
-  /** Load straight away instead of when scrolled near. */
+  /** Load straight away, at high priority, instead of when scrolled near. */
   eager?: boolean;
+  /** How wide the photo is drawn, so the browser picks the small or large file. */
+  sizes?: string;
   class?: string;
 }
 
-const { art, muted = false, ratio = '4 / 3', eager = false, class: className } = Astro.props;
+const {
+  art,
+  muted = false,
+  ratio = '4 / 3',
+  eager = false,
+  sizes = '(max-width: 600px) 92vw, 320px',
+  class: className,
+} = Astro.props;
 
 /*
  * Openly licensed photographs from Wikimedia Commons, stored in
  * public/photos/ and credited in public/photos/CREDITS.md. They stand in for
  * the sellers' own photos until listings carry real uploads.
+ *
+ * Each photo has a 480px copy in public/photos/480/ for cards and thumbnails
+ * and a 960px original for large views; both are progressive JPEGs, and the
+ * frame shows a tinted placeholder until the image arrives (NFR-USER-U-6).
  */
 const photos: Record<FoodArt, { alt: string; width: number; height: number }> = {
   'pandesal-ube': { alt: 'Ube pandesal: purple bread rolls dusted with crumbs', width: 960, height: 715 },
@@ -38,11 +51,14 @@ const photo = photos[art];
 <figure class:list={['food-photo', { 'is-muted': muted }, className]} style={`--ratio:${ratio}`}>
   <img
     class="photo"
-    src={`/photos/${art}.jpg`}
+    src={`/photos/480/${art}.jpg`}
+    srcset={`/photos/480/${art}.jpg 480w, /photos/${art}.jpg 960w`}
+    sizes={sizes}
     alt={photo.alt}
     width={photo.width}
     height={photo.height}
     loading={eager ? 'eager' : 'lazy'}
+    fetchpriority={eager ? 'high' : 'auto'}
     decoding="async"
   />
 </figure>

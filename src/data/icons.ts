@@ -29,4 +29,13 @@ export type IconName =
   | 'store'
   | 'minus'
   | 'sun'
-  | 'moon';
+  | 'moon'
+  | 'menu'
+  | 'close'
+  | 'bell'
+  | 'heart'
+  | 'star'
+  | 'chart'
+  | 'help'
+  | 'compare'
+  | 'message';

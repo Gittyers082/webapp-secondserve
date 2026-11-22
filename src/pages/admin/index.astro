@@ -51,7 +51,7 @@ const filters = [
     <tbody>
       {
         users.map((user) => (
-          <tr data-user={user.username} data-role={user.role} data-status={user.status}>
+          <tr data-user={user.username} data-user-id={user.id} data-role={user.role} data-status={user.status}>
             <td class="name">
               <span class="who">
                 <span class="avatar" aria-hidden="true">{user.username.charAt(0)}</span>
@@ -98,6 +98,8 @@ const filters = [
   import { announce } from '../../scripts/announce';
   import { closeDialog, openDialog } from '../../scripts/dialog';
   import { setupFilters } from '../../scripts/filters';
+  import { run } from '../../scripts/request';
+  import { api } from '../../api/client';
 
   const rows = () => Array.from(document.querySelectorAll<HTMLElement>('[data-user]'));
   const scrim = document.querySelector<HTMLElement>('[data-dialog="confirm-ban"]');
@@ -131,11 +133,17 @@ const filters = [
     announce(`${user} ${banned ? 'banned' : 'unbanned'}.`);
   };
 
+  const save = async (row: HTMLElement, banned: boolean, button: HTMLButtonElement | null) => {
+    const user = await run(button, () => api.admin.setBanned(row.dataset.userId ?? '', banned));
+    if (user) setBanned(row, banned);
+    return Boolean(user);
+  };
+
   rows().forEach((row) => {
     const button = row.querySelector<HTMLButtonElement>('[data-toggle-ban]');
-    button?.addEventListener('click', () => {
+    button?.addEventListener('click', async () => {
       if (row.dataset.status === 'banned') {
-        setBanned(row, false);
+        await save(row, false, button);
         return;
       }
 
@@ -149,11 +157,13 @@ const filters = [
     });
   });
 
-  document.querySelector<HTMLButtonElement>('[data-confirm-ban]')?.addEventListener('click', () => {
+  document.querySelector<HTMLButtonElement>('[data-confirm-ban]')?.addEventListener('click', async (event) => {
     const row = pending;
+    if (!row) return;
+    const ok = await save(row, true, event.currentTarget as HTMLButtonElement);
+    if (!ok) return;
     pending = null;
     closeDialog();
-    if (row) setBanned(row, true);
     apply(false);
   });
 </script>
