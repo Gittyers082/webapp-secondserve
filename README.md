@@ -21,8 +21,8 @@ This repo now holds both halves of SecondServe:
 | [`docs/`](docs/) | [Decisions](docs/DECISIONS.md), [team roles](docs/ROLES.md) | — |
 
 Start with [CONTRIBUTING.md](CONTRIBUTING.md) for branches, commits and PRs.
-The frontend talks to the API through `src/lib/api.ts`; copy `.env.example` to `.env`
-and set `PUBLIC_API_URL`.
+The frontend talks to the API through `src/api/client.ts`; copy `.env.example` to `.env`
+and set `PUBLIC_API_BASE_URL`.
 
 ## Running it
 
