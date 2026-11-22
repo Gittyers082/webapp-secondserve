@@ -9,9 +9,12 @@ services:
     region: singapore
     rootDir: backend
     buildCommand: pip install -r requirements.txt
-    preDeployCommand: alembic upgrade head
+    # The free plan has no pre-deploy step, so migrations are run by hand
+    # (alembic upgrade head from backend/) before merging a new one into main.
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
+    # Deploy releases only: dev is merged into main when it is ready to ship.
+    branch: main
     autoDeploy: true
     envVars:
       - key: PYTHON_VERSION
@@ -23,8 +26,6 @@ services:
       - key: DATABASE_URL
         sync: false
       - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_JWT_SECRET
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
