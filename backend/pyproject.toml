@@ -7,6 +7,8 @@ requires-python = ">=3.10"
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+# Alembic writes migrations in its own style; review them by hand instead.
+extend-exclude = ["alembic/versions"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
