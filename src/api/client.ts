@@ -67,12 +67,12 @@ export const api = {
   seller: {
     listings: () =>
       isLive
-        ? request<Listing[]>("GET", "/seller/listings")
+        ? request<Listing[]>("GET", "/listings/mine")
         : offline(seed.sellerListings),
 
     createListing: (input: ListingInput) =>
       isLive
-        ? request<Listing>("POST", "/seller/listings", input)
+        ? request<Listing>("POST", "/listings", input)
         : offline({
             ...seed.sellerListings[0]!,
             ...input,
@@ -82,49 +82,53 @@ export const api = {
 
     updateListing: (id: string, input: Partial<ListingInput>) =>
       isLive
-        ? request<Listing>("PATCH", `/seller/listings/${id}`, input)
+        ? request<Listing>("PATCH", `/listings/${id}`, input)
         : offline({ ...find(seed.sellerListings, id), ...input } as Listing),
 
     setStatus: (id: string, status: "sold" | "withdrawn") =>
       isLive
-        ? request<Listing>("POST", `/seller/listings/${id}/status`, { status })
+        ? request<Listing>("POST", `/listings/${id}/status`, { status })
         : offline({ ...find(seed.sellerListings, id), status }),
 
     deleteListing: (id: string) =>
       isLive
-        ? request<null>("DELETE", `/seller/listings/${id}`)
+        ? request<null>("DELETE", `/listings/${id}`)
         : offline(null),
 
     orders: () =>
       isLive
-        ? request<Order[]>("GET", "/seller/orders")
+        ? request<Order[]>("GET", "/orders/mine")
         : offline(seed.handoverQueue),
 
     markReady: (orderId: string) =>
       isLive
-        ? request<Order>("POST", `/seller/orders/${orderId}/ready`)
+        ? request<Order>("POST", `/orders/${orderId}/ready`)
         : offline({
             ...find(seed.handoverQueue, orderId),
             status: "ready",
           } as Order),
 
+    // TODO(Role 1): the backend has no seller reviews route yet.
     reviews: () =>
       isLive
         ? request<Review[]>("GET", "/seller/reviews")
         : offline(seed.reviews),
 
+    // TODO(Role 4): GET /me returns the user with the shop inside `sellerProfile`; map it to ShopProfile.
     profile: () =>
       isLive
-        ? request<ShopProfile>("GET", "/seller/profile")
+        ? request<ShopProfile>("GET", "/me")
         : offline(seed.sellerProfile),
 
     updateProfile: (input: Partial<Omit<ShopProfile, "logoUrl">>) =>
       isLive
-        ? request<ShopProfile>("PATCH", "/seller/profile", input)
+        ? // TODO(Role 4): map ShopProfile fields to the backend's seller fields.
+          request<ShopProfile>("PATCH", "/me", { seller: input })
         : offline({ ...seed.sellerProfile, ...input }),
 
     uploadLogo: async (file: File): Promise<{ logoUrl: string }> => {
       if (!isLive) return offline({ logoUrl: URL.createObjectURL(file) });
+      // TODO(Role 1): the backend has no logo upload route yet.
       const body = new FormData();
       body.append("logo", file);
       const response = await fetch(`${BASE_URL}/seller/profile/logo`, {
@@ -144,7 +148,10 @@ export const api = {
   buyer: {
     review: (input: ReviewInput) =>
       isLive
-        ? request<Review>("POST", "/reviews", input)
+        ? request<Review>("POST", `/orders/${input.orderId}/review`, {
+            rating: input.rating,
+            comment: input.comment,
+          })
         : offline({
             id: `r-${Date.now()}`,
             listingId: "",
@@ -160,14 +167,14 @@ export const api = {
     users: () =>
       isLive ? request<User[]>("GET", "/admin/users") : offline(seed.users),
 
-    setBanned: (username: string, banned: boolean) =>
+    setBanned: (userId: string, banned: boolean) =>
       isLive
         ? request<User>(
             "POST",
-            `/admin/users/${encodeURIComponent(username)}/${banned ? "ban" : "unban"}`,
+            `/admin/users/${encodeURIComponent(userId)}/${banned ? "ban" : "unban"}`,
           )
         : offline({
-            ...seed.users.find((user) => user.username === username)!,
+            ...seed.users.find((user) => user.id === userId)!,
             status: banned ? "banned" : "active",
           } as User),
 
@@ -176,6 +183,7 @@ export const api = {
         ? request<PendingAccount[]>("GET", "/admin/approvals")
         : offline(seed.pendingAccounts),
 
+    // Note: the backend returns the updated User here, not an AccountDecision.
     decide: (id: string, decision: "approved" | "declined") =>
       isLive
         ? request<AccountDecision>("POST", `/admin/approvals/${id}`, {
@@ -187,6 +195,7 @@ export const api = {
             decidedAt: "Just now",
           } as AccountDecision),
 
+    // TODO(Role 1): the backend has no listing moderation or sessions routes yet.
     flagListing: (id: string) =>
       isLive
         ? request<Listing>("POST", `/admin/listings/${id}/flag`)
