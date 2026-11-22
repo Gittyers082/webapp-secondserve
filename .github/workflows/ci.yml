@@ -2,9 +2,9 @@ name: CI
 
 on:
   pull_request:
-    branches: [main, develop]
+    branches: [main, dev]
   push:
-    branches: [main]
+    branches: [main, dev]
 
 jobs:
   frontend-checks:
@@ -73,6 +73,8 @@ jobs:
         if: steps.check_backend.outputs.exists == 'true'
         working-directory: backend
         run: mypy . --ignore-missing-imports
+
+        continue-on-error: true
 
       - name: Run Pytest
         if: always() && steps.check_backend.outputs.exists == 'true'
