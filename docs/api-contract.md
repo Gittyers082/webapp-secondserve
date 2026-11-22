@@ -18,6 +18,52 @@ endpoints are typed in `src/api/contract.ts`; the frontend calls them through
 - Shapes (`Listing`, `Order`, `User`, `Review`, `AppNotification`,
   `SaleRecord`, …) are the TypeScript interfaces in `src/data/types.ts`.
 
+## Alignment with the backend
+
+The backend's interactive docs (`http://localhost:8000/docs` while it runs) are the
+source of truth for paths and shapes. Frontend paths are written without the `/api`
+prefix, because `PUBLIC_API_BASE_URL` already ends in `/api`.
+
+These are the paths this proposal used and what the backend serves instead.
+
+### Seller
+
+| Frontend called | Backend route | Notes |
+| --- | --- | --- |
+| `GET /seller/listings` | `GET /listings/mine` | |
+| `POST /seller/listings` | `POST /listings` | |
+| `PATCH /seller/listings/:id` | `PATCH /listings/:id` | |
+| `POST /seller/listings/:id/status` | `POST /listings/:id/status` | |
+| `DELETE /seller/listings/:id` | `DELETE /listings/:id` | |
+| `GET /seller/orders` | `GET /orders/mine` | Sellers get the orders they received |
+| `POST /seller/orders/:id/ready` | `POST /orders/:id/ready` | |
+| `GET /seller/profile` | `GET /me` | Shop details are inside `sellerProfile`; the frontend maps them to `ShopProfile` |
+| `PATCH /seller/profile` | `PATCH /me` | Shop fields go inside `{ seller: { ... } }` with the backend's field names |
+| `POST /reviews` | `POST /orders/:orderId/review` | Body is `{ rating, comment }` |
+| `GET /seller/reviews` | none yet | Backend to add (Role 1) |
+| `POST /seller/profile/logo` | none yet | Backend to add (Role 1) |
+| `GET /seller/sales` | none yet | Backend to add (Role 1) |
+
+### Administrator
+
+| Frontend called | Backend route | Notes |
+| --- | --- | --- |
+| `GET /admin/users` | same | |
+| `POST /admin/users/:username/ban` | `POST /admin/users/:userId/ban` | By user id, not username |
+| `POST /admin/users/:username/unban` | `POST /admin/users/:userId/unban` | By user id, not username |
+| `GET /admin/approvals` | same | |
+| `POST /admin/approvals/:id` | same | Returns the updated `User`, not an `AccountDecision` |
+| `GET /admin/decisions` | same | |
+| `GET /admin/listings` | none yet | Backend to add (Role 1) |
+| `POST /admin/listings/:id/flag` | none yet | Backend to add (Role 1) |
+| `DELETE /admin/listings/:id` | none yet | Backend to add (Role 1) |
+| `GET /admin/sessions` | none yet | Backend to add (Role 1) |
+
+### Everyone signed in
+
+Notifications already match: `GET /notifications`, `POST /notifications/:id/read`,
+`POST /notifications/read-all`.
+
 ## Seller
 
 | Method | Path | Body | Returns |
