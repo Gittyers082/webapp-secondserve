@@ -1,0 +1,109 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import ProfilePanel from '../../components/ProfilePanel.astro';
+import { partner, partnerProfile } from '../../data/store';
+import { organizationTypeLabel } from '../../data/types';
+import type { OrganizationType } from '../../data/types';
+
+const types = Object.entries(organizationTypeLabel) as [OrganizationType, string][];
+---
+
+<AppLayout
+  role="partner"
+  username={partner.username}
+  section="Organization Profile"
+  heading="Organization Profile"
+  subtitle={partnerProfile.verifiedAt ? `Verified by an administrator on ${partnerProfile.verifiedAt}.` : 'Waiting for an administrator to verify your organization.'}
+  highlight={partnerProfile.verifiedAt ? 'Verified' : 'Waiting'}
+>
+  <form class="panel org" method="post" data-org-form>
+    <h2 class="panel-title">Organization details</h2>
+    <p class="hint">Shops see the organization name on every order you place.</p>
+
+    <div class="field-row">
+      <div class="field">
+        <label class="field-label" for="org-name">Organization name</label>
+        <input class="input" id="org-name" name="organizationName" value={partnerProfile.organizationName} required />
+      </div>
+      <div class="field">
+        <label class="field-label" for="org-type">Type</label>
+        <select class="input" id="org-type" name="organizationType">
+          {types.map(([value, label]) => <option value={value} selected={value === partnerProfile.organizationType}>{label}</option>)}
+        </select>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label class="field-label" for="org-contact">Contact person</label>
+        <input class="input" id="org-contact" name="contactPerson" value={partnerProfile.contactPerson} required autocomplete="name" />
+      </div>
+      <div class="field">
+        <label class="field-label" for="org-address">Address</label>
+        <input class="input" id="org-address" name="address" value={partnerProfile.address} required autocomplete="street-address" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="org-accreditation">Accreditation or registration link (optional)</label>
+      <input class="input" id="org-accreditation" name="accreditationUrl" type="url" value={partnerProfile.accreditationUrl ?? ''} placeholder="https://" />
+    </div>
+
+    <div class="form-foot">
+      <button class="btn btn-primary" type="submit">Save details</button>
+      <p class="form-status" data-org-status hidden></p>
+    </div>
+  </form>
+
+  <ProfilePanel username={partner.username} role="partner" />
+</AppLayout>
+
+<script>
+  import { announce } from '../../scripts/announce';
+  import { run } from '../../scripts/request';
+  import { api } from '../../api/client';
+  import type { OrganizationType } from '../../data/types';
+
+  const form = document.querySelector<HTMLFormElement>('[data-org-form]');
+  const status = form?.querySelector<HTMLElement>('[data-org-status]');
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!form.reportValidity()) return;
+    const data = new FormData(form);
+    const text = (name: string) => String(data.get(name) ?? '').trim();
+    const saved = await run(form.querySelector<HTMLButtonElement>('button[type="submit"]'), () =>
+      api.partner.updateProfile({
+        organizationName: text('organizationName'),
+        organizationType: text('organizationType') as OrganizationType,
+        contactPerson: text('contactPerson'),
+        address: text('address'),
+        accreditationUrl: text('accreditationUrl') || undefined,
+      }),
+    );
+    if (!saved || !status) return;
+    status.textContent = 'Organization details saved.';
+    status.hidden = false;
+    announce('Organization details saved.');
+  });
+</script>
+
+<style>
+  .org {
+    display: grid;
+    gap: 16px;
+    margin-bottom: var(--gutter);
+  }
+
+  .form-foot {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .form-status {
+    color: var(--ok);
+    font-size: var(--fs-sm);
+    font-weight: 600;
+  }
+</style>

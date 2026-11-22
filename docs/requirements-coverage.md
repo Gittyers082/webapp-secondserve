@@ -36,8 +36,9 @@ Decisions #10–12 in `DECISIONS.md` add screens these requirements now apply to
 
 - NFR-USER-U-1: the Add Listing wizard's pickup step becomes a fulfillment step
   (pickup, delivery or both, plus a delivery fee).
-- NFR-USER-U-2: the partner role needs its own sidebar, with the Surplus Board,
-  claimed items and distribution history each one click away.
+- NFR-USER-U-2: done for the partner role. Its sidebar puts the Surplus Board,
+  My Orders (claimed and bought items, with distribution) and the organization
+  profile one click away (`src/pages/partner/`).
 - NFR-USER-U-3: delivery fees must appear in the cart and checkout totals.
 - NFR-USER-U-4, U-5, U-8 and U-10: apply to the new checkout choice, delivery
   status and partner screens once they exist.

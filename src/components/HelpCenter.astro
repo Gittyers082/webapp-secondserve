@@ -1,6 +1,7 @@
 ---
 import Icon from './Icon.astro';
 import { faq } from '../data/store';
+import { roleLabel } from '../data/nav';
 import type { Role } from '../data/types';
 
 interface Props {
@@ -49,7 +50,7 @@ const entries = faq.filter((entry) => !entry.roles || entry.roles.includes(role)
     <dl class="contact-facts">
       <div>
         <dt class="label">Your role</dt>
-        <dd>{role === 'buyer' ? 'Buyer' : role === 'seller' ? 'Seller' : 'Administrator'}</dd>
+        <dd>{roleLabel[role]}</dd>
       </div>
     </dl>
     <p class="hint">Tell them your username, what you were doing and what the screen said.</p>

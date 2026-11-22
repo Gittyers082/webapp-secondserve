@@ -3,11 +3,13 @@ import AppLayout from '../../layouts/AppLayout.astro';
 import Dialog from '../../components/Dialog.astro';
 import Icon from '../../components/Icon.astro';
 import { admin, users } from '../../data/store';
+import { roleLabel } from '../../data/nav';
 
 const filters = [
   { id: 'all', label: 'All' },
   { id: 'buyer', label: 'Buyers' },
   { id: 'seller', label: 'Sellers' },
+  { id: 'partner', label: 'Partners' },
   { id: 'banned', label: 'Banned' },
 ];
 ---
@@ -58,7 +60,7 @@ const filters = [
                 {user.username}
               </span>
             </td>
-            <td>{user.role === 'seller' ? 'Seller' : 'Buyer'}</td>
+            <td>{roleLabel[user.role]}</td>
             <td>
               <span
                 class:list={['pill', user.status === 'banned' ? 'pill-danger' : 'pill-ok']}
