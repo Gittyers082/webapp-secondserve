@@ -1,8 +1,8 @@
 # Frontend requirements coverage
 
 How the frontend meets the user-facing non-functional requirements in
-Table 7 of the SecondServe prelim document (NFR-USER-U-1 to U-10 and
-NFR-USER-PERS-3). "Partly" means the frontend side is done and the rest
+the SecondServe IT 313 document (NFR-USER-U-1 to U-10 and NFR-USER-PERS-3).
+The table numbers changed in v13, so requirements are referred to by ID only. "Partly" means the frontend side is done and the rest
 depends on the backend or on testing that can't be done in a browser
 emulator.
 
@@ -18,9 +18,9 @@ emulator.
 | NFR-USER-U-8 | Error messages | Met | Form errors appear under the field in plain language and say how to fix it ("Make the discounted price lower than the original price of ₱120.00"); the first one takes focus. Server errors are explained by cause (offline, signed out, not allowed, gone, server problem) with what to do next, shown on screen and read out. |
 | NFR-USER-U-9 | Help and support | Met | Info buttons beside fields open short explanations on Add Listing, Register and Shop Profile; Add Listing links to the seller help page; every role has a searchable Help & FAQ with seller-specific answers. |
 | NFR-USER-U-10 | Visual feedback | Met | Buttons respond to hover and press; a button waiting on the server shows a spinner and can't be pressed twice; forms show their result on screen; pages cross-fade where the browser supports it. |
-| NFR-USER-PERS-3 | Seller profile customisation | Met | `/seller/shop-profile` (in the seller menu and linked from Overview) edits the logo, shop name, area, description and up to four category tags, with a live preview. Buyers see it on each listing's detail page. Saving uses `GET/PATCH /seller/profile` and `POST /seller/profile/logo`. |
+| NFR-USER-PERS-3 | Seller profile customisation | Met | `/seller/shop-profile` (in the seller menu and linked from Overview) edits the logo, shop name, area, description and up to four category tags, with a live preview. Buyers see it on each listing's detail page. Saving uses `GET/PATCH /me` (shop details inside `sellerProfile`); the logo upload route is still to be added on the backend. |
 
-## Other user requirements in Table 7
+## Other user requirements
 
 These are outside the frontend role's spec IDs but touch the frontend:
 
@@ -29,3 +29,15 @@ These are outside the frontend role's spec IDs but touch the frontend:
 - NFR-USER-R-2 (confirmation): publishing a listing and saving a profile
   confirm on screen; the email confirmation is a backend task.
 - NFR-USER-PERS-1/2, R-3/4/5 and PERF-1/2/3 are not started.
+
+## Still to cover after the partner and delivery changes
+
+Decisions #10–12 in `DECISIONS.md` add screens these requirements now apply to:
+
+- NFR-USER-U-1: the Add Listing wizard's pickup step becomes a fulfillment step
+  (pickup, delivery or both, plus a delivery fee).
+- NFR-USER-U-2: the partner role needs its own sidebar, with the Surplus Board,
+  claimed items and distribution history each one click away.
+- NFR-USER-U-3: delivery fees must appear in the cart and checkout totals.
+- NFR-USER-U-4, U-5, U-8 and U-10: apply to the new checkout choice, delivery
+  status and partner screens once they exist.
