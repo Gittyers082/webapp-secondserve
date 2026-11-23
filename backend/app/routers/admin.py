@@ -1,9 +1,16 @@
 """Administrator screens (/admin/*). Owner: Role 1 (Project Lead)."""
 
+import csv
+import io
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
 
+from fastapi import APIRouter, HTTPException, Query, Request, Response, status
+from sqlalchemy import func, or_, select
+from sqlalchemy.orm import aliased
+
+from app.core.deps import DB, Admin
 from app.models import (
     AccountDecision,
     AccountStatus,
@@ -22,15 +29,11 @@ from app.models import (
     User,
 )
 from app.realtime.stock import stock
-from app.schemas.user import DecisionIn, DecisionOut, UserOut
-from app.services.notifications import notify
-from fastapi import APIRouter, HTTPException, Query, Request, status
-from sqlalchemy import func, or_, select
-
-from app.core.deps import DB, Admin
 from app.schemas.admin import FlagIn, ModeratedListingOut, RemoveIn, SessionOut, StatsOut
+from app.schemas.user import DecisionIn, DecisionOut, UserOut
 from app.services import audit
 from app.services.listings import get_listing_or_404
+from app.services.notifications import notify
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -370,7 +373,95 @@ async def stats(db: DB, admin: Admin) -> StatsOut:
     )
 
 
-# TODO(Role 1): GET  /api/admin/export.csv — transaction export (NFR-BUS-RA-3).
+# ---------------------------------------------------------------- Export
+
+_CSV_COLUMNS = [
+    "order_code",
+    "created_at",
+    "order_type",
+    "status",
+    "listing",
+    "shop",
+    "customer",
+    "quantity",
+    "unit_price",
+    "total",
+    "delivery_fee",
+    "fulfillment",
+    "payment_method",
+    "payment_status",
+    "amount_paid",
+    "commission",
+    "payment_reference",
+]
+
+
+def _cell(value: object) -> str:
+    """CSV cell text. Values starting with = + - @ are prefixed with ' so spreadsheet
+    apps don't run them as formulas (shop and food names are user input)."""
+    text = "" if value is None else str(getattr(value, "value", value))
+    return f"'{text}" if text[:1] in ("=", "+", "-", "@") else text
+
+
+@router.get("/export.csv")
+async def export_transactions(
+    db: DB,
+    admin: Admin,
+    start: date | None = Query(default=None, alias="from", description="First day, inclusive"),
+    end: date | None = Query(default=None, alias="to", description="Last day, inclusive"),
+) -> Response:
+    """All orders with their payments as a CSV file, for reports (NFR-BUS-RA-3)."""
+    customer = aliased(User)
+    stmt = (
+        select(Order, PaymentTransaction, customer.username)
+        .outerjoin(PaymentTransaction, PaymentTransaction.order_id == Order.id)
+        .join(customer, customer.id == Order.buyer_id)
+        .order_by(Order.created_at)
+    )
+    if start is not None:
+        stmt = stmt.where(Order.created_at >= datetime.combine(start, time.min, timezone.utc))
+    if end is not None:
+        stmt = stmt.where(
+            Order.created_at < datetime.combine(end + timedelta(days=1), time.min, timezone.utc)
+        )
+
+    out = io.StringIO()
+    writer = csv.writer(out)
+    writer.writerow(_CSV_COLUMNS)
+    for order, payment, username in (await db.execute(stmt)).unique().all():
+        listing = order.listing
+        profile = listing.seller.seller_profile if listing.seller else None
+        writer.writerow(
+            _cell(value)
+            for value in (
+                order.pickup_code,
+                order.created_at.isoformat(),
+                order.order_type,
+                order.status,
+                listing.name,
+                profile.business_name if profile else "",
+                username,
+                order.quantity,
+                order.unit_price,
+                order.total,
+                order.delivery_fee,
+                order.fulfillment_type,
+                payment.method if payment else "",
+                payment.status if payment else "",
+                payment.amount if payment else "",
+                payment.commission if payment else "",
+                payment.reference if payment else "",
+            )
+        )
+
+    audit.record(db, actor_id=admin.id, action="admin.export", entity_type="order")
+    await db.commit()
+    filename = f"secondserve-transactions-{datetime.now(timezone.utc):%Y%m%d}.csv"
+    return Response(
+        content=out.getvalue(),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 async def _set_status(
