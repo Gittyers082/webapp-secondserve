@@ -9,6 +9,10 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
+from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile, status
+from sqlalchemy import delete, func, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+
 from app.core.deps import DB, ActiveBuyer, ActiveSeller
 from app.core.rate_limit import limiter
 from app.models import (
@@ -32,10 +36,6 @@ from app.schemas.listing import (
     SortOption,
 )
 from app.schemas.review import ReviewOut, ReviewsOut
-from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile, status
-from sqlalchemy import delete, func, select
-from sqlalchemy.dialects.postgresql import insert as pg_insert
-
 from app.services import audit, images
 from app.services.listings import ensure_eligible, get_listing_or_404
 from app.services.search import listing_query, sort_clauses

@@ -2,13 +2,14 @@
 
 import uuid
 
-from app.core.config import get_settings
-from app.models import Listing, ListingChannel
-from app.services.eligibility import listing_problems
 from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import lazyload
+
+from app.core.config import get_settings
+from app.models import Listing, ListingChannel
+from app.services.eligibility import listing_problems
 
 
 async def get_listing_or_404(db: AsyncSession, listing_id: uuid.UUID) -> Listing:

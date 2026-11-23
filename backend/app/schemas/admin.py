@@ -4,10 +4,11 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
+from pydantic import Field
+
 from app.models import Listing, Role
 from app.schemas.common import Schema
 from app.schemas.listing import ListingOut
-from pydantic import Field
 
 
 class FlagIn(Schema):

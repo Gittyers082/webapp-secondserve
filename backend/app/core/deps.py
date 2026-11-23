@@ -17,12 +17,13 @@ Typical route:
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
-from app.core.security import InvalidToken, TokenClaims, decode_access_token
-from app.db.session import get_db
-from app.models import AccountStatus, Role, User
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.security import InvalidToken, TokenClaims, decode_access_token
+from app.db.session import get_db
+from app.models import AccountStatus, Role, User
 
 _bearer = HTTPBearer(auto_error=False)
 

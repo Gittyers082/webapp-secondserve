@@ -19,6 +19,12 @@ import uuid
 from datetime import datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal
 
+from fastapi import HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import lazyload
+
 from app.core.config import get_settings
 from app.models import (
     DeliveryStatus,
@@ -36,18 +42,12 @@ from app.models import (
     Review,
     User,
 )
+from app.schemas.order import CheckoutIn, Fulfillment, OrderCreate
 from app.schemas.partner import PartnerOrderIn
 from app.schemas.review import ReviewCreate
-from app.services.notifications import notify
-from fastapi import HTTPException, status
-from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import lazyload
-
-from app.schemas.order import CheckoutIn, Fulfillment, OrderCreate
 from app.services import audit, delivery
 from app.services.listings import lock_listings
+from app.services.notifications import notify
 
 CENT = Decimal("0.01")
 # No 0/O or 1/I, so codes are easy to read out at the counter.
