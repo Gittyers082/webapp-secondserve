@@ -10,14 +10,14 @@ Sign-up flow:
 3. Every other call uses GET /api/me to find out who is logged in.
 """
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, File, HTTPException, Request, UploadFile, status
 from sqlalchemy import select
 
-from app.core.deps import DB, CurrentUser, TokenUser
+from app.core.deps import DB, ActiveSeller, CurrentUser, TokenUser
 from app.core.rate_limit import limiter
 from app.models import AccountStatus, BuyerProfile, PartnerProfile, Role, SellerProfile, User
-from app.schemas.user import ProfileCreate, ProfileUpdate, UserOut
-from app.services import audit
+from app.schemas.user import LogoOut, ProfileCreate, ProfileUpdate, UserOut
+from app.services import audit, images
 
 router = APIRouter(prefix="/api/me", tags=["me"])
 
@@ -96,5 +96,41 @@ async def update_me(data: ProfileUpdate, user: CurrentUser, db: DB) -> User:
     return user
 
 
-# TODO(Role 1): POST /api/me/logo  — seller logo upload (NFR-USER-PERS-3)
+@router.post("/logo", response_model=LogoOut)
+@limiter.limit("10/minute")
+async def upload_logo(
+    request: Request,
+    db: DB,
+    seller: ActiveSeller,
+    file: UploadFile = File(...),
+) -> LogoOut:
+    """Upload the shop logo (JPEG, PNG or WebP, up to 2 MB), stored as a <=512px WebP.
+
+    Buyers see it on the shop profile and listing cards (NFR-USER-PERS-3).
+    """
+    if seller.seller_profile is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Finish your shop details first.")
+    if file.content_type not in images.ALLOWED_TYPES:
+        raise HTTPException(
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, "Use a JPEG, PNG or WebP image."
+        )
+    raw = await file.read(_MAX_LOGO_BYTES + 1)
+    if len(raw) > _MAX_LOGO_BYTES:
+        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Logos can be up to 2 MB.")
+
+    seller.seller_profile.logo_url = await images.process_and_store_logo(seller.id, raw)
+    audit.record(
+        db,
+        actor_id=seller.id,
+        action="seller.logo",
+        entity_type="user",
+        entity_id=seller.id,
+        request=request,
+    )
+    await db.commit()
+    return LogoOut(logo_url=seller.seller_profile.logo_url)
+
+
+_MAX_LOGO_BYTES = 2 * 1024 * 1024
+
 # TODO(Role 1): GET/PUT /api/me/preferences — buyer favourite categories, price range (PERS-2)
