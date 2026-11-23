@@ -176,7 +176,6 @@ export const api = {
         ? request<Order[]>("GET", "/partners/orders")
         : offline(seed.partnerOrders),
 
-    // TODO(Role 3): buy, claim and distributed answer 501 until the backend implements them.
     buy: (listingId: string, input: PartnerOrderInput) =>
       isLive
         ? request<Order>("POST", `/partners/surplus/${listingId}/buy`, input)
