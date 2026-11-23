@@ -1,0 +1,49 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Privacy Policy | SecondServe">
+  <main class="legal-page">
+    <h1>Privacy Policy</h1>
+    <p><strong>Effective Date:</strong> November 2026</p>
+
+    <h2>1. Compliance Statement (NFR-BUS-LC-3)</h2>
+    <p>
+      SecondServe processes personal information in accordance with the Philippine Data Privacy
+      Act of 2012 (Republic Act No. 10173). By creating an account or placing an order, you
+      consent to the collection and use of your information as described below.
+    </p>
+
+    <h2>2. Data We Collect</h2>
+    <ul>
+      <li><strong>Account & Profile Data:</strong> Full name, email address, phone number, role (Buyer, Seller, Partner, Administrator), and hashed authentication credentials managed by Supabase Auth.</li>
+      <li><strong>Seller & Partner Verification Records:</strong> Business names, business addresses, organization types, and accreditation documents (e.g., DTI/business permits, DSWD registration, LGU IDs).</li>
+      <li><strong>Transaction & Order Data:</strong> Purchased or claimed listings, quantities, order statuses, simulated payment statuses, and distribution logs.</li>
+    </ul>
+
+    <h2>3. How Delivery Addresses Are Handled (FR-SYS-13, NFR-SYS-S-2)</h2>
+    <ul>
+      <li><strong>Collection & Purpose:</strong> Default and order-specific delivery addresses are collected solely to calculate delivery fees, dispatch orders, and complete fulfillment for Buyers and Partners selecting delivery.</li>
+      <li><strong>Controlled Sharing:</strong> Your delivery address and contact number are shared only with the fulfilling Seller and the assigned delivery service partner (simulated in the prototype) for active delivery orders.</li>
+      <li><strong>Security & Access Control:</strong> All personal and address records are encrypted in transit (TLS 1.2+) and at rest (AES-256), with strict role-based access controls preventing unauthorized cross-user access.</li>
+    </ul>
+
+    <h2>4. Data Retention & User Rights (NFR-USER-R-3)</h2>
+    <ul>
+      <li>Account and transaction records are retained for at least two (2) years following last activity to support order history, dispute resolution, audit logging, and BIR tax compliance reporting.</li>
+      <li>You may update your profile details and saved delivery addresses at any time via your Profile page, or request account deactivation through Platform Administrators.</li>
+    </ul>
+  </main>
+</BaseLayout>
+
+<style>
+  .legal-page {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 0 1.5rem;
+    line-height: 1.65;
+  }
+  .legal-page h2 {
+    margin-top: 1.75rem;
+  }
+</style>
