@@ -13,6 +13,11 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 import pytest
+from fastapi import HTTPException
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy import select, text
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
 from app.core.deps import get_current_user
 from app.db.session import get_db
 from app.main import app
@@ -33,14 +38,9 @@ from app.models import (
     SellerProfile,
     User,
 )
+from app.schemas.order import CheckoutIn, CheckoutLine, OrderCreate
 from app.schemas.partner import PartnerOrderIn
 from app.schemas.review import ReviewCreate
-from fastapi import HTTPException
-from httpx import ASGITransport, AsyncClient
-from sqlalchemy import select, text
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-
-from app.schemas.order import CheckoutIn, CheckoutLine, OrderCreate
 from app.services import orders as svc
 
 TEST_URL = os.environ.get("TEST_DATABASE_URL")

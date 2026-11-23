@@ -129,10 +129,9 @@ export const api = {
 
     uploadLogo: async (file: File): Promise<{ logoUrl: string }> => {
       if (!isLive) return offline({ logoUrl: URL.createObjectURL(file) });
-      // TODO(Role 1): the backend has no logo upload route yet.
       const body = new FormData();
-      body.append("logo", file);
-      const response = await fetch(`${BASE_URL}/seller/profile/logo`, {
+      body.append("file", file);
+      const response = await fetch(`${BASE_URL}/me/logo`, {
         method: "POST",
         credentials: "include",
         body,

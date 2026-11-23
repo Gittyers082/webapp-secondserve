@@ -67,8 +67,8 @@ export interface Endpoints {
   'GET /seller/reviews': { response: Review[] };
   'GET /me': { response: ShopProfile };
   'PATCH /me': { body: Partial<Omit<ShopProfile, 'logoUrl'>>; response: ShopProfile };
-  /** multipart/form-data with a "logo" file (PNG or JPG, up to 2 MB). */
-  'POST /seller/profile/logo': { body: FormData; response: { logoUrl: string } };
+  /** multipart/form-data with a "file" field (JPEG, PNG or WebP, up to 2 MB). */
+  'POST /me/logo': { body: FormData; response: { logoUrl: string } };
 
   // Buyer
   'POST /orders/:orderId/review': { body: ReviewInput; response: Review };

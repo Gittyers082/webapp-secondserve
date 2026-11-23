@@ -7,8 +7,9 @@ Ported from Ethan's backend-updates branch, using the channel model on dev.
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from app.models import FoodCategory, Listing, ListingChannel, ListingStatus, SellerProfile
 from sqlalchemy import Select, func, or_, select
+
+from app.models import FoodCategory, Listing, ListingChannel, ListingStatus, SellerProfile
 
 discount = 1 - Listing.discounted_price / Listing.original_price
 SORTS = {

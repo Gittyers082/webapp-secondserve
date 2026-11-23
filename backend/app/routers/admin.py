@@ -1,15 +1,38 @@
 """Administrator screens (/admin/*). Owner: Role 1 (Project Lead)."""
 
+import csv
+import io
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, time, timedelta, timezone
+from decimal import Decimal
 
-from fastapi import APIRouter, HTTPException, Query, Request, status
-from sqlalchemy import or_, select
+from fastapi import APIRouter, HTTPException, Query, Request, Response, status
+from sqlalchemy import func, or_, select
+from sqlalchemy.orm import aliased
 
 from app.core.deps import DB, Admin
-from app.models import AccountDecision, AccountStatus, Decision, Role, User
+from app.models import (
+    AccountDecision,
+    AccountStatus,
+    Decision,
+    DistributionStatus,
+    Listing,
+    ListingChannel,
+    ListingStatus,
+    Order,
+    OrderStatus,
+    OrderType,
+    PaymentStatus,
+    PaymentTransaction,
+    Role,
+    SellerProfile,
+    User,
+)
+from app.realtime.stock import stock
+from app.schemas.admin import FlagIn, ModeratedListingOut, RemoveIn, SessionOut, StatsOut
 from app.schemas.user import DecisionIn, DecisionOut, UserOut
 from app.services import audit
+from app.services.listings import get_listing_or_404
 from app.services.notifications import notify
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -121,12 +144,324 @@ async def decisions(db: DB, admin: Admin) -> list[DecisionOut]:
     ]
 
 
-# TODO(Role 1): GET  /api/admin/listings?flagged=true and POST /api/admin/listings/{id}/remove
-#   (Item Moderation screen).
-# TODO(Role 1): GET  /api/admin/sessions — who's online (use users.last_seen_at in the last 30 min).
-# TODO(Role 1): GET  /api/admin/stats — users, listings, orders, avg discount, kg of food saved
-#   (Objective 4, FR-BUS-11, NFR-BUS-RA-1).
-# TODO(Role 1): GET  /api/admin/export.csv — transaction export (NFR-BUS-RA-3).
+# ---------------------------------------------------------------- Item Moderation
+
+
+@router.get("/listings", response_model=list[ModeratedListingOut])
+async def moderated_listings(
+    db: DB,
+    admin: Admin,
+    flagged: bool | None = None,
+    q: str | None = Query(default=None, max_length=100, description="Search name or shop"),
+    listing_status: ListingStatus | None = Query(default=None, alias="status"),
+) -> list[ModeratedListingOut]:
+    """Item Moderation screen: every listing, flagged ones first (FR-BUS-8)."""
+    stmt = (
+        select(Listing)
+        .join(SellerProfile, SellerProfile.user_id == Listing.seller_id)
+        .order_by(Listing.flagged.desc(), Listing.created_at.desc())
+        .limit(200)
+    )
+    if flagged is not None:
+        stmt = stmt.where(Listing.flagged == flagged)
+    if listing_status is not None:
+        stmt = stmt.where(Listing.status == listing_status)
+    if q:
+        stmt = stmt.where(
+            or_(
+                Listing.name.icontains(q, autoescape=True),
+                SellerProfile.business_name.icontains(q, autoescape=True),
+            )
+        )
+    rows = await db.execute(stmt)
+    return [ModeratedListingOut.from_model(listing) for listing in rows.unique().scalars()]
+
+
+@router.post("/listings/{listing_id}/flag", response_model=ModeratedListingOut)
+async def flag_listing(
+    listing_id: uuid.UUID, request: Request, db: DB, admin: Admin, data: FlagIn | None = None
+) -> ModeratedListingOut:
+    """Mark a listing for review. It stays visible until it is removed."""
+    listing = await get_listing_or_404(db, listing_id)
+    listing.flagged = True
+    listing.flag_reason = data.reason if data else None
+    audit.record(
+        db,
+        actor_id=admin.id,
+        action="listing.flag",
+        entity_type="listing",
+        entity_id=listing.id,
+        details={"reason": listing.flag_reason},
+        request=request,
+    )
+    await db.commit()
+    return ModeratedListingOut.from_model(await get_listing_or_404(db, listing.id))
+
+
+@router.post("/listings/{listing_id}/unflag", response_model=ModeratedListingOut)
+async def unflag_listing(
+    listing_id: uuid.UUID, request: Request, db: DB, admin: Admin
+) -> ModeratedListingOut:
+    """Clear a flag after review."""
+    listing = await get_listing_or_404(db, listing_id)
+    listing.flagged = False
+    listing.flag_reason = None
+    audit.record(
+        db,
+        actor_id=admin.id,
+        action="listing.unflag",
+        entity_type="listing",
+        entity_id=listing.id,
+        request=request,
+    )
+    await db.commit()
+    return ModeratedListingOut.from_model(await get_listing_or_404(db, listing.id))
+
+
+@router.delete("/listings/{listing_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_listing(
+    listing_id: uuid.UUID, request: Request, db: DB, admin: Admin, data: RemoveIn | None = None
+) -> None:
+    """Take a listing out of the Shop and the Surplus Board (FR-BUS-8).
+
+    It is not deleted: orders and reviews still point at it, and the seller can see why.
+    Reservations already made are left for the seller to honour or cancel.
+    """
+    listing = await get_listing_or_404(db, listing_id)
+    if listing.status == ListingStatus.removed:
+        return
+    listing.status = ListingStatus.removed
+    reason = (data.reason if data else None) or listing.flag_reason
+    notify(
+        db,
+        user_id=listing.seller_id,
+        type="listing.removed",
+        title="A listing was removed",
+        body=f"An administrator removed {listing.name}." + (f" Reason: {reason}" if reason else ""),
+        link="/seller/manage",
+    )
+    audit.record(
+        db,
+        actor_id=admin.id,
+        action="listing.remove",
+        entity_type="listing",
+        entity_id=listing.id,
+        details={"reason": reason},
+        request=request,
+    )
+    await db.commit()
+    await stock.publish(str(listing.id), listing.quantity_available, listing.status.value)
+
+
+# ---------------------------------------------------------------- Active Sessions
+
+_ONLINE_WINDOW = timedelta(minutes=30)
+
+
+@router.get("/sessions", response_model=list[SessionOut])
+async def active_sessions(db: DB, admin: Admin) -> list[SessionOut]:
+    """Who used the app in the last 30 minutes, most recent first.
+
+    Supabase holds the real sign-in sessions; this is based on users.last_seen_at,
+    which every signed-in request refreshes (at most every 5 minutes).
+    """
+    since = datetime.now(timezone.utc) - _ONLINE_WINDOW
+    users = await db.scalars(
+        select(User)
+        .where(User.last_seen_at >= since, User.status != AccountStatus.banned)
+        .order_by(User.last_seen_at.desc())
+        .limit(200)
+    )
+    return [
+        SessionOut(
+            user_id=user.id, username=user.username, role=user.role, last_seen_at=user.last_seen_at
+        )
+        for user in users
+    ]
+
+
+# ---------------------------------------------------------------- Stats
+
+
+@router.get("/stats", response_model=StatsOut)
+async def stats(db: DB, admin: Admin) -> StatsOut:
+    """Platform totals (Objective 4, FR-BUS-11, NFR-BUS-RA-1)."""
+    now = datetime.now(timezone.utc)
+    zero = Decimal("0")
+
+    users_by_role = {
+        role.value: count
+        for role, count in await db.execute(select(User.role, func.count()).group_by(User.role))
+    }
+    pending = await db.scalar(
+        select(func.count()).select_from(User).where(User.status == AccountStatus.pending)
+    )
+
+    live = (Listing.status == ListingStatus.active, Listing.expires_at > now)
+    active_listings = await db.scalar(
+        select(func.count())
+        .select_from(Listing)
+        .where(*live, Listing.channel == ListingChannel.marketplace)
+    )
+    surplus_listings = await db.scalar(
+        select(func.count())
+        .select_from(Listing)
+        .where(*live, Listing.channel != ListingChannel.marketplace)
+    )
+    flagged = await db.scalar(
+        select(func.count())
+        .select_from(Listing)
+        .where(Listing.flagged.is_(True), Listing.status != ListingStatus.removed)
+    )
+
+    orders_by_status = {
+        state.value: count
+        for state, count in await db.execute(
+            select(Order.status, func.count()).group_by(Order.status)
+        )
+    }
+
+    received = Order.status.in_((OrderStatus.picked_up, OrderStatus.delivered))
+    rescued, savings = (
+        await db.execute(
+            select(
+                func.coalesce(func.sum(Order.quantity), 0),
+                func.coalesce(
+                    func.sum((Order.original_unit_price - Order.unit_price) * Order.quantity), zero
+                ),
+            ).where(received)
+        )
+    ).one()
+    donated = await db.scalar(
+        select(func.coalesce(func.sum(Order.quantity), 0)).where(
+            received, Order.order_type == OrderType.donation
+        )
+    )
+    distributed = await db.scalar(
+        select(func.coalesce(func.sum(Order.quantity), 0)).where(
+            Order.distribution_status == DistributionStatus.distributed
+        )
+    )
+    revenue, commission = (
+        await db.execute(
+            select(
+                func.coalesce(func.sum(PaymentTransaction.amount), zero),
+                func.coalesce(func.sum(PaymentTransaction.commission), zero),
+            ).where(PaymentTransaction.status == PaymentStatus.paid)
+        )
+    ).one()
+    average_discount = await db.scalar(
+        select(func.avg(1 - Listing.discounted_price / Listing.original_price) * 100).where(
+            Listing.channel == ListingChannel.marketplace, Listing.original_price > 0
+        )
+    )
+
+    return StatsOut(
+        users_by_role=users_by_role,
+        pending_accounts=pending or 0,
+        active_listings=active_listings or 0,
+        surplus_listings=surplus_listings or 0,
+        flagged_listings=flagged or 0,
+        orders_by_status=orders_by_status,
+        items_rescued=int(rescued),
+        items_donated=int(donated or 0),
+        items_distributed=int(distributed or 0),
+        revenue=revenue,
+        commission=commission,
+        customer_savings=savings,
+        average_discount_percent=round(average_discount or 0),
+    )
+
+
+# ---------------------------------------------------------------- Export
+
+_CSV_COLUMNS = [
+    "order_code",
+    "created_at",
+    "order_type",
+    "status",
+    "listing",
+    "shop",
+    "customer",
+    "quantity",
+    "unit_price",
+    "total",
+    "delivery_fee",
+    "fulfillment",
+    "payment_method",
+    "payment_status",
+    "amount_paid",
+    "commission",
+    "payment_reference",
+]
+
+
+def _cell(value: object) -> str:
+    """CSV cell text. Values starting with = + - @ are prefixed with ' so spreadsheet
+    apps don't run them as formulas (shop and food names are user input)."""
+    text = "" if value is None else str(getattr(value, "value", value))
+    return f"'{text}" if text[:1] in ("=", "+", "-", "@") else text
+
+
+@router.get("/export.csv")
+async def export_transactions(
+    db: DB,
+    admin: Admin,
+    start: date | None = Query(default=None, alias="from", description="First day, inclusive"),
+    end: date | None = Query(default=None, alias="to", description="Last day, inclusive"),
+) -> Response:
+    """All orders with their payments as a CSV file, for reports (NFR-BUS-RA-3)."""
+    customer = aliased(User)
+    stmt = (
+        select(Order, PaymentTransaction, customer.username)
+        .outerjoin(PaymentTransaction, PaymentTransaction.order_id == Order.id)
+        .join(customer, customer.id == Order.buyer_id)
+        .order_by(Order.created_at)
+    )
+    if start is not None:
+        stmt = stmt.where(Order.created_at >= datetime.combine(start, time.min, timezone.utc))
+    if end is not None:
+        stmt = stmt.where(
+            Order.created_at < datetime.combine(end + timedelta(days=1), time.min, timezone.utc)
+        )
+
+    out = io.StringIO()
+    writer = csv.writer(out)
+    writer.writerow(_CSV_COLUMNS)
+    for order, payment, username in (await db.execute(stmt)).unique().all():
+        listing = order.listing
+        profile = listing.seller.seller_profile if listing.seller else None
+        writer.writerow(
+            _cell(value)
+            for value in (
+                order.pickup_code,
+                order.created_at.isoformat(),
+                order.order_type,
+                order.status,
+                listing.name,
+                profile.business_name if profile else "",
+                username,
+                order.quantity,
+                order.unit_price,
+                order.total,
+                order.delivery_fee,
+                order.fulfillment_type,
+                payment.method if payment else "",
+                payment.status if payment else "",
+                payment.amount if payment else "",
+                payment.commission if payment else "",
+                payment.reference if payment else "",
+            )
+        )
+
+    audit.record(db, actor_id=admin.id, action="admin.export", entity_type="order")
+    await db.commit()
+    filename = f"secondserve-transactions-{datetime.now(timezone.utc):%Y%m%d}.csv"
+    return Response(
+        content=out.getvalue(),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 async def _set_status(

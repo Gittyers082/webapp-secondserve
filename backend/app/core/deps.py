@@ -14,6 +14,7 @@ Typical route:
 - `Admin`         an administrator
 """
 
+from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
@@ -52,7 +53,20 @@ async def get_current_user(claims: TokenUser, db: DB) -> User:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "profile_missing")
     if user.status == AccountStatus.banned:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "This account has been suspended.")
+    await _touch_last_seen(db, user)
     return user
+
+
+# Writing last_seen_at on every request would be a database write per click; once every
+# few minutes is plenty for "who's online in the last 30 minutes" (Active Sessions).
+_SEEN_EVERY = timedelta(minutes=5)
+
+
+async def _touch_last_seen(db: AsyncSession, user: User) -> None:
+    now = datetime.now(timezone.utc)
+    if user.last_seen_at is None or now - user.last_seen_at >= _SEEN_EVERY:
+        user.last_seen_at = now
+        await db.commit()
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]

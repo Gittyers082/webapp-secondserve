@@ -3,6 +3,8 @@ from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
+from pydantic import Field, model_validator
+
 from app.models import (
     DeliveryStatus,
     DistributionStatus,
@@ -14,7 +16,6 @@ from app.models import (
     PaymentStatus,
 )
 from app.schemas.common import Schema
-from pydantic import Field, model_validator
 
 
 class Fulfillment(Schema):

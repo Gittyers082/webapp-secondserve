@@ -41,7 +41,7 @@ These are the paths this proposal used and what the backend serves instead.
 | `PATCH /seller/profile` | `PATCH /me` | Shop fields go inside `{ seller: { ... } }` with the backend's field names |
 | `POST /reviews` | `POST /orders/:orderId/review` | Body is `{ rating, comment }` |
 | `GET /seller/reviews` | none yet | Backend to add (Role 1) |
-| `POST /seller/profile/logo` | none yet | Backend to add (Role 1) |
+| `POST /seller/profile/logo` | `POST /me/logo` | Done; the client now calls `/me/logo` |
 | `GET /seller/sales` | none yet | Backend to add (Role 1) |
 
 ### Administrator
@@ -54,10 +54,13 @@ These are the paths this proposal used and what the backend serves instead.
 | `GET /admin/approvals` | same | |
 | `POST /admin/approvals/:id` | same | Returns the updated `User`, not an `AccountDecision` |
 | `GET /admin/decisions` | same | |
-| `GET /admin/listings` | none yet | Backend to add (Role 1) |
-| `POST /admin/listings/:id/flag` | none yet | Backend to add (Role 1) |
-| `DELETE /admin/listings/:id` | none yet | Backend to add (Role 1) |
-| `GET /admin/sessions` | none yet | Backend to add (Role 1) |
+| `GET /admin/listings` | same | Flagged first; filters `flagged`, `status`, `q`; each item has `flagReason` |
+| `POST /admin/listings/:id/flag` | same | Optional body `{ reason }`; `POST .../unflag` clears it |
+| `DELETE /admin/listings/:id` | same | Marks it `removed` (not deleted) and tells the seller; optional `{ reason }` |
+| `GET /admin/sessions` | same | Returns `{ userId, username, role, lastSeenAt }[]` for the last 30 minutes; no IP address |
+| none | `GET /admin/stats` | Platform totals for a dashboard |
+| none | `GET /admin/export.csv?from=&to=` | Orders and payments as a CSV download |
+| none | `GET /orders/:id/receipt` | Printable HTML receipt for the buyer, partner or seller |
 
 ### Everyone signed in
 
@@ -79,7 +82,7 @@ Notifications already match: `GET /notifications`, `POST /notifications/:id/read
 | GET | `/seller/reviews` | | `Review[]` |
 | GET | `/seller/profile` | | `ShopProfile` |
 | PATCH | `/seller/profile` | `{ shopName?, description?, tags?, location? }` | `ShopProfile` |
-| POST | `/seller/profile/logo` | multipart, field `logo` (PNG or JPG, up to 2 MB) | `{ logoUrl }` |
+| POST | `/me/logo` | multipart, field `file` (JPEG, PNG or WebP, up to 2 MB) | `{ logoUrl }` |
 
 `ListingInput`: `name`, `description?`, `category`, `quantity`,
 `originalPrice`, `discountedPrice` (must be lower), `expiresAt`,
