@@ -1,0 +1,65 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Terms of Service | SecondServe">
+  <main class="legal-page">
+    <h1>Terms of Service</h1>
+    <p><strong>Effective Date:</strong> November 2026</p>
+
+    <h2>1. Platform Purpose & Scope</h2>
+    <p>
+      SecondServe is a digital marketplace connecting food retailers and businesses ("Sellers")
+      with consumers ("Buyers") and verified community organizations ("Partners") to redirect
+      still-safe, near-expiry food items away from routine disposal in alignment with SDG 12.
+    </p>
+
+    <h2>2. Seller Responsibilities & Food Safety (NFR-BUS-LC-1, NFR-BUS-LC-5)</h2>
+    <ul>
+      <li>Sellers must hold verified business credentials approved by Platform Administrators before listing items.</li>
+      <li>Sellers are solely responsible for product accuracy, proper storage/handling, accurate expiration dates, and compliance with Philippine Food and Drug Administration (FDA) rules and RA 7394 (Consumer Act of the Philippines).</li>
+      <li>Expired, spoiled, or unsafe items are strictly prohibited and subject to immediate removal and account suspension.</li>
+    </ul>
+
+    <h2>3. Buyer Responsibilities & Liability (NFR-BUS-LC-2, NFR-BUS-LC-5)</h2>
+    <ul>
+      <li>Buyers acknowledge that listed products are near-expiry or surplus goods sold at discounted rates.</li>
+      <li>Buyers must inspect items upon store pickup or courier delivery and consume perishable items before the stated expiration window.</li>
+      <li>Prototype payments and courier hand-offs are simulated for academic demonstration purposes.</li>
+    </ul>
+
+    <h2>4. Partner Organizations & Donation Terms (FR-USER-P-1 to P-9)</h2>
+    <ul>
+      <li>Only verified LGUs, government agencies, registered charities, and shelters with valid accreditation (e.g., DSWD registration or LGU office ID) may access the Partner Surplus Board.</li>
+      <li><strong>Agency Purchases:</strong> Government agencies and LGUs may purchase surplus lots at deeper discounts strictly for community redistribution, not commercial resale.</li>
+      <li><strong>Charity Donations:</strong> Free donated items claimed by charities or shelters are reserved exclusively for the claiming organization. Unclaimed items not collected within the designated pickup window are automatically released back to the Surplus Board.</li>
+      <li>Partners agree to mark received items as distributed to support platform waste-diversion and SDG 12 impact reporting.</li>
+    </ul>
+
+    <h2>5. Fulfillment & Delivery Terms (FR-SYS-13, FR-BUS-13)</h2>
+    <p>
+      Orders may be fulfilled via store pickup or delivery through third-party courier services
+      (e.g., Lalamove, Grab, or local couriers—simulated in the current prototype). Delivery fees
+      are displayed prior to checkout confirmation.
+    </p>
+
+    <h2>6. Dispute Resolution & Account Enforcement (NFR-BUS-LC-5)</h2>
+    <p>
+      Disputes regarding misrepresented items or unfulfilled handovers may be reported to Platform
+      Administrators. Administrators reserve the right to moderate listings, cancel pending orders
+      on unsafe items, and suspend or ban accounts that violate these terms.
+    </p>
+  </main>
+</BaseLayout>
+
+<style>
+  .legal-page {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 0 1.5rem;
+    line-height: 1.65;
+  }
+  .legal-page h2 {
+    margin-top: 1.75rem;
+  }
+</style>
