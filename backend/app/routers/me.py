@@ -10,14 +10,26 @@ Sign-up flow:
 3. Every other call uses GET /api/me to find out who is logged in.
 """
 
-from fastapi import APIRouter, File, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile, status
 from sqlalchemy import select
 
-from app.core.deps import DB, ActiveSeller, CurrentUser, TokenUser
+from app.core.deps import DB, ActiveBuyer, ActiveSeller, CurrentUser, TokenUser
 from app.core.rate_limit import limiter
-from app.models import AccountStatus, BuyerProfile, PartnerProfile, Role, SellerProfile, User
+from app.models import (
+    AccountStatus,
+    BuyerProfile,
+    Listing,
+    ListingChannel,
+    PartnerProfile,
+    Role,
+    SellerProfile,
+    User,
+)
+from app.schemas.listing import ListingOut
+from app.schemas.preferences import Preferences
 from app.schemas.user import LogoOut, ProfileCreate, ProfileUpdate, UserOut
 from app.services import audit, images
+from app.services.search import listing_query
 
 router = APIRouter(prefix="/api/me", tags=["me"])
 
@@ -133,4 +145,57 @@ async def upload_logo(
 
 _MAX_LOGO_BYTES = 2 * 1024 * 1024
 
-# TODO(Role 1): GET/PUT /api/me/preferences — buyer favourite categories, price range (PERS-2)
+# ---------------------------------------------------------------- Buyer preferences
+
+
+async def _buyer_profile(db: DB, buyer: User) -> BuyerProfile:
+    """The buyer's profile, created on first use for accounts made before it existed."""
+    if buyer.buyer_profile is None:
+        buyer.buyer_profile = BuyerProfile(user_id=buyer.id, preferences={})
+        db.add(buyer.buyer_profile)
+    return buyer.buyer_profile
+
+
+def _read(profile: BuyerProfile) -> Preferences:
+    # Unknown or outdated keys are ignored rather than failing the request.
+    return Preferences.model_validate(
+        {k: v for k, v in (profile.preferences or {}).items() if k in Preferences.model_fields}
+    )
+
+
+@router.get("/preferences", response_model=Preferences)
+async def read_preferences(db: DB, buyer: ActiveBuyer) -> Preferences:
+    """Favourite categories and price range (NFR-USER-PERS-2)."""
+    return _read(await _buyer_profile(db, buyer))
+
+
+@router.put("/preferences", response_model=Preferences)
+async def save_preferences(data: Preferences, db: DB, buyer: ActiveBuyer) -> Preferences:
+    profile = await _buyer_profile(db, buyer)
+    # A new dict (not an in-place edit) so SQLAlchemy sees the JSONB change.
+    profile.preferences = data.model_dump(mode="json")
+    await db.commit()
+    return data
+
+
+@router.get("/recommendations", response_model=list[ListingOut])
+async def recommendations(
+    db: DB,
+    buyer: ActiveBuyer,
+    limit: int = Query(default=12, ge=1, le=50),
+) -> list[ListingOut]:
+    """The Shop's "Picked for you" row: marketplace listings that fit the buyer's
+    preferences, soonest to expire first (NFR-USER-PERS-1). Without preferences
+    this is simply what expires soonest."""
+    prefs = _read(await _buyer_profile(db, buyer))
+    stmt = listing_query(
+        channels=(ListingChannel.marketplace,),
+        min_price=prefs.min_price,
+        max_price=prefs.max_price,
+    )
+    if prefs.favourite_categories:
+        stmt = stmt.where(Listing.category.in_(prefs.favourite_categories))
+    if prefs.delivery_only:
+        stmt = stmt.where(Listing.allows_delivery.is_(True))
+    rows = await db.execute(stmt.order_by(Listing.expires_at.asc()).limit(limit))
+    return [ListingOut.from_model(listing) for listing in rows.unique().scalars()]
