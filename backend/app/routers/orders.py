@@ -5,15 +5,15 @@ Owner: Role 3 (Backend Developer, Marketplace & Orders).
 
 import uuid
 
+from app.core.deps import DB, ActiveBuyer, ActiveSeller, CurrentUser
+from app.core.rate_limit import limiter
+from app.models import DeliveryStatus, Order, OrderStatus, Role
+from app.realtime.stock import stock
+from app.schemas.review import ReviewCreate, ReviewOut
 from fastapi import APIRouter, HTTPException, Query, Request, status
 from sqlalchemy import select
 
-from app.core.deps import DB, ActiveBuyer, ActiveSeller, CurrentUser
-from app.core.rate_limit import limiter
-from app.models import Order, OrderStatus, Role
-from app.realtime.stock import stock
-from app.schemas.order import CheckoutIn, OrderCreate, OrderOut, PickupIn
-from app.schemas.review import ReviewCreate, ReviewOut
+from app.schemas.order import CheckoutIn, DeliveryUpdateIn, OrderCreate, OrderOut, PickupIn
 from app.services import orders as order_service
 from app.services.orders import get_order_or_404, place_order
 
@@ -77,6 +77,15 @@ async def picked_up(
 ) -> OrderOut:
     """Seller enters the buyer's pickup code at the counter."""
     order = await order_service.mark_picked_up(db, seller, order_id, data.code)
+    return OrderOut.from_model(order)
+
+
+@router.post("/{order_id}/delivery", response_model=OrderOut)
+async def delivery_update(
+    order_id: uuid.UUID, data: DeliveryUpdateIn, db: DB, seller: ActiveSeller
+) -> OrderOut:
+    """Move a delivery order along: out-for-delivery, then delivered (simulated courier)."""
+    order = await order_service.update_delivery(db, seller, order_id, DeliveryStatus(data.status))
     return OrderOut.from_model(order)
 
 
