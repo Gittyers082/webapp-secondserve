@@ -106,11 +106,14 @@ administrator approves them before they can sign in.
 | POST | `/partners/surplus/:id/buy` | `{ quantity, fulfillmentType, deliveryAddress? }` | `Order` |
 | POST | `/partners/surplus/:id/claim` | `{ quantity, fulfillmentType, deliveryAddress? }` | `Order` |
 | POST | `/partners/orders/:id/distributed` | | `Order` |
+| POST | `/orders/:id/delivery` (seller) | `{ status: "out-for-delivery" \| "delivered" }` | `Order` |
 | POST | `/listings/:id/offer-to-partners` (seller) | `{ channel: "partner-offer" \| "donation", partnerPrice? }` | `Listing` |
 
 `fulfillmentType` is `"pickup"` or `"delivery"`; `deliveryAddress` is required
-for delivery. Buy, claim, distributed and offer-to-partners answer 501 until
-the backend implements them (Role 3). The partner screens are in
+for delivery. The Surplus Board also takes `q`, `channel`, `category`,
+`maxPrice`, `minQuantity`, `expiringSoon`, `expiresBefore` and `sort`. A
+delivery goes `pending` → `preparing` (seller marks it ready) →
+`out-for-delivery` → `delivered`. The partner screens are in
 `src/pages/partner/` and call these through `api.partner` in
 `src/api/client.ts`.
 

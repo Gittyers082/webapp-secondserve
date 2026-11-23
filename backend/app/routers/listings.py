@@ -6,12 +6,8 @@ schemas in, eligibility check, audit record, commit, schema out.
 """
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from decimal import Decimal
-
-from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile, status
-from sqlalchemy import delete, func, or_, select
-from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.core.deps import DB, ActiveBuyer, ActiveSeller
 from app.core.rate_limit import limiter
@@ -24,7 +20,6 @@ from app.models import (
     OrderStatus,
     Review,
     SavedItem,
-    SellerProfile,
     User,
 )
 from app.realtime.stock import stock
@@ -37,19 +32,15 @@ from app.schemas.listing import (
     SortOption,
 )
 from app.schemas.review import ReviewOut, ReviewsOut
+from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile, status
+from sqlalchemy import delete, func, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+
 from app.services import audit, images
 from app.services.listings import ensure_eligible, get_listing_or_404
+from app.services.search import listing_query, sort_clauses
 
 router = APIRouter(prefix="/api/listings", tags=["listings"])
-
-_discount = 1 - Listing.discounted_price / Listing.original_price
-_SORTS = {
-    "newest": Listing.created_at.desc(),
-    "price-asc": Listing.discounted_price.asc(),
-    "price-desc": Listing.discounted_price.desc(),
-    "discount": _discount.desc(),
-    "expiring": Listing.expires_at.asc(),
-}
 
 
 @router.get("", response_model=Page[ListingOut])
@@ -65,49 +56,21 @@ async def browse(
     limit: int = Query(default=24, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
 ) -> Page[ListingOut]:
-    """Public marketplace feed (UC-07, UC-08, FR-USER-B-4/5/6). Only active, unexpired items."""
-    now = datetime.now(timezone.utc)
-    stmt = (
-        select(Listing)
-        .join(SellerProfile, SellerProfile.user_id == Listing.seller_id)
-        .where(
-            Listing.status == ListingStatus.active,
-            Listing.expires_at > now,
-            # Partner offers and donations only show on the partner Surplus Board.
-            Listing.channel == ListingChannel.marketplace,
-        )
-    )
-    if q:
-        # Substring match, or pg_trgm's "similar enough" (%) so small typos still find things.
-        # Both can use the trigram index on listings.name.
-        stmt = stmt.where(
-            or_(
-                Listing.name.icontains(q, autoescape=True),
-                SellerProfile.business_name.icontains(q, autoescape=True),
-                Listing.name.op("%")(q),
-                SellerProfile.business_name.op("%")(q),
-            )
-        )
-    if category:
-        stmt = stmt.where(Listing.category == category)
-    if min_price is not None:
-        stmt = stmt.where(Listing.discounted_price >= min_price)
-    if max_price is not None:
-        stmt = stmt.where(Listing.discounted_price <= max_price)
-    if min_discount is not None:
-        stmt = stmt.where(_discount * 100 >= min_discount)
-    if expires_before is not None:
-        stmt = stmt.where(Listing.expires_at <= expires_before)
+    """Public marketplace feed (UC-07, UC-08, FR-USER-B-4/5/6). Only active, unexpired items.
 
+    Partner offers and donations only show on the partner Surplus Board.
+    """
+    stmt = listing_query(
+        channels=(ListingChannel.marketplace,),
+        q=q,
+        category=category,
+        min_price=min_price,
+        max_price=max_price,
+        min_discount=min_discount,
+        expires_before=expires_before,
+    )
     total = await db.scalar(stmt.with_only_columns(func.count(Listing.id)).order_by(None))
-    if sort == "relevance" and q:
-        score = func.greatest(
-            func.similarity(Listing.name, q), func.similarity(SellerProfile.business_name, q)
-        )
-        order_by = (score.desc(), Listing.created_at.desc())
-    else:
-        order_by = (_SORTS.get(sort, Listing.created_at.desc()),)
-    rows = await db.execute(stmt.order_by(*order_by).limit(limit).offset(offset))
+    rows = await db.execute(stmt.order_by(*sort_clauses(sort, q)).limit(limit).offset(offset))
     items = [ListingOut.from_model(listing) for listing in rows.unique().scalars()]
     return Page(items=items, total=total or 0, limit=limit, offset=offset)
 
