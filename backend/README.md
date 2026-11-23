@@ -159,3 +159,20 @@ request after a while is slow. Open the app before a demo.
 
 Celery needs a separate worker process. Until that's running, keep
 `CELERY_ENABLED=false`: in-app notifications still work, emails are just skipped.
+
+### Scheduled jobs without a worker
+
+The jobs live in `app/services/jobs.py` (today: expiring listings and warning
+sellers 3 hours ahead). On the free plan they run through
+`POST /api/internal/run-jobs`, which the **Scheduled jobs** GitHub Action
+(`.github/workflows/jobs.yml`) calls every 15 minutes:
+
+1. Generate a secret: `python -c "import secrets; print(secrets.token_urlsafe(32))"`.
+2. Render: add `JOBS_SECRET` with that value.
+3. GitHub, Settings > Secrets and variables > Actions: add the secret
+   `JOBS_SECRET` (same value) and the variable `API_URL`
+   (`https://secondserve-api.onrender.com`).
+4. Actions tab > Scheduled jobs > Run workflow, to check it once by hand.
+
+Without `JOBS_SECRET` the endpoint answers 404 to everyone. New jobs go in the
+`JOBS` dict and must be safe to run twice.
