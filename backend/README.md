@@ -70,6 +70,26 @@ Browser ──(Bearer token from supabase-js)──▶ FastAPI
 Sellers start as `pending` and can't list anything until an admin approves them
 (FR-BUS-7). Buyers are active right away.
 
+## Partners, donations and delivery
+
+- **Partners** (LGUs, agencies, charities, shelters) sign up with `role: "partner"` and a
+  `partner` block, and wait for admin approval like sellers.
+- A seller moves an active listing to the **Surplus Board** with
+  `POST /api/listings/{id}/offer-to-partners`: `partner-offer` with a lower `partnerPrice`,
+  or `donation` (free). It leaves the marketplace for good (`channel` changes).
+- Partners browse `GET /api/partners/surplus` (filters: `channel`, `category`, `q`,
+  `maxPrice`, `minQuantity`, `expiringSoon`, `expiresBefore`, `sort`), then
+  `POST /api/partners/surplus/{id}/buy` (partner offers) or `/claim` (donations). Both lock
+  the listing row like buyer orders, so two partners can't both get the last item.
+- Every order picks `fulfillmentType` (`pickup` or `delivery`, plus `deliveryAddress`) from
+  what the listing allows (`allowsPickup`, `allowsDelivery`). Delivery adds the listing's
+  `deliveryFee`, which earns no commission.
+- Delivery is simulated: `pending` until the seller marks it ready (`preparing`, handed to
+  the courier), then the seller calls `POST /api/orders/{id}/delivery` with
+  `out-for-delivery`, then `delivered`, which finishes the order (status `delivered`).
+- Partners confirm hand-out with `POST /api/partners/orders/{id}/distributed` once the
+  order is picked up or delivered.
+
 ## Folder layout
 
 ```
