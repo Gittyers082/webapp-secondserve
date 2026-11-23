@@ -1,10 +1,13 @@
 """Background tasks. Owner: Role 1 (Project Lead)."""
 
+import asyncio
 import logging
 
 import httpx
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.core.config import get_settings
+from app.services import jobs
 from app.workers.celery_app import celery_app
 
 log = logging.getLogger(__name__)
@@ -26,16 +29,30 @@ def send_email(to: str, subject: str, text: str) -> None:
     response.raise_for_status()
 
 
+def _run(job) -> dict:
+    """Run one async job from a synchronous Celery task, with its own engine.
+
+    asyncio.run starts a new event loop each time, and a connection pool can't be
+    shared between loops, so the engine is created and closed here.
+    """
+
+    async def main() -> dict:
+        engine = create_async_engine(
+            get_settings().database_url, connect_args={"statement_cache_size": 0}
+        )
+        try:
+            async with async_sessionmaker(engine, expire_on_commit=False)() as db:
+                return await job(db)
+        finally:
+            await engine.dispose()
+
+    return asyncio.run(main())
+
+
 @celery_app.task
 def expire_listings() -> None:
-    """Every 10 minutes.
-
-    TODO(Role 1):
-    - set status='expired' on active listings whose expires_at has passed
-    - notify sellers about listings expiring in the next 3 hours (FR-USER-S-10c)
-    Celery tasks are synchronous, so wrap async DB code with asyncio.run(...).
-    """
-    log.info("expire_listings: not implemented yet")
+    """Every 10 minutes when Celery runs. On the free plan the GitHub Action runs it."""
+    log.info("expire_listings: %s", _run(jobs.expire_listings))
 
 
 @celery_app.task

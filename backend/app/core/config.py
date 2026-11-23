@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     resend_api_key: str = ""
     email_from: str = "SecondServe <onboarding@resend.dev>"
     celery_enabled: bool = False
+    # Shared secret for POST /api/internal/run-jobs (the scheduled GitHub Action).
+    # Leave empty to switch the endpoint off.
+    jobs_secret: str = ""
 
     commission_rate: float = Field(default=0.07, ge=0, le=0.5)
     # Unsold listings this close to expiry move to the partner Surplus Board (FR-SYS-14).
