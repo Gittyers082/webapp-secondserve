@@ -6,7 +6,13 @@
  * the seed data in src/data/store.ts, so the frontend stays usable before the
  * backend exists. The screens never know which one answered.
  */
-import type { ApiError, ListingInput, PartnerOrderInput, ReviewInput } from "./contract";
+import type {
+  ApiError,
+  BuyerPreferences,
+  ListingInput,
+  PartnerOrderInput,
+  ReviewInput,
+} from "./contract";
 import type {
   AccountDecision,
   AppNotification,
@@ -146,6 +152,27 @@ export const api = {
   },
 
   buyer: {
+    preferences: () =>
+      isLive
+        ? request<BuyerPreferences>("GET", "/me/preferences")
+        : offline<BuyerPreferences>({
+            favouriteCategories: ["bread", "pastries"],
+            minPrice: null,
+            maxPrice: "100",
+            deliveryOnly: false,
+          }),
+
+    savePreferences: (input: BuyerPreferences) =>
+      isLive
+        ? request<BuyerPreferences>("PUT", "/me/preferences", input)
+        : offline(input),
+
+    // TODO(Role 4): the backend sends ListingOut; map it to Listing like the Shop does.
+    recommendations: () =>
+      isLive
+        ? request<Listing[]>("GET", "/me/recommendations")
+        : offline(seed.listings.filter((listing) => listing.status === "active").slice(0, 4)),
+
     review: (input: ReviewInput) =>
       isLive
         ? request<Review>("POST", `/orders/${input.orderId}/review`, {

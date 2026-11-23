@@ -48,6 +48,15 @@ export interface PartnerOrderInput {
   deliveryAddress?: string;
 }
 
+/** A buyer's Shop preferences (GET/PUT /me/preferences). */
+export interface BuyerPreferences {
+  favouriteCategories: Listing['category'][];
+  /** Peso amounts; the backend sends decimals as strings. */
+  minPrice: string | null;
+  maxPrice: string | null;
+  deliveryOnly: boolean;
+}
+
 export interface ReviewInput {
   orderId: string;
   rating: number;
@@ -72,6 +81,10 @@ export interface Endpoints {
 
   // Buyer
   'POST /orders/:orderId/review': { body: ReviewInput; response: Review };
+  'GET /me/preferences': { response: BuyerPreferences };
+  'PUT /me/preferences': { body: BuyerPreferences; response: BuyerPreferences };
+  /** "Picked for you": marketplace listings that fit the preferences. */
+  'GET /me/recommendations': { response: Listing[] };
 
   // Partner
   'GET /partners/surplus': { response: { items: Listing[]; total: number; limit: number; offset: number } };
