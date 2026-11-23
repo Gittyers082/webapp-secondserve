@@ -33,5 +33,7 @@ services:
         sync: false
       - key: RESEND_API_KEY
         sync: false
+      - key: JOBS_SECRET
+        sync: false # the same value as the JOBS_SECRET secret on GitHub
       - key: CELERY_ENABLED
         value: "false"

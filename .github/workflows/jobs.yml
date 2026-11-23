@@ -1,0 +1,37 @@
+# Runs the backend's scheduled jobs (listing expiry, and later the surplus jobs)
+# by calling POST /api/internal/run-jobs. The free Render plan has no background
+# workers, so this stands in for Celery beat.
+#
+# Setup (repo Settings -> Secrets and variables -> Actions):
+#   Variables tab: API_URL     = https://secondserve-api.onrender.com
+#   Secrets tab:   JOBS_SECRET = the same value as JOBS_SECRET on Render
+#
+# GitHub only runs schedules from the default branch (main), and they can start
+# a few minutes late. "Run workflow" on the Actions tab runs it by hand.
+name: Scheduled jobs
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  run-jobs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Run due jobs on the API
+        env:
+          API_URL: ${{ vars.API_URL }}
+          JOBS_SECRET: ${{ secrets.JOBS_SECRET }}
+        run: |
+          if [ -z "$API_URL" ] || [ -z "$JOBS_SECRET" ]; then
+            echo "::warning::Set the API_URL variable and the JOBS_SECRET secret to run jobs."
+            exit 0
+          fi
+          # The free Render plan sleeps when idle, so the first try may time out.
+          curl --fail --silent --show-error --retry 3 --retry-delay 20 --retry-all-errors \
+            --max-time 90 -X POST -H "X-Jobs-Secret: $JOBS_SECRET" \
+            "$API_URL/api/internal/run-jobs"
