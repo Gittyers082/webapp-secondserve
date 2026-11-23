@@ -25,9 +25,8 @@ const progress = (order: Order): { label: string; tone: string } => {
   return { label: 'Reserved', tone: 'pill-neutral' };
 };
 
-/** Food can be handed on once it is in the partner's hands. */
+/** Food can be handed on once it is in the partner's hands (the backend checks the same). */
 const received = (order: Order) =>
-  order.status === 'ready' ||
   order.status === 'picked-up' ||
   order.status === 'delivered' ||
   order.deliveryStatus === 'delivered';

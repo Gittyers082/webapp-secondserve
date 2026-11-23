@@ -1,5 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
+from typing import Literal
 from uuid import UUID
 
 from pydantic import Field, model_validator
@@ -50,6 +51,12 @@ class CheckoutIn(Fulfillment):
 
 class PickupIn(Schema):
     code: str = Field(min_length=4, max_length=8)
+
+
+class DeliveryUpdateIn(Schema):
+    """The (simulated) courier's next step for a delivery order."""
+
+    status: Literal["out-for-delivery", "delivered"]
 
 
 class OrderOut(Schema):

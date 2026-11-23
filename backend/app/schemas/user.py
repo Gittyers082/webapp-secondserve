@@ -98,3 +98,7 @@ class DecisionOut(Schema):
     decision: Decision
     reason: str | None
     created_at: datetime
+
+
+class LogoOut(Schema):
+    logo_url: str

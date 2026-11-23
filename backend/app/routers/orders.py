@@ -6,15 +6,17 @@ Owner: Role 3 (Backend Developer, Marketplace & Orders).
 import uuid
 
 from fastapi import APIRouter, HTTPException, Query, Request, status
+from fastapi.responses import HTMLResponse
 from sqlalchemy import select
 
 from app.core.deps import DB, ActiveBuyer, ActiveSeller, CurrentUser
 from app.core.rate_limit import limiter
-from app.models import Order, OrderStatus, Role
+from app.models import DeliveryStatus, Order, OrderStatus, Role, User
 from app.realtime.stock import stock
-from app.schemas.order import CheckoutIn, OrderCreate, OrderOut, PickupIn
+from app.schemas.order import CheckoutIn, DeliveryUpdateIn, OrderCreate, OrderOut, PickupIn
 from app.schemas.review import ReviewCreate, ReviewOut
 from app.services import orders as order_service
+from app.services import receipts
 from app.services.orders import get_order_or_404, place_order
 
 router = APIRouter(prefix="/api/orders", tags=["orders"])
@@ -80,6 +82,15 @@ async def picked_up(
     return OrderOut.from_model(order)
 
 
+@router.post("/{order_id}/delivery", response_model=OrderOut)
+async def delivery_update(
+    order_id: uuid.UUID, data: DeliveryUpdateIn, db: DB, seller: ActiveSeller
+) -> OrderOut:
+    """Move a delivery order along: out-for-delivery, then delivered (simulated courier)."""
+    order = await order_service.update_delivery(db, seller, order_id, DeliveryStatus(data.status))
+    return OrderOut.from_model(order)
+
+
 @router.post("/{order_id}/cancel", response_model=OrderOut)
 async def cancel(order_id: uuid.UUID, db: DB, buyer: ActiveBuyer) -> OrderOut:
     """Buyer cancels a reservation; the quantity goes back on sale."""
@@ -103,4 +114,14 @@ async def review(order_id: uuid.UUID, data: ReviewCreate, db: DB, buyer: ActiveB
     )
 
 
-# TODO(Role 1): GET /api/orders/{id}/receipt     — PDF/HTML receipt (FR-USER-S-11, B-13).
+@router.get("/{order_id}/receipt", response_class=HTMLResponse)
+async def receipt(order_id: uuid.UUID, db: DB, user: CurrentUser) -> HTMLResponse:
+    """A printable receipt for the buyer, partner or seller of the order (FR-USER-S-11, B-13).
+
+    The browser's Print dialog saves it as a PDF.
+    """
+    order = await get_order_or_404(db, order_id)
+    if user.id not in (order.buyer_id, order.seller_id) and user.role != Role.admin:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Order not found.")  # NFR-SYS-S-3
+    customer = await db.get(User, order.buyer_id)
+    return HTMLResponse(receipts.render(order, customer))
