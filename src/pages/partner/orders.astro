@@ -1,44 +1,16 @@
 ---
 import AppLayout from '../../layouts/AppLayout.astro';
-import FoodArt from '../../components/FoodArt.astro';
-import { partner, partnerOrders, undistributedOrders } from '../../data/store';
-import { peso } from '../../data/types';
-import type { Order } from '../../data/types';
-
-const progress = (order: Order): { label: string; tone: string } => {
-  if (order.fulfillmentType === 'delivery') {
-    switch (order.deliveryStatus) {
-      case 'delivered':
-        return { label: 'Delivered', tone: 'pill-ok' };
-      case 'out-for-delivery':
-        return { label: 'Out for delivery', tone: 'pill-lime' };
-      case 'preparing':
-        return { label: 'Preparing', tone: 'pill-neutral' };
-      case 'cancelled':
-        return { label: 'Cancelled', tone: 'pill-danger' };
-      default:
-        return { label: 'Waiting for the shop', tone: 'pill-neutral' };
-    }
-  }
-  if (order.status === 'picked-up') return { label: 'Picked up', tone: 'pill-ok' };
-  if (order.status === 'ready') return { label: 'Ready for pickup', tone: 'pill-ok' };
-  return { label: 'Reserved', tone: 'pill-neutral' };
-};
-
-/** Food can be handed on once it is in the partner's hands (the backend checks the same). */
-const received = (order: Order) =>
-  order.status === 'picked-up' ||
-  order.status === 'delivered' ||
-  order.deliveryStatus === 'delivered';
 ---
+
+
 
 <AppLayout
   role="partner"
-  username={partner.username}
+  username="Loading..."
   section="My Orders"
   heading="My Orders"
-  subtitle={`${undistributedOrders.length} orders still to hand out to the people you serve.`}
-  highlight={`${undistributedOrders.length} orders`}
+  subtitle="Loading your orders..."
+  
 >
   <div class="table-wrap">
     <table class="table">
@@ -53,53 +25,11 @@ const received = (order: Order) =>
           <th><span class="sr-only">Actions</span></th>
         </tr>
       </thead>
-      <tbody>
-        {
-          partnerOrders.map((order) => {
-            const state = progress(order);
-            const delivery = order.fulfillmentType === 'delivery';
-            const distributed = order.distributionStatus === 'distributed';
-            return (
-              <tr data-order={order.id}>
-                <td class="name">
-                  <span class="food-cell">
-                    <span class="food-thumb"><FoodArt art={order.art} ratio="1 / 1" /></span>
-                    {order.foodName}
-                  </span>
-                </td>
-                <td class="muted">{order.shopName}</td>
-                <td class="num">{order.quantity}</td>
-                <td class="num">
-                  {order.orderType === 'donation' && !order.deliveryFee ? (
-                    <span class="pill pill-lime">Free</span>
-                  ) : (
-                    peso(order.total + (order.deliveryFee ?? 0))
-                  )}
-                </td>
-                <td class="muted small">
-                  {delivery ? `Delivery to ${order.deliveryAddress ?? 'your address'}` : `Pickup at ${order.pickupLocation}`}
-                </td>
-                <td>
-                  <span class:list={['pill', state.tone]}>{state.label}</span>
-                </td>
-                <td class="actions">
-                  {distributed ? (
-                    <span class="pill pill-ok">Distributed</span>
-                  ) : received(order) ? (
-                    <button class="btn btn-sm btn-light" type="button" data-distribute={order.id} aria-label={`Mark ${order.foodName} as distributed`}>
-                      Mark distributed
-                    </button>
-                  ) : (
-                    <span class="small muted">Not received yet</span>
-                  )}
-                </td>
-              </tr>
-            );
-          })
-        }
-      </tbody>
+      <tbody data-partner-orders-body></tbody>
     </table>
   </div>
+
+  <p class="hint" data-orders-loading role="status">Loading your orders...</p>
 
   <p class="hint page-note">
     Mark an order distributed once the food has reached the people you serve. It counts toward the food rescued in Baguio.
@@ -107,21 +37,6 @@ const received = (order: Order) =>
 </AppLayout>
 
 <script>
-  import { announce } from '../../scripts/announce';
-  import { run } from '../../scripts/request';
-  import { api } from '../../api/client';
-
-  document.querySelectorAll<HTMLButtonElement>('[data-distribute]').forEach((button) => {
-    button.addEventListener('click', async () => {
-      const order = await run(button, () => api.partner.markDistributed(button.dataset.distribute ?? ''));
-      if (!order) return;
-      const cell = button.closest<HTMLElement>('.actions');
-      const chip = document.createElement('span');
-      chip.className = 'pill pill-ok';
-      chip.textContent = 'Distributed';
-      cell?.replaceChildren(chip);
-      const food = button.closest('tr')?.querySelector('.name')?.textContent?.trim() ?? 'Order';
-      announce(`${food} marked as distributed.`);
-    });
-  });
+  import { initPartnerOrders } from '../../scripts/partner-orders';
+  void initPartnerOrders();
 </script>

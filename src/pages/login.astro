@@ -1,11 +1,12 @@
+
 ---
 import AuthLayout from '../layouts/AuthLayout.astro';
 
 const landings = [
-  { role: 'Buyer', destination: 'Shop tab', href: '/buyer/shop' },
-  { role: 'Seller', destination: 'Overview tab', href: '/seller' },
-  { role: 'Partner', destination: 'Surplus Board', href: '/partner' },
-  { role: 'Administrator', destination: 'User Management tab', href: '/admin' },
+  { role: 'Buyer', destination: 'Shop tab' },
+  { role: 'Seller', destination: 'Overview tab' },
+  { role: 'Partner', destination: 'Surplus Board' },
+  { role: 'Administrator', destination: 'User Management tab' },
 ];
 ---
 
@@ -18,37 +19,313 @@ const landings = [
     {
       landings.map((landing) => (
         <li>
-          <a href={landing.href}>
+          <div class="landing">
             <strong>{landing.role}</strong>
             <span>&rarr; {landing.destination}</span>
-          </a>
+          </div>
         </li>
       ))
     }
   </ul>
 
-  <form class="signin" method="post" data-demo-form data-next="/buyer/shop">
+  <form class="signin" method="post">
     <h2 class="display-title">Sign in</h2>
 
     <div class="field">
-      <label class="field-label" for="username">Username</label>
-      <input class="input" id="username" name="username" value="maria_c" autocomplete="username" required data-error="Enter your username." />
+      <label class="field-label" for="email">Email</label>
+      <input
+        class="input"
+        id="email"
+        name="email"
+        type="email"
+        autocomplete="email"
+        placeholder="Enter your email"
+        required
+      />
     </div>
 
     <div class="field">
-      <label class="field-label" for="password">Password</label>
-      <input class="input" id="password" name="password" type="password" value="secondserve" autocomplete="current-password" required data-error="Enter your password." />
+      <label class="field-label" for="password">
+        Password
+      </label>
+      <input
+        class="input"
+        id="password"
+        name="password"
+        type="password"
+        autocomplete="current-password"
+        required
+        data-error="Enter your password."
+      />
     </div>
 
-    <button class="btn btn-primary btn-lg btn-block" type="submit">Sign in</button>
+    <button
+      class="btn btn-primary btn-lg btn-block"
+      type="submit"
+    >
+      Sign in
+    </button>
 
-    <p class="alt">New to SecondServe? <a href="/register">Register</a></p>
+    <p
+      role="status"
+      aria-live="polite"
+      class="login-status"
+      data-login-status
+      hidden
+    ></p>
+
+    <p class="alt">
+      New to SecondServe?
+      <a href="/register">Register</a>
+    </p>
   </form>
 </AuthLayout>
 
 <script>
-  import { initDemoForms } from '../scripts/demo-forms';
-  initDemoForms();
+  import { supabase } from '../api/supabase';
+  import { liveValidate, validate } from '../scripts/validate';
+
+  type BackendResponse = {
+    role?: string;
+    status?: string;
+    detail?: unknown;
+  };
+
+  type ValidAccount = BackendResponse & {
+    role: string;
+    status: string;
+  };
+
+  const form = document.querySelector<HTMLFormElement>('.signin');
+
+  if (form) {
+    liveValidate(form);
+
+    const emailInput = form.querySelector<HTMLInputElement>('#email')!;
+    const passwordInput = form.querySelector<HTMLInputElement>('#password')!;
+    const button = form.querySelector<HTMLButtonElement>(
+      'button[type="submit"]'
+    )!;
+    const status = form.querySelector<HTMLElement>(
+      '[data-login-status]'
+    )!;
+
+    // Supports API URLs with or without /api at the end.
+    function getApiBase(): string {
+      const raw = import.meta.env.PUBLIC_API_BASE_URL
+        ?.replace(/\/+$/, '');
+
+      if (!raw) {
+        throw new Error(
+          'Backend API URL is not configured in .env.'
+        );
+      }
+
+      return raw.endsWith('/api') ? raw : `${raw}/api`;
+    }
+
+    function apiError(
+      body: BackendResponse | null,
+      fallback: string
+    ): string {
+      if (typeof body?.detail === 'string') {
+        return body.detail;
+      }
+
+      if (Array.isArray(body?.detail)) {
+        const issues = body.detail
+          .map((issue: { msg?: string; loc?: (string | number)[] }) => {
+            const field = issue.loc?.join('.') ?? 'Field';
+            return `${field}: ${issue.msg ?? 'Invalid value'}`;
+          })
+          .join('; ');
+
+        return issues || fallback;
+      }
+
+      return fallback;
+    }
+
+    // Creates the backend profile after email verification,
+    // if it was not created during registration.
+    async function loadAccount(
+      token: string,
+      signupProfile: unknown
+    ): Promise<ValidAccount> {
+      const base = getApiBase();
+
+      const headers = {
+        Authorization: `Bearer ${token}`,
+      };
+
+      let response = await fetch(`${base}/me`, {
+        headers,
+      });
+
+      let account: BackendResponse | null =
+        await response.json().catch(() => null);
+
+      // Supabase account exists, but backend profile is missing.
+      if (
+        response.status === 403 &&
+        account?.detail === 'profile_missing'
+      ) {
+        if (
+          !signupProfile ||
+          typeof signupProfile !== 'object' ||
+          Array.isArray(signupProfile)
+        ) {
+          throw new Error(
+            'Login succeeded, but your SecondServe profile is missing. Please contact the team to complete your account.'
+          );
+        }
+
+        status.textContent = 'Finishing your account setup...';
+
+        const createResponse = await fetch(
+          `${base}/me/profile`,
+          {
+            method: 'POST',
+            headers: {
+              ...headers,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(signupProfile),
+          }
+        );
+
+        const created: BackendResponse | null =
+          await createResponse.json().catch(() => null);
+
+        // A 409 can happen if the profile was already created.
+        if (!createResponse.ok && createResponse.status !== 409) {
+          throw new Error(
+            apiError(
+              created,
+              `Profile creation failed (${createResponse.status}).`
+            )
+          );
+        }
+
+        // Retrieve the saved account from the backend.
+        response = await fetch(`${base}/me`, {
+          headers,
+        });
+
+        account = await response.json().catch(() => null);
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          apiError(
+            account,
+            `Could not load your account (${response.status}).`
+          )
+        );
+      }
+
+      if (
+        !account ||
+        typeof account.role !== 'string' ||
+        typeof account.status !== 'string'
+      ) {
+        throw new Error('Backend returned incomplete account details.');
+      }
+
+      return { ...account, role: account.role, status: account.status };
+    }
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      if (!validate(form)) return;
+
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+
+      button.disabled = true;
+      button.setAttribute('aria-busy', 'true');
+
+      status.hidden = false;
+      status.textContent = 'Signing in...';
+
+      try {
+        // STEP 1: Supabase authentication.
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) throw error;
+
+        if (!data.session || !data.user) {
+          throw new Error(
+            'No active session. Please verify your email first.'
+          );
+        }
+
+        // STEP 2: Load or create the backend profile.
+        const account = await loadAccount(
+          data.session.access_token,
+          data.user.user_metadata?.secondserveProfile
+        );
+
+        // STEP 3: Check account approval.
+        if (account.status !== 'active') {
+          const messages: Record<string, string> = {
+            pending:
+              'Your account is waiting for administrator approval.',
+            declined:
+              'Your account registration was declined.',
+            banned:
+              'Your account has been suspended.',
+          };
+
+          status.textContent =
+            messages[account.status] ??
+            'Your account is not active.';
+
+          await supabase.auth.signOut();
+          return;
+        }
+
+        // STEP 4: Navigate according to the backend role.
+        const destinations: Record<string, string> = {
+          buyer: '/buyer/shop',
+          seller: '/seller',
+          partner: '/partner',
+          admin: '/admin',
+        };
+
+        const destination = destinations[account.role];
+
+        if (!destination) {
+          throw new Error('Unknown account role.');
+        }
+
+        status.textContent = 'Login successful! Redirecting...';
+
+        window.location.assign(destination);
+
+      } catch (error) {
+        if (
+          error instanceof TypeError &&
+          error.message.includes('fetch')
+        ) {
+          status.textContent =
+            'Cannot reach the backend. Check the API URL, CORS settings, or server availability.';
+        } else {
+          status.textContent =
+            error instanceof Error
+              ? error.message
+              : 'Login failed. Please try again.';
+        }
+      } finally {
+        button.disabled = false;
+        button.removeAttribute('aria-busy');
+      }
+    });
+  }
 </script>
 
 <style>
@@ -60,23 +337,18 @@ const landings = [
     max-width: 420px;
   }
 
-  .landings a {
+  .landing {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
     gap: 16px;
     padding: 12px 16px;
     border-radius: var(--r-md);
-    transition: background var(--dur) var(--ease-out);
   }
-
-  .landings a:hover { background: var(--s3); }
-  .landings a:hover strong { color: var(--brick-text); }
 
   .landings strong {
     font-size: var(--fs-lg);
     font-weight: 600;
-    transition: color var(--dur-fast) var(--ease-out);
   }
 
   .landings span {
@@ -90,6 +362,13 @@ const landings = [
 
   .signin .btn {
     margin-top: 24px;
+  }
+
+  .login-status {
+    margin-top: 16px;
+    font-size: var(--fs-sm);
+    line-height: 1.5;
+    color: var(--brick-text);
   }
 
   .alt {

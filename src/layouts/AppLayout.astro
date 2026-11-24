@@ -37,7 +37,8 @@ const showHighlight = Boolean(highlight && subtitle?.includes(highlight));
 ---
 
 <BaseLayout title={`${roleLabel[role]} · ${section}`}>
-  <div class:list={['app', { 'has-rail': hasRail }]}>
+  <p class="auth-loading" data-auth-loading role="status">Checking your account...</p>
+  <div class:list={['app', { 'has-rail': hasRail }]} data-required-role={role} hidden>
     <!-- Top bar below 1000px: the menu, the brand, notifications and theme -->
     <header class="mobile-bar" data-page-content>
       <button
@@ -96,10 +97,18 @@ const showHighlight = Boolean(highlight && subtitle?.includes(highlight));
 
 <script>
   import { initNavDrawer } from '../scripts/nav-drawer';
+  import { initAccountUi } from '../scripts/account-ui';
   initNavDrawer();
+  void initAccountUi();
 </script>
 
 <style>
+  .auth-loading {
+    padding: 32px;
+    text-align: center;
+    color: var(--muted);
+  }
+  .app[hidden] { display: none; }
   .app {
     display: grid;
     grid-template-columns: var(--sidebar) minmax(0, 1fr);

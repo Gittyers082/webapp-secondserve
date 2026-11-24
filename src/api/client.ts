@@ -26,37 +26,61 @@ import type {
   User,
 } from "../data/types";
 import * as seed from "../data/store";
+import { supabase } from './supabase';
+import {
+  listingFromBackend, orderFromBackend, partnerProfileFromUser, shopProfileFromUser,
+  type BackendListing, type BackendOrder, type BackendUser,
+} from './partner-data';
 
-const BASE_URL: string | undefined = import.meta.env.PUBLIC_API_BASE_URL;
+const BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL as string | undefined)?.replace(/\/+$/, '');
+const API_BASE = BASE_URL ? (BASE_URL.endsWith('/api') ? BASE_URL : `${BASE_URL}/api`) : undefined;
 
 /** True when the client talks to a real server. */
 export const isLive = Boolean(BASE_URL);
 
-async function request<T>(
-  method: string,
-  path: string,
-  body?: unknown,
-): Promise<T> {
-  const response = await fetch(`${BASE_URL}${path}`, {
-    method,
-    credentials: "include",
-    headers:
-      body === undefined ? undefined : { "Content-Type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
+async function tokenHeaders(extra: Record<string, string> = {}): Promise<Record<string, string>> {
+  const { data, error } = await supabase.auth.getSession();
+  if (error || !data.session?.access_token) {
+    throw { status: 401, message: 'Please sign in first.' } satisfies ApiError;
+  }
+  return { ...extra, Authorization: `Bearer ${data.session.access_token}` };
+}
 
-  if (!response.ok) {
-    let message = response.statusText;
+async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  if (!API_BASE) {
+    throw { status: 0, message: 'Backend API URL is missing.' } satisfies ApiError;
+  }
+  const headers = await tokenHeaders(body === undefined ? {} : { 'Content-Type': 'application/json' });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      method,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  } catch {
+    throw { status: 0, message: 'Could not connect to the backend.' } satisfies ApiError;
+  }
+    if (!response.ok) {
+    let message = response.statusText || `HTTP ${response.status}`;
+
     try {
-      const body = (await response.json()) as { detail?: unknown; message?: string };
+      const body = (await response.json()) as {
+        detail?: unknown;
+        message?: string;
+      };
+
       message = readDetail(body.detail) ?? body.message ?? message;
     } catch {
-      // Not JSON; keep the status text.
+      // Not JSON; keep the status message.
     }
+
     throw { status: response.status, message } satisfies ApiError;
   }
 
-  return response.status === 204 ? (null as T) : ((await response.json()) as T);
+  return response.status === 204
+    ? null as T
+    : await response.json() as T;
 }
 
 /**
@@ -90,6 +114,10 @@ function find<T extends { id: string }>(items: T[], id: string): T {
 }
 
 export const api = {
+  account: {
+    me: () => request<BackendUser>('GET', '/me'),
+  },
+
   seller: {
     listings: () =>
       isLive
@@ -140,25 +168,36 @@ export const api = {
         ? request<Review[]>("GET", "/seller/reviews")
         : offline(seed.reviews),
 
-    // TODO(Role 4): GET /me returns the user with the shop inside `sellerProfile`; map it to ShopProfile.
-    profile: () =>
-      isLive
-        ? request<ShopProfile>("GET", "/me")
-        : offline(seed.sellerProfile),
+    profile: async (): Promise<ShopProfile> =>
+      isLive ? shopProfileFromUser(await request<BackendUser>('GET', '/me')) : offline(seed.sellerProfile),
 
-    updateProfile: (input: Partial<Omit<ShopProfile, "logoUrl">>) =>
-      isLive
-        ? // TODO(Role 4): map ShopProfile fields to the backend's seller fields.
-          request<ShopProfile>("PATCH", "/me", { seller: input })
-        : offline({ ...seed.sellerProfile, ...input }),
+    updateProfile: async (input: Partial<Omit<ShopProfile, 'logoUrl'>>): Promise<ShopProfile> => {
+      if (!isLive) return offline({ ...seed.sellerProfile, ...input });
+      const user = await request<BackendUser>('GET', '/me');
+      const existing = user.sellerProfile;
+      if (user.role !== 'seller' || !existing) {
+        throw { status: 403, message: 'Seller profile was not found.' } satisfies ApiError;
+      }
+      // PATCH /me uses SellerDetails, which requires all identity fields.
+      const updated = await request<BackendUser>('PATCH', '/me', {
+        seller: {
+          businessName: input.shopName ?? existing.businessName,
+          businessType: existing.businessType,
+          businessAddress: input.location ?? existing.businessAddress,
+          contactPhone: existing.contactPhone,
+          description: input.description ?? existing.description,
+        },
+      });
+      return shopProfileFromUser(updated);
+    },
 
     uploadLogo: async (file: File): Promise<{ logoUrl: string }> => {
       if (!isLive) return offline({ logoUrl: URL.createObjectURL(file) });
       const body = new FormData();
       body.append("file", file);
-      const response = await fetch(`${BASE_URL}/me/logo`, {
+      const response = await fetch(`${API_BASE}/me/logo`, {
         method: "POST",
-        credentials: "include",
+        headers: await tokenHeaders(),
         body,
       });
       if (!response.ok)
@@ -186,11 +225,10 @@ export const api = {
         ? request<BuyerPreferences>("PUT", "/me/preferences", input)
         : offline(input),
 
-    // TODO(Role 4): the backend sends ListingOut; map it to Listing like the Shop does.
-    recommendations: () =>
+    recommendations: async (): Promise<Listing[]> =>
       isLive
-        ? request<Listing[]>("GET", "/me/recommendations")
-        : offline(seed.listings.filter((listing) => listing.status === "active").slice(0, 4)),
+        ? (await request<BackendListing[]>('GET', '/me/recommendations')).map(listingFromBackend)
+        : offline(seed.listings.filter((listing) => listing.status === 'active').slice(0, 4)),
 
     review: (input: ReviewInput) =>
       isLive
@@ -210,45 +248,49 @@ export const api = {
   },
 
   partner: {
-    // The backend answers with a page: { items, total, limit, offset }.
-    surplus: async () =>
-      isLive
-        ? (await request<{ items: Listing[] }>("GET", "/partners/surplus")).items
-        : offline(seed.surplusBoard),
+    // Render all pages of results, not just the backend's first 24 offers.
+    surplus: async (): Promise<Listing[]> => {
+      if (!isLive) return offline(seed.surplusBoard);
+      const listings: Listing[] = [];
+      for (let offset = 0; ; offset += 100) {
+        const page = await request<{ items: BackendListing[]; total: number }>(
+          'GET', `/partners/surplus?limit=100&offset=${offset}`,
+        );
+        listings.push(...page.items.map(listingFromBackend));
+        if (page.items.length === 0 || listings.length >= page.total) break;
+      }
+      return listings;
+    },
 
-    orders: () =>
+    orders: async (): Promise<Order[]> =>
       isLive
-        ? request<Order[]>("GET", "/partners/orders")
+        ? (await request<BackendOrder[]>('GET', '/partners/orders')).map(orderFromBackend)
         : offline(seed.partnerOrders),
 
-    buy: (listingId: string, input: PartnerOrderInput) =>
+    buy: async (listingId: string, input: PartnerOrderInput): Promise<Order> =>
       isLive
-        ? request<Order>("POST", `/partners/surplus/${listingId}/buy`, input)
-        : offline(partnerOrderFromSeed(listingId, input, "partner-purchase")),
+        ? orderFromBackend(await request<BackendOrder>('POST', `/partners/surplus/${encodeURIComponent(listingId)}/buy`, input))
+        : offline(partnerOrderFromSeed(listingId, input, 'partner-purchase')),
 
-    claim: (listingId: string, input: PartnerOrderInput) =>
+    claim: async (listingId: string, input: PartnerOrderInput): Promise<Order> =>
       isLive
-        ? request<Order>("POST", `/partners/surplus/${listingId}/claim`, input)
-        : offline(partnerOrderFromSeed(listingId, input, "donation")),
+        ? orderFromBackend(await request<BackendOrder>('POST', `/partners/surplus/${encodeURIComponent(listingId)}/claim`, input))
+        : offline(partnerOrderFromSeed(listingId, input, 'donation')),
 
-    markDistributed: (orderId: string) =>
+    markDistributed: async (orderId: string): Promise<Order> =>
       isLive
-        ? request<Order>("POST", `/partners/orders/${orderId}/distributed`)
-        : offline({
-            ...find(seed.partnerOrders, orderId),
-            distributionStatus: "distributed",
-          } as Order),
+        ? orderFromBackend(await request<BackendOrder>('POST', `/partners/orders/${encodeURIComponent(orderId)}/distributed`))
+        : offline({ ...find(seed.partnerOrders, orderId), distributionStatus: 'distributed' } as Order),
 
-    // TODO(Role 4): GET /me returns the user with the organization inside `partnerProfile`.
-    profile: () =>
+    profile: async (): Promise<PartnerProfile> =>
       isLive
-        ? request<PartnerProfile>("GET", "/me")
+        ? partnerProfileFromUser(await request<BackendUser>('GET', '/me'))
         : offline(seed.partnerProfile),
 
-    updateProfile: (input: Partial<Omit<PartnerProfile, "verifiedAt">>) =>
+    updateProfile: async (input: Partial<Omit<PartnerProfile, 'verifiedAt' | 'accreditationUrl'>> & { accreditationUrl?: string | null }): Promise<PartnerProfile> =>
       isLive
-        ? request<PartnerProfile>("PATCH", "/me", { partner: input })
-        : offline({ ...seed.partnerProfile, ...input }),
+        ? partnerProfileFromUser(await request<BackendUser>('PATCH', '/me', { partner: input }))
+        : offline({ ...seed.partnerProfile, ...input, accreditationUrl: input.accreditationUrl ?? undefined }),
   },
 
   admin: {
