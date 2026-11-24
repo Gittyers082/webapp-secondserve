@@ -15,19 +15,23 @@ from decimal import Decimal
 import pytest
 from fastapi import HTTPException
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import select, text
+from sqlalchemy import select, text, update
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+from app.core.config import get_settings
 from app.core.deps import get_current_user
 from app.db.session import get_db
 from app.main import app
 from app.models import (
+    AccountStatus,
     Base,
     DistributionStatus,
     FoodCategory,
     Listing,
     ListingChannel,
     ListingStatus,
+    Notification,
+    Order,
     OrderStatus,
     OrderType,
     PartnerProfile,
@@ -41,7 +45,9 @@ from app.models import (
 from app.schemas.order import CheckoutIn, CheckoutLine, OrderCreate
 from app.schemas.partner import PartnerOrderIn
 from app.schemas.review import ReviewCreate
+from app.services import jobs
 from app.services import orders as svc
+from app.services.surplus import PHILIPPINE_TIME
 
 TEST_URL = os.environ.get("TEST_DATABASE_URL")
 pytestmark = pytest.mark.skipif(not TEST_URL, reason="TEST_DATABASE_URL not set")
@@ -59,7 +65,7 @@ async def sessions():
     await engine.dispose()
 
 
-async def make_user(maker, name: str, role: Role) -> User:
+async def make_user(maker, name: str, role: Role, org_type: str = "charity") -> User:
     async with maker() as db:
         user = User(
             id=uuid.uuid4(),
@@ -84,7 +90,7 @@ async def make_user(maker, name: str, role: Role) -> User:
                 PartnerProfile(
                     user_id=user.id,
                     organization_name=f"{name.title()} Pantry",
-                    organization_type="charity",
+                    organization_type=org_type,
                     contact_person=name.title(),
                     address="Aurora Hill, Baguio",
                 )
@@ -511,3 +517,272 @@ async def test_partner_marks_food_distributed(sessions):
         assert (await client.post(path)).status_code == 409
         mine = (await client.get("/api/partners/orders")).json()
         assert [o["orderType"] for o in mine] == ["donation"]
+
+
+# ---------------------------------------------------------------- jobs, notices, seller pages
+
+
+async def notice_types(maker, user: User) -> list[str]:
+    async with maker() as db:
+        rows = await db.scalars(select(Notification.type).where(Notification.user_id == user.id))
+        return sorted(rows)
+
+
+async def run_job(maker, job):
+    async with maker() as db:
+        return await job(db)
+
+
+async def backdate(maker, order_id, hours: int) -> None:
+    async with maker() as db:
+        await db.execute(
+            update(Order)
+            .where(Order.id == order_id)
+            .values(created_at=datetime.now(timezone.utc) - timedelta(hours=hours))
+        )
+        await db.commit()
+
+
+async def test_escalate_surplus_moves_unsold_food_to_partners(sessions):
+    seller = await make_user(sessions, "sam", Role.seller)
+    lgu = await make_user(sessions, "lgu", Role.partner, "lgu")
+    charity = await make_user(sessions, "hope", Role.partner, "charity")
+    waiting = await make_user(sessions, "wait", Role.partner, "lgu")
+    async with sessions() as db:
+        await db.execute(
+            update(User).where(User.id == waiting.id).values(status=AccountStatus.pending)
+        )
+        await db.commit()
+
+    soon = datetime.now(timezone.utc) + timedelta(hours=3)
+    due = await make_listing(sessions, seller, "Due bread", 3, expires_at=soon)
+    far = await make_listing(
+        sessions,
+        seller,
+        "Far bread",
+        3,
+        expires_at=datetime.now(timezone.utc) + timedelta(hours=20),
+    )
+    sold_out = await make_listing(
+        sessions, seller, "Gone bread", 1, expires_at=soon, status=ListingStatus.sold_out
+    )
+
+    result = await run_job(sessions, jobs.escalate_surplus)
+
+    assert result == {"escalated": 1, "partnersNotified": 1}
+    assert (await reload(sessions, due.id)).channel == ListingChannel.partner_offer
+    assert (await reload(sessions, due.id)).surplus_at is not None
+    assert (await reload(sessions, due.id)).discounted_price == Decimal("50")  # price kept
+    assert (await reload(sessions, far.id)).channel == ListingChannel.marketplace
+    assert (await reload(sessions, sold_out.id)).channel == ListingChannel.marketplace
+    assert await notice_types(sessions, seller) == ["listing.surplus"]
+    assert await notice_types(sessions, lgu) == ["surplus.offer"]  # may buy offers
+    assert await notice_types(sessions, charity) == []  # can't buy, so no offer notice
+    assert await notice_types(sessions, waiting) == []  # not approved
+
+    again = await run_job(sessions, jobs.escalate_surplus)  # safe to run twice
+    assert again == {"escalated": 0, "partnersNotified": 0}
+    assert await notice_types(sessions, lgu) == ["surplus.offer"]
+
+
+async def test_uncollected_claims_go_back_on_the_board(sessions):
+    seller = await make_user(sessions, "sam", Role.seller)
+    buyer = await make_user(sessions, "ana", Role.buyer)
+    partner = await make_user(sessions, "pat", Role.partner)
+    gift = await make_listing(
+        sessions,
+        seller,
+        "Gift bread",
+        3,
+        channel=ListingChannel.donation,
+        discounted_price=Decimal("0"),
+    )
+    old, _ = await claim(sessions, partner, gift.id, 2)
+    fresh, _ = await claim(sessions, partner, gift.id, 1)  # takes the last one
+    retail = await make_listing(sessions, seller, "Retail bread", 2)
+    sale, _ = await reserve(sessions, buyer, retail.id)
+    for order in (old, sale):
+        await backdate(sessions, order.id, hours=5)
+    assert (await reload(sessions, gift.id)).status == ListingStatus.sold_out
+
+    result = await run_job(sessions, jobs.release_uncollected_claims)
+
+    assert result == {"released": 1}  # not the fresh claim, not the buyer's sale
+    after = await reload(sessions, gift.id)
+    assert after.quantity_available == 2 and after.status == ListingStatus.active
+    async with sessions() as db:
+        assert (await svc.get_order_or_404(db, old.id)).status == OrderStatus.cancelled
+        assert (await svc.get_order_or_404(db, fresh.id)).status == OrderStatus.reserved
+        assert (await svc.get_order_or_404(db, sale.id)).status == OrderStatus.reserved
+    assert "order.released" in await notice_types(sessions, partner)
+    assert "order.released" in await notice_types(sessions, seller)
+    assert await run_job(sessions, jobs.release_uncollected_claims) == {"released": 0}
+
+
+async def test_a_collected_claim_is_not_released(sessions):
+    seller = await make_user(sessions, "sam", Role.seller)
+    partner = await make_user(sessions, "pat", Role.partner)
+    gift = await make_listing(
+        sessions,
+        seller,
+        "Gift bread",
+        2,
+        channel=ListingChannel.donation,
+        discounted_price=Decimal("0"),
+    )
+    order, _ = await claim(sessions, partner, gift.id, 1)
+    await backdate(sessions, order.id, hours=9)
+    async with sessions() as db:
+        await svc.mark_picked_up(db, seller, order.id, order.pickup_code)
+
+    assert await run_job(sessions, jobs.release_uncollected_claims) == {"released": 0}
+
+
+async def test_only_lgus_and_agencies_buy_offers_but_everyone_claims(sessions, monkeypatch):
+    seller = await make_user(sessions, "sam", Role.seller)
+    lgu = await make_user(sessions, "lgu", Role.partner, "lgu")
+    charity = await make_user(sessions, "hope", Role.partner, "charity")
+    offer = await make_listing(
+        sessions, seller, "Offer bread", 5, channel=ListingChannel.partner_offer
+    )
+    gift = await make_listing(
+        sessions,
+        seller,
+        "Gift bread",
+        5,
+        channel=ListingChannel.donation,
+        discounted_price=Decimal("0"),
+    )
+
+    async with api(sessions, charity) as client:
+        refused = await client.post(f"/api/partners/surplus/{offer.id}/buy", json={"quantity": 1})
+        assert refused.status_code == 403 and "LGUs" in refused.json()["detail"]
+        claimed = await client.post(f"/api/partners/surplus/{gift.id}/claim", json={"quantity": 1})
+        assert claimed.status_code == 201
+    async with api(sessions, lgu) as client:
+        bought = await client.post(f"/api/partners/surplus/{offer.id}/buy", json={"quantity": 1})
+        assert bought.status_code == 201
+
+    monkeypatch.setenv("PARTNER_BUYER_TYPES", "lgu,government-agency,charity,shelter")
+    get_settings.cache_clear()
+    try:
+        async with api(sessions, charity) as client:
+            opened = await client.post(
+                f"/api/partners/surplus/{offer.id}/buy", json={"quantity": 1}
+            )
+            assert opened.status_code == 201
+    finally:
+        get_settings.cache_clear()
+
+
+async def test_offering_to_partners_notifies_the_right_partners(sessions):
+    seller = await make_user(sessions, "sam", Role.seller)
+    lgu = await make_user(sessions, "lgu", Role.partner, "lgu")
+    charity = await make_user(sessions, "hope", Role.partner, "charity")
+    buyer = await make_user(sessions, "ana", Role.buyer)
+    offer = await make_listing(sessions, seller, "Offer bread", 3)
+    gift = await make_listing(sessions, seller, "Gift bread", 3)
+
+    async with api(sessions, seller) as client:
+        a = await client.post(
+            f"/api/listings/{offer.id}/offer-to-partners",
+            json={"channel": "partner-offer", "partnerPrice": 20},
+        )
+        b = await client.post(
+            f"/api/listings/{gift.id}/offer-to-partners", json={"channel": "donation"}
+        )
+        assert a.status_code == 200 and b.status_code == 200
+
+    assert await notice_types(sessions, lgu) == ["surplus.donation", "surplus.offer"]
+    assert await notice_types(sessions, charity) == ["surplus.donation"]
+    assert await notice_types(sessions, buyer) == []
+
+
+async def test_seller_reviews_and_sales(sessions):
+    seller = await make_user(sessions, "sam", Role.seller)
+    other = await make_user(sessions, "olive", Role.seller)
+    buyer = await make_user(sessions, "ana", Role.buyer)
+    partner = await make_user(sessions, "pat", Role.partner)
+    bread = await make_listing(sessions, seller, "Bread", 6)
+    gift = await make_listing(
+        sessions,
+        seller,
+        "Gift bread",
+        2,
+        channel=ListingChannel.donation,
+        discounted_price=Decimal("0"),
+    )
+    elsewhere = await make_listing(sessions, other, "Not mine", 2)
+
+    async def complete(user, listing, quantity, review=None):
+        if listing.channel == ListingChannel.donation:
+            order, _ = await claim(sessions, user, listing.id, quantity)
+        else:
+            order, _ = await reserve(sessions, user, listing.id, quantity)
+        async with sessions() as db:
+            await svc.mark_picked_up(db, listing_seller(listing), order.id, order.pickup_code)
+        if review:
+            async with sessions() as db:
+                await svc.create_review(db, user, order.id, ReviewCreate(**review))
+
+    owners = {bread.id: seller, gift.id: seller, elsewhere.id: other}
+
+    def listing_seller(listing):
+        return owners[listing.id]
+
+    await complete(buyer, bread, 2, {"rating": 5, "comment": "Great"})
+    await complete(buyer, bread, 1, {"rating": 3})
+    await complete(partner, gift, 1)
+    await complete(buyer, elsewhere, 1, {"rating": 1})  # someone else's shop
+    waiting, _ = await reserve(sessions, buyer, bread.id, 1)  # still pending
+    cancelled, _ = await reserve(sessions, buyer, bread.id, 1)
+    async with sessions() as db:
+        await svc.cancel_order(db, buyer, cancelled.id)
+
+    async with api(sessions, seller) as client:
+        reviews = (await client.get("/api/seller/reviews")).json()
+        assert reviews["sellerReviewCount"] == 2 and reviews["sellerAverage"] == 4.0
+        assert reviews["distribution"] == {"1": 0, "2": 0, "3": 1, "4": 0, "5": 1}
+        assert {r["listingName"] for r in reviews["items"]} == {"Bread"}
+        assert reviews["items"][0]["author"] == "ana"
+
+        sales = (await client.get("/api/seller/sales")).json()
+        assert sales["orders"] == 3 and sales["itemsSold"] == 3 and sales["donatedItems"] == 1
+        assert Decimal(sales["revenue"]) == 150 and Decimal(sales["commission"]) == Decimal("10.50")
+        assert Decimal(sales["netRevenue"]) == Decimal("139.50")
+        assert Decimal(sales["discountImpact"]) == 250  # 3 x 50 off, and 1 free item worth 100
+        assert sales["pendingOrders"] == 1 and len(sales["daily"]) == 30
+        today = datetime.now(PHILIPPINE_TIME).date().isoformat()
+        assert sales["daily"][-1]["date"] == today and sales["daily"][-1]["orders"] == 3
+        assert sales["daily"][0]["orders"] == 0
+        assert len((await client.get("/api/seller/sales", params={"days": 7})).json()["daily"]) == 7
+        assert (await client.get("/api/seller/sales", params={"days": 0})).status_code == 422
+    assert waiting.id
+
+    async with api(sessions, buyer) as client:
+        assert (await client.get("/api/seller/reviews")).status_code == 403
+        assert (await client.get("/api/seller/sales")).status_code == 403
+
+
+async def test_order_receipt_is_private_and_escapes_html(sessions):
+    seller = await make_user(sessions, "sam", Role.seller)
+    buyer = await make_user(sessions, "ana", Role.buyer)
+    stranger = await make_user(sessions, "ben", Role.buyer)
+    listing = await make_listing(sessions, seller, "<script>alert(1)</script> bread", 2)
+    order, _ = await reserve(sessions, buyer, listing.id)
+
+    async with api(sessions, buyer) as client:
+        page = await client.get(f"/api/orders/{order.id}/receipt")
+        assert page.status_code == 200 and page.headers["content-type"].startswith("text/html")
+        assert order.pickup_code in page.text and "Purchase" in page.text
+        assert "<script>alert(1)" not in page.text and "&lt;script&gt;" in page.text
+    async with api(sessions, seller) as client:
+        assert (await client.get(f"/api/orders/{order.id}/receipt")).status_code == 200
+    async with api(sessions, stranger) as client:
+        assert (await client.get(f"/api/orders/{order.id}/receipt")).status_code == 404
+
+
+async def test_the_job_runner_includes_the_new_jobs(sessions):
+    result = await run_job(sessions, jobs.run_all)
+    assert set(result) == {"expire-listings", "escalate-surplus", "release-claims"}
+    assert not any("error" in value for value in result.values())

@@ -57,15 +57,11 @@ def expire_listings() -> None:
 
 @celery_app.task
 def escalate_surplus() -> None:
-    """Every 15 minutes: move unsold food to the partner Surplus Board (FR-SYS-14, FR-SYS-15).
+    """Every 15 minutes: move unsold food to the partner Surplus Board (FR-SYS-14, FR-SYS-15)."""
+    log.info("escalate_surplus: %s", _run(jobs.escalate_surplus))
 
-    TODO(Role 1):
-    - find active marketplace listings that still have stock and expire within
-      SURPLUS_WINDOW_HOURS (about 6 hours)
-    - set `channel` to partner-offer, set `surplus_at`, and keep the price for now
-      (the seller can still change it or turn it into a donation)
-    - notify every approved partner in the seller's area, and tell the seller
-    - publish the stock change so buyers' pages drop the item
-    Celery tasks are synchronous, so wrap async DB code with asyncio.run(...).
-    """
-    log.info("escalate_surplus: not implemented yet")
+
+@celery_app.task
+def release_uncollected_claims() -> None:
+    """Every 15 minutes: give stock back when a partner never collects (FR-USER-P-6)."""
+    log.info("release_uncollected_claims: %s", _run(jobs.release_uncollected_claims))
