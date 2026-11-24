@@ -2,7 +2,7 @@
 import '../styles/global.css';
 
 interface Props {
-  /** Shown in the window chrome strip at the top of every screen. */
+  /** Page name, shown in the browser tab as "Hapag — title". */
   title: string;
   description?: string;
 }
@@ -43,10 +43,6 @@ const { title, description = 'A place at the table for everyone.' } = Astro.prop
   <body>
     <a class="skip-link" href="#main">Skip to main content</a>
     <div data-app-root>
-      <div class="window-chrome" aria-hidden="true">
-        <span class="lights"><i></i><i></i><i></i></span>
-        <span class="window-title">Hapag &mdash; {title}</span>
-      </div>
       <slot />
     </div>
     <p class="sr-only" role="status" aria-live="polite" aria-atomic="true" data-announcer></p>
@@ -60,35 +56,3 @@ const { title, description = 'A place at the table for everyone.' } = Astro.prop
   </body>
 </html>
 
-<style>
-  .window-chrome {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: var(--chrome-h);
-    padding: 0 20px;
-    background: var(--glass-strong);
-    -webkit-backdrop-filter: var(--blur);
-    backdrop-filter: var(--blur);
-  }
-
-  .lights {
-    position: absolute;
-    left: 20px;
-    display: flex;
-    gap: 8px;
-  }
-
-  .lights i {
-    width: 11px;
-    height: 11px;
-    border-radius: 50%;
-    background: var(--s4);
-  }
-
-  .window-title {
-    font-size: var(--fs-sm);
-    color: var(--muted);
-  }
-</style>
