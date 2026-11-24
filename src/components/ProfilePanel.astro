@@ -1,22 +1,12 @@
 ---
 import type { SignupRole } from '../data/types';
-
-interface Props {
-  username: string;
-  role: SignupRole;
-}
-
+interface Props { username: string; role: SignupRole; }
 const { username, role } = Astro.props;
-const initial = role === 'seller' ? 'B' : username.charAt(0).toUpperCase();
-
 const accountLabel: Record<SignupRole, string> = {
-  buyer: 'Buyer account',
-  seller: 'Seller account',
-  partner: 'Partner account',
+  buyer: 'Buyer account', seller: 'Seller account', partner: 'Partner account',
 };
-
 const note: Record<SignupRole, string> = {
-  buyer: 'Sellers see "Seller account" here. Same screen for Buyer and Seller.',
+  buyer: 'Your account is connected to Supabase Auth.',
   seller: 'Buyers see your shop name on every listing.',
   partner: 'Shops see your organization name on every order you place.',
 };
@@ -24,54 +14,83 @@ const note: Record<SignupRole, string> = {
 
 <div class="profile">
   <aside class="identity panel">
-    <span class="avatar avatar-lg" aria-hidden="true">{initial}</span>
+    <span class="avatar avatar-lg" aria-hidden="true">{username.charAt(0).toUpperCase()}</span>
     <p class="username">{username}</p>
     <p class="pill pill-neutral">{accountLabel[role]}</p>
     <p class="hint note">{note[role]}</p>
-    <a class="btn btn-danger btn-block logout" href="/login">Log out of SecondServe</a>
+    <a class="btn btn-danger btn-block logout" href="/login" data-signout>Log out of SecondServe</a>
   </aside>
 
   <div class="forms">
-    <form class="block panel" method="post" data-demo-form data-success="Username updated.">
+    <div class="block panel">
       <div class="field">
-        <label class="field-label" for="username-field">Update username</label>
-        <input class="input" id="username-field" name="username" value={username} autocomplete="username" required />
+        <label class="field-label" for="username-field">Username</label>
+        <input class="input" id="username-field" value={username} autocomplete="username" readonly />
+        <p class="hint field-hint">Username changes are not supported by the current backend.</p>
       </div>
-      <div class="form-foot">
-        <button class="btn" type="submit">Update username</button>
-        <p class="form-status" data-form-status hidden></p>
-      </div>
-    </form>
+    </div>
 
-    <form class="block panel" method="post" data-demo-form data-success="Password changed.">
+    <form class="block panel" method="post" data-password-form>
       <div class="field">
         <label class="field-label" for="current-password">Current password</label>
-        <input class="input" id="current-password" name="currentPassword" type="password" value="password" autocomplete="current-password" required />
+        <input class="input" id="current-password" name="currentPassword" type="password" autocomplete="current-password" required />
       </div>
-
       <div class="field-row">
-        <div>
+        <div class="field">
           <label class="field-label" for="new-password">New password</label>
-          <input class="input" id="new-password" name="newPassword" type="password" value="newpassword" autocomplete="new-password" required />
+          <input class="input" id="new-password" name="newPassword" type="password" autocomplete="new-password" minlength="8" required />
         </div>
-        <div>
+        <div class="field">
           <label class="field-label" for="confirm-password">Confirm new password</label>
-          <input class="input" id="confirm-password" name="confirmPassword" type="password" value="newpassword" autocomplete="new-password" required />
+          <input class="input" id="confirm-password" name="confirmPassword" type="password" autocomplete="new-password" minlength="8" required />
         </div>
       </div>
-
       <div class="form-foot">
         <button class="btn" type="submit">Change password</button>
-        <p class="form-status" data-form-status hidden></p>
+        <p class="form-status" data-password-status role="status" hidden></p>
       </div>
     </form>
-
   </div>
 </div>
 
 <script>
-  import { initDemoForms } from '../scripts/demo-forms';
-  initDemoForms();
+  import { supabase } from '../api/supabase';
+  import { signOut } from '../scripts/account-ui';
+  const logout = document.querySelector<HTMLAnchorElement>('[data-signout]');
+  logout?.addEventListener('click', (event) => {
+    event.preventDefault();
+    void signOut();
+  });
+  const form = document.querySelector<HTMLFormElement>('[data-password-form]');
+  const status = form?.querySelector<HTMLElement>('[data-password-status]');
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!form.reportValidity()) return;
+    const current = form.querySelector<HTMLInputElement>('#current-password')?.value ?? '';
+    const next = form.querySelector<HTMLInputElement>('#new-password')?.value ?? '';
+    const confirm = form.querySelector<HTMLInputElement>('#confirm-password')?.value ?? '';
+    if (!status) return;
+    status.hidden = false;
+    if (next !== confirm) { status.textContent = 'Passwords do not match.'; return; }
+    if (next === current) { status.textContent = 'Choose a different password.'; return; }
+    const button = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+    if (button) button.disabled = true;
+    status.textContent = 'Updating password...';
+    try {
+      const { data } = await supabase.auth.getUser();
+      if (!data.user?.email) throw new Error('Could not determine your signed-in email.');
+      const verified = await supabase.auth.signInWithPassword({ email: data.user.email, password: current });
+      if (verified.error) throw new Error('Current password is incorrect.');
+      const result = await supabase.auth.updateUser({ password: next });
+      if (result.error) throw result.error;
+      status.textContent = 'Password updated successfully.';
+      form.reset();
+    } catch (error) {
+      status.textContent = error instanceof Error ? error.message : 'Could not change password.';
+    } finally {
+      if (button) button.disabled = false;
+    }
+  });
 </script>
 
 <style>

@@ -1,119 +1,188 @@
 ---
 import AppLayout from '../../layouts/AppLayout.astro';
-import { admin, pendingAccounts } from '../../data/store';
-import { roleLabel } from '../../data/nav';
 ---
 
 <AppLayout
   role="admin"
-  username={admin.username}
+  username="Loading..."
   section="Pending Approvals"
   heading="Pending Approvals"
-  subtitle={`${pendingAccounts.length} new accounts are waiting for you.`}
-  highlight={`${pendingAccounts.length} new accounts`}
+  subtitle="Checking pending accounts..."
 >
-  <div class="table-wrap" data-approvals>
-  <table class="table">
-    <thead>
-      <tr>
-        <th>Username</th>
-        <th>Account type</th>
-        <th>Shop / organization</th>
-        <th>Requested</th>
-        <th>Status</th>
-        <th><span class="sr-only">Actions</span></th>
-      </tr>
-    </thead>
-    <tbody>
-      {
-        pendingAccounts.map((account) => (
-          <tr data-account={account.id}>
-            <td class="name">
-              <span class="who">
-                <span class="avatar" aria-hidden="true">{account.username.charAt(0)}</span>
-                {account.username}
-              </span>
-            </td>
-            <td>{roleLabel[account.role]}</td>
-            <td class="muted">{account.shopName ?? account.organizationName ?? '—'}</td>
-            <td class="muted">{account.requestedAt}</td>
-            <td>
-              <span class="pill pill-neutral" data-decision-chip>Pending</span>
-            </td>
-            <td class="actions">
-              <div class="row">
-                <button class="btn btn-sm btn-light" type="button" data-decide="approved" aria-label={`Approve ${account.username}`}>
-                  Approve
-                </button>
-                <button class="btn btn-sm btn-danger" type="button" data-decide="declined" aria-label={`Decline ${account.username}`}>
-                  Decline
-                </button>
-              </div>
-            </td>
-          </tr>
-        ))
-      }
-    </tbody>
-  </table>
+  <p class="hint" data-approvals-status role="status" aria-live="polite">Loading pending accounts...</p>
+
+  <div class="table-wrap" data-approvals hidden>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>Account type</th>
+          <th>Shop / organization</th>
+          <th>Requested</th>
+          <th>Status</th>
+          <th><span class="sr-only">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody data-approvals-body></tbody>
+    </table>
   </div>
 
   <div class="empty" data-empty hidden>
     <h2>Nothing waiting.</h2>
-    <p>Every new account has been reviewed. Decisions are kept in Approved/Declined Users.</p>
-    <a class="btn btn-primary" href="/admin/decisions">See past decisions</a>
+    <p>Every new account has been reviewed.</p>
   </div>
+
+  <button class="btn btn-light" type="button" data-approvals-retry hidden>Try again</button>
 </AppLayout>
 
 <script>
+  import { api, isLive, errorMessage } from '../../api/client';
+  import { requireRole } from '../../scripts/account-ui';
   import { announce } from '../../scripts/announce';
   import { run } from '../../scripts/request';
-  import { api } from '../../api/client';
 
-  const rows = Array.from(document.querySelectorAll<HTMLElement>('[data-account]'));
+  // GET /api/admin/approvals returns UserOut records (not the UI's seed-data type).
+  interface PendingBackendAccount {
+    id: string;
+    username: string;
+    role: string;
+    status: string;
+    createdAt?: string;
+    requestedAt?: string;
+    sellerProfile?: { businessName?: string } | null;
+    partnerProfile?: { organizationName?: string } | null;
+  }
 
-  const checkEmpty = () => {
-    const remaining = rows.filter((row) => row.dataset.decided !== 'true').length;
-    if (remaining > 0) return;
+  const body = document.querySelector<HTMLTableSectionElement>('[data-approvals-body]');
+  const table = document.querySelector<HTMLElement>('[data-approvals]');
+  const empty = document.querySelector<HTMLElement>('[data-empty]');
+  const status = document.querySelector<HTMLElement>('[data-approvals-status]');
+  const retry = document.querySelector<HTMLButtonElement>('[data-approvals-retry]');
 
-    const table = document.querySelector<HTMLElement>('[data-approvals]');
-    const empty = document.querySelector<HTMLElement>('[data-empty]');
-    if (table) table.hidden = true;
-    if (empty) empty.hidden = false;
-    empty?.querySelector<HTMLElement>('a')?.focus();
+  const roles: Record<string, string> = {
+    buyer: 'Buyer', seller: 'Seller', partner: 'Partner', admin: 'Administrator',
   };
 
-  rows.forEach((row) => {
-    row.querySelectorAll<HTMLButtonElement>('[data-decide]').forEach((button) => {
+  function makeElement<K extends keyof HTMLElementTagNameMap>(
+    tag: K, className: string, value: string,
+  ): HTMLElementTagNameMap[K] {
+    const element = document.createElement(tag);
+    if (className) element.className = className;
+    element.textContent = value;
+    return element;
+  }
+
+  function updateCount(count: number): void {
+    const summary = document.querySelector<HTMLElement>('.section-sub');
+    if (summary) {
+      const highlight = makeElement('span', 'hl', `${count} new ${count === 1 ? 'account' : 'accounts'}`);
+      summary.replaceChildren(highlight, ' waiting for you.');
+    }
+
+    // This page has real counts; replace the demo count on its sidebar link.
+    const link = document.querySelector<HTMLAnchorElement>('.sidebar a[href="/admin/approvals"]');
+    if (!link) return;
+    let badge = link.querySelector<HTMLElement>('.nav-count');
+    if (count === 0) {
+      badge?.remove();
+      return;
+    }
+    if (!badge) {
+      badge = makeElement('span', 'count nav-count', '');
+      link.append(badge);
+    }
+    badge.textContent = String(count);
+    badge.setAttribute('aria-label', `${count} waiting`);
+  }
+
+  function displayDate(iso?: string): string {
+    if (!iso) return '—';
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return '—';
+    return new Intl.DateTimeFormat('en-PH', {
+      month: 'short', day: 'numeric', year: 'numeric',
+      hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Manila',
+    }).format(date);
+  }
+
+  function createRow(account: PendingBackendAccount): HTMLTableRowElement {
+    const row = document.createElement('tr');
+    row.dataset.account = account.id;
+
+    const name = makeElement('td', 'name', '');
+    const who = makeElement('span', 'who', '');
+    who.append(
+      makeElement('span', 'avatar', account.username.charAt(0).toUpperCase()),
+      document.createTextNode(account.username),
+    );
+    name.append(who);
+
+    const role = makeElement('td', '', roles[account.role] ?? account.role);
+    const organization = makeElement('td', 'muted',
+      account.sellerProfile?.businessName ?? account.partnerProfile?.organizationName ?? '—',
+    );
+    const requested = makeElement('td', 'muted', displayDate(account.createdAt ?? account.requestedAt));
+    const state = makeElement('td', '', '');
+    state.append(makeElement('span', 'pill pill-neutral', 'Pending'));
+
+    const actions = makeElement('td', 'actions', '');
+    const controls = makeElement('div', 'row', '');
+    for (const decision of ['approved', 'declined'] as const) {
+      const label = decision === 'approved' ? 'Approve' : 'Decline';
+      const button = makeElement('button',
+        decision === 'approved' ? 'btn btn-sm btn-light' : 'btn btn-sm btn-danger', label,
+      );
+      button.type = 'button';
+      button.setAttribute('aria-label', `${label} ${account.username}`);
       button.addEventListener('click', async () => {
-        const choice = button.dataset.decide === 'approved' ? 'approved' : 'declined';
-        const saved = await run(button, () => api.admin.decide(row.dataset.account ?? '', choice));
+        const confirmed = window.confirm(`${label} ${account.username} (${roles[account.role] ?? account.role})?`);
+        if (!confirmed) return;
+        const saved = await run(button, () => api.admin.decide(account.id, decision));
         if (!saved) return;
-        const decision = choice === 'approved' ? 'Approved' : 'Declined';
-        const chip = row.querySelector<HTMLElement>('[data-decision-chip]');
-        const actions = row.querySelector<HTMLElement>('.actions');
-
-        if (chip) {
-          chip.className = `pill ${decision === 'Approved' ? 'pill-ok' : 'pill-danger'}`;
-          chip.textContent = decision;
-        }
-
-        if (actions) {
-          const note = document.createElement('span');
-          note.className = 'small muted';
-          note.textContent = `${decision} just now`;
-          actions.replaceChildren(note);
-        }
-
-        row.dataset.decided = 'true';
-        announce(`${row.querySelector('.name')?.textContent?.trim() ?? 'Account'} ${decision.toLowerCase()}.`);
-        checkEmpty();
-
-        // The buttons are gone; keep keyboard focus on the next pending decision.
-        rows
-          .find((other) => other.dataset.decided !== 'true')
-          ?.querySelector<HTMLButtonElement>('[data-decide]')
-          ?.focus();
+        announce(`${account.username} ${decision}.`);
+        await loadPending();
       });
-    });
-  });
+      controls.append(button);
+    }
+    actions.append(controls);
+    row.append(name, role, organization, requested, state, actions);
+    return row;
+  }
+
+  async function loadPending(): Promise<void> {
+    if (!body || !table || !empty || !status || !retry) return;
+    table.hidden = true;
+    empty.hidden = true;
+    retry.hidden = true;
+    status.hidden = false;
+    status.textContent = 'Loading pending accounts...';
+
+    try {
+      // Never approve seed/demo accounts when the API URL is missing.
+      if (!isLive) throw new Error('Set PUBLIC_API_BASE_URL in your local .env to load real accounts.');
+      await requireRole('admin');
+      const accounts = await api.admin.approvals() as unknown as PendingBackendAccount[];
+      if (!Array.isArray(accounts)) throw new Error('The backend did not return an account list.');
+      const pending = accounts.filter((account) => account.status === 'pending');
+      body.replaceChildren(...pending.map(createRow));
+      updateCount(pending.length);
+      status.hidden = true;
+      table.hidden = pending.length === 0;
+      empty.hidden = pending.length !== 0;
+    } catch (error) {
+      const code = (error as { status?: number })?.status;
+      if (code === 401 || code === 403) return; // Account guard handles login/role errors.
+      status.textContent = `Could not load pending accounts: ${errorMessage(error)}`;
+      retry.hidden = false;
+    }
+  }
+
+  retry?.addEventListener('click', () => { void loadPending(); });
+  void loadPending();
 </script>
+
+<style>
+  [data-approvals][hidden], [data-empty][hidden], [data-approvals-status][hidden],
+  [data-approvals-retry][hidden] { display: none; }
+  [data-approvals-retry] { margin-top: 12px; }
+</style>

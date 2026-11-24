@@ -91,6 +91,11 @@ const landings = [
     detail?: unknown;
   };
 
+  type ValidAccount = BackendResponse & {
+    role: string;
+    status: string;
+  };
+
   const form = document.querySelector<HTMLFormElement>('.signin');
 
   if (form) {
@@ -146,7 +151,7 @@ const landings = [
     async function loadAccount(
       token: string,
       signupProfile: unknown
-    ): Promise<BackendResponse> {
+    ): Promise<ValidAccount> {
       const base = getApiBase();
 
       const headers = {
@@ -219,11 +224,15 @@ const landings = [
         );
       }
 
-      if (!account?.role || !account?.status) {
+      if (
+        !account ||
+        typeof account.role !== 'string' ||
+        typeof account.status !== 'string'
+      ) {
         throw new Error('Backend returned incomplete account details.');
       }
 
-      return account;
+      return { ...account, role: account.role, status: account.status };
     }
 
     form.addEventListener('submit', async (event) => {

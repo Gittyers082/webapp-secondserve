@@ -1,38 +1,23 @@
 ---
 import AppLayout from '../../layouts/AppLayout.astro';
 import Dialog from '../../components/Dialog.astro';
-import FoodArt from '../../components/FoodArt.astro';
 import Icon from '../../components/Icon.astro';
-import { partner, partnerProfile, surplusBoard } from '../../data/store';
-import { peso } from '../../data/types';
-import type { Listing } from '../../data/types';
-
-const donations = surplusBoard.filter((listing) => listing.channel === 'donation').length;
-
 const filters = [
   { id: 'all', label: 'All' },
   { id: 'partner-offer', label: 'Partner offers' },
   { id: 'donation', label: 'Donations' },
 ];
-
-const fulfillment = (listing: Listing) => {
-  const pickup = listing.allowsPickup ?? true;
-  const delivery = Boolean(listing.allowsDelivery);
-  if (pickup && delivery) return 'Pickup or delivery';
-  return delivery ? 'Delivery only' : 'Pickup only';
-};
-
-const deliveryNote = (listing: Listing) =>
-  listing.allowsDelivery ? (listing.deliveryFee ? `${peso(listing.deliveryFee)} delivery` : 'Free delivery') : '';
 ---
+
+
 
 <AppLayout
   role="partner"
-  username={partner.username}
+  username="Loading..."
   section="Surplus Board"
   heading="Surplus Board"
-  subtitle={`${surplusBoard.length} offers from Baguio shops, ${donations} of them free donations.`}
-  highlight={`${donations} of them free donations`}
+  subtitle="Loading offers from nearby shops..."
+  
 >
   <div class="toolbar">
     <div class="search">
@@ -65,61 +50,11 @@ const deliveryNote = (listing: Listing) =>
           <th><span class="sr-only">Actions</span></th>
         </tr>
       </thead>
-      <tbody>
-        {
-          surplusBoard.map((listing) => {
-            const donation = listing.channel === 'donation';
-            return (
-              <tr
-                data-offer={listing.id}
-                data-channel={listing.channel}
-                data-text={`${listing.name} ${listing.shopName}`.toLowerCase()}
-                data-name={listing.name}
-                data-left={listing.quantity}
-                data-price={listing.discountedPrice}
-                data-pickup={String(listing.allowsPickup ?? true)}
-                data-delivery={String(Boolean(listing.allowsDelivery))}
-                data-delivery-fee={listing.deliveryFee ?? 0}
-              >
-                <td class="name">
-                  <span class="food-cell">
-                    <span class="food-thumb"><FoodArt art={listing.art} ratio="1 / 1" /></span>
-                    {listing.name}
-                  </span>
-                </td>
-                <td class="muted">{listing.shopName}</td>
-                <td class="num" data-left-cell>{listing.quantity}</td>
-                <td class="num">
-                  {donation ? (
-                    <span class="pill pill-lime">Free</span>
-                  ) : (
-                    <span>
-                      {peso(listing.discountedPrice)} <s class="small muted">{peso(listing.originalPrice)}</s>
-                    </span>
-                  )}
-                </td>
-                <td class="muted">{listing.expiryLabel}</td>
-                <td>
-                  <span class="small">{fulfillment(listing)}</span>
-                  {deliveryNote(listing) && <span class="small muted block">{deliveryNote(listing)}</span>}
-                </td>
-                <td class="actions">
-                  <button
-                    class="btn btn-sm btn-primary"
-                    type="button"
-                    data-take={listing.id}
-                    aria-label={`${donation ? 'Claim' : 'Buy'} ${listing.name}`}
-                  >
-                    {donation ? 'Claim' : 'Buy'}
-                  </button>
-                </td>
-              </tr>
-            );
-          })
-        }
-      </tbody>
+      <tbody data-surplus-body></tbody>
     </table>
   </div>
+
+  <p class="hint" data-surplus-loading role="status">Loading live surplus offers...</p>
 
   <p class="no-results" data-no-results hidden>No offer matches that. Try another word, or switch the filter to All.</p>
 
@@ -149,7 +84,7 @@ const deliveryNote = (listing: Listing) =>
 
       <div class="field" data-address-field hidden>
         <label class="field-label" for="take-address">Delivery address</label>
-        <input class="input" id="take-address" name="address" value={partnerProfile.address} autocomplete="street-address" />
+        <input class="input" id="take-address" name="address" value="" autocomplete="street-address" />
       </div>
 
       <p class="total" data-total></p>
@@ -164,132 +99,8 @@ const deliveryNote = (listing: Listing) =>
 </AppLayout>
 
 <script>
-  import { announce } from '../../scripts/announce';
-  import { closeDialog, openDialog } from '../../scripts/dialog';
-  import { setupFilters } from '../../scripts/filters';
-  import { run } from '../../scripts/request';
-  import { api } from '../../api/client';
-  import { peso } from '../../data/types';
-  import type { FulfillmentType } from '../../data/types';
-
-  const rows = () => Array.from(document.querySelectorAll<HTMLElement>('[data-offer]'));
-
-  setupFilters({
-    items: rows,
-    noun: 'offer',
-    matches: (row, filter, term) =>
-      Number(row.dataset.left) > 0 &&
-      (filter === 'all' || row.dataset.channel === filter) &&
-      (term === '' || (row.dataset.text ?? '').includes(term)),
-  });
-
-  const scrim = document.querySelector<HTMLElement>('[data-dialog="take-offer"]');
-  const form = scrim?.querySelector<HTMLFormElement>('[data-take-form]');
-  const title = scrim?.querySelector<HTMLElement>('[data-dialog-title]');
-  const message = scrim?.querySelector<HTMLElement>('[data-dialog-message]');
-  const quantityInput = form?.querySelector<HTMLInputElement>('#take-quantity');
-  const quantityHint = form?.querySelector<HTMLElement>('[data-quantity-hint]');
-  const pickupRadio = form?.querySelector<HTMLInputElement>('input[value="pickup"]');
-  const deliveryRadio = form?.querySelector<HTMLInputElement>('input[value="delivery"]');
-  const deliveryLabel = form?.querySelector<HTMLElement>('[data-delivery-label]');
-  const addressField = form?.querySelector<HTMLElement>('[data-address-field]');
-  const addressInput = form?.querySelector<HTMLInputElement>('#take-address');
-  const totalLine = form?.querySelector<HTMLElement>('[data-total]');
-  const errorLine = form?.querySelector<HTMLElement>('[data-take-error]');
-  const confirm = form?.querySelector<HTMLButtonElement>('[data-take-confirm]');
-
-  let current: HTMLElement | null = null;
-
-  const chosen = (): FulfillmentType => (deliveryRadio?.checked ? 'delivery' : 'pickup');
-
-  const refresh = () => {
-    if (!current || !totalLine) return;
-    const quantity = Number(quantityInput?.value) || 0;
-    const price = Number(current.dataset.price) * quantity;
-    const fee = chosen() === 'delivery' ? Number(current.dataset.deliveryFee) : 0;
-    if (addressField) addressField.hidden = chosen() !== 'delivery';
-    totalLine.textContent =
-      current.dataset.channel === 'donation'
-        ? fee > 0
-          ? `Free food. Delivery fee: ${peso(fee)}.`
-          : 'Free. Nothing to pay.'
-        : `Total: ${peso(price + fee)}${fee > 0 ? ` (includes ${peso(fee)} delivery)` : ''}.`;
-  };
-
-  const showError = (text: string) => {
-    if (!errorLine) return;
-    errorLine.textContent = text;
-    errorLine.hidden = text === '';
-  };
-
-  rows().forEach((row) => {
-    row.querySelector<HTMLButtonElement>('[data-take]')?.addEventListener('click', (event) => {
-      current = row;
-      const donation = row.dataset.channel === 'donation';
-      const left = Number(row.dataset.left);
-      const pickup = row.dataset.pickup === 'true';
-      const delivery = row.dataset.delivery === 'true';
-
-      if (title) title.textContent = `${donation ? 'Claim' : 'Buy'} ${row.dataset.name}`;
-      if (message) message.textContent = donation ? 'This food is a free donation from the shop.' : '';
-      if (confirm) confirm.textContent = donation ? 'Claim' : 'Buy';
-      if (quantityInput) {
-        quantityInput.max = String(left);
-        quantityInput.value = '1';
-      }
-      if (quantityHint) quantityHint.textContent = `Up to ${left}.`;
-      if (pickupRadio) {
-        pickupRadio.disabled = !pickup;
-        pickupRadio.checked = pickup;
-      }
-      if (deliveryRadio) {
-        deliveryRadio.disabled = !delivery;
-        deliveryRadio.checked = !pickup && delivery;
-      }
-      if (deliveryLabel) deliveryLabel.textContent = delivery ? 'Deliver to us' : 'Deliver to us (this shop does not deliver)';
-      showError('');
-      refresh();
-      openDialog('take-offer', event.currentTarget as HTMLElement);
-    });
-  });
-
-  form?.addEventListener('input', refresh);
-
-  form?.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const row = current;
-    if (!row) return;
-
-    const quantity = Number(quantityInput?.value);
-    const left = Number(row.dataset.left);
-    if (!Number.isInteger(quantity) || quantity < 1 || quantity > left) {
-      showError(`Enter a whole number from 1 to ${left}.`);
-      quantityInput?.focus();
-      return;
-    }
-    const fulfillmentType = chosen();
-    const deliveryAddress = addressInput?.value.trim() ?? '';
-    if (fulfillmentType === 'delivery' && deliveryAddress === '') {
-      showError('Add a delivery address, or choose pickup.');
-      addressInput?.focus();
-      return;
-    }
-
-    const input = { quantity, fulfillmentType, deliveryAddress: fulfillmentType === 'delivery' ? deliveryAddress : undefined };
-    const id = row.dataset.offer ?? '';
-    const donation = row.dataset.channel === 'donation';
-    const order = await run(confirm ?? null, () => (donation ? api.partner.claim(id, input) : api.partner.buy(id, input)));
-    if (!order) return;
-
-    const remaining = left - quantity;
-    row.dataset.left = String(remaining);
-    const leftCell = row.querySelector<HTMLElement>('[data-left-cell]');
-    if (leftCell) leftCell.textContent = String(remaining);
-    if (remaining === 0) row.hidden = true;
-
-    closeDialog();
-    announce(`${donation ? 'Claimed' : 'Bought'} ${quantity} × ${row.dataset.name}. It is in My Orders.`);
-  });
+  import { initPartnerBoard } from '../../scripts/partner-board';
+  void initPartnerBoard();
 </script>
 
 <style>

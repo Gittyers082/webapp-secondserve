@@ -14,7 +14,7 @@ export type UserStatus = 'active' | 'banned';
 
 export type ListingStatus = 'active' | 'sold' | 'withdrawn' | 'expired';
 
-export type OrderStatus = 'reserved' | 'ready' | 'picked-up' | 'delivered';
+export type OrderStatus = 'reserved' | 'ready' | 'picked-up' | 'delivered' | 'cancelled';
 
 /** How an order reaches the buyer or partner. */
 export type FulfillmentType = 'pickup' | 'delivery';
@@ -36,7 +36,7 @@ export type OrganizationType = 'lgu' | 'government-agency' | 'charity' | 'shelte
 
 export type ApprovalDecision = 'pending' | 'approved' | 'declined';
 
-export type FoodCategory = 'bread' | 'pastries' | 'savory' | 'cakes' | 'fruit-cups';
+export type FoodCategory = 'bread' | 'pastries' | 'savory' | 'cakes' | 'fruit-cups' | 'groceries' | 'other';
 
 /** Keys of the illustrated food artwork bundled with the app. */
 export type FoodArt =
