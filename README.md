@@ -102,8 +102,11 @@ docs/
   api-contract.md          The API the frontend is built against, for the backend team
   requirements-coverage.md How each NFR-USER-U requirement and PERS-3 is met
 public/
-  brand/        hapag-mark.svg (the tile: a plate with an extra place set beside it),
-                hapag-mark.png (512 px, favicon and app icon),
+  brand/        hapag-mark.svg (app tile: the h of hapag drawn as a table with a bowl
+                on it; cream table, lime bowl, brick tile), also the favicon,
+                hapag-mark.png (512 px, app icon and PNG favicon),
+                hapag-symbol.svg / hapag-symbol-color.svg (the mark without the
+                tile, in ink and in brick, for light backgrounds),
                 hapag-logo.png (full square lockup with the tagline)
   photos/       Food photographs, one per listing type, with CREDITS.md
 src/
