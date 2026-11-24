@@ -48,8 +48,8 @@ async function request<T>(
   if (!response.ok) {
     let message = response.statusText;
     try {
-      message =
-        ((await response.json()) as { message?: string }).message ?? message;
+      const body = (await response.json()) as { detail?: unknown; message?: string };
+      message = readDetail(body.detail) ?? body.message ?? message;
     } catch {
       // Not JSON; keep the status text.
     }
@@ -57,6 +57,25 @@ async function request<T>(
   }
 
   return response.status === 204 ? (null as T) : ((await response.json()) as T);
+}
+
+/**
+ * FastAPI puts the error in `detail`: a sentence for most errors ("That username is
+ * already taken."), or a list of field problems for validation errors (422).
+ */
+function readDetail(detail: unknown): string | undefined {
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    const problems = detail
+      .map((item) =>
+        typeof item === "string" ? item : (item as { msg?: string })?.msg,
+      )
+      .filter((text): text is string => Boolean(text))
+      // Pydantic prefixes model-level errors with "Value error, ".
+      .map((text) => text.replace(/^Value error, /, ""));
+    return problems.length ? problems.join(" ") : undefined;
+  }
+  return undefined;
 }
 
 /** Seed fallback: answers after a short delay, like a real round trip. */
