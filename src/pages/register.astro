@@ -1,10 +1,13 @@
+
 ---
 import AuthLayout from '../layouts/AuthLayout.astro';
 import Tip from '../components/Tip.astro';
 import { organizationTypeLabel } from '../data/types';
 import type { OrganizationType } from '../data/types';
 
-const organizationTypes = Object.entries(organizationTypeLabel) as [OrganizationType, string][];
+const organizationTypes = Object.entries(
+  organizationTypeLabel
+) as [OrganizationType, string][];
 ---
 
 <AuthLayout
@@ -13,126 +16,590 @@ const organizationTypes = Object.entries(organizationTypeLabel) as [Organization
   accent="a second chance."
   lede="Create a seller account to list surplus, a buyer account to find it, or a partner account for your organization."
 >
-  <p class="note" slot="hero-extra">Sellers add a shop name; partners add their organization's details.</p>
+  <p class="note" slot="hero-extra">
+    Sellers add their business details. Partners add their organization's details.
+  </p>
 
-  <form class="register" method="post" data-demo-form data-next="/login">
+  <form class="register" method="post">
     <h2 class="display-title">Create an account</h2>
 
     <div class="field">
+      <label class="field-label" for="full-name">Full name</label>
+      <input
+        class="input"
+        id="full-name"
+        name="fullName"
+        autocomplete="name"
+        required
+        minlength="2"
+        maxlength="120"
+        placeholder="Enter your full name"
+      />
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="email">Email</label>
+      <input
+        class="input"
+        id="email"
+        name="email"
+        type="email"
+        autocomplete="email"
+        required
+        placeholder="Enter your email"
+      />
+    </div>
+
+    <div class="field">
       <label class="field-label" for="new-username">Username</label>
-      <input class="input" id="new-username" name="username" value="mangben_owner" autocomplete="username" required minlength="3" data-error="Choose a username. Buyers and sellers will see it." />
+      <input
+        class="input"
+        id="new-username"
+        name="username"
+        autocomplete="username"
+        required
+        minlength="3"
+        maxlength="50"
+        pattern="[A-Za-z0-9_.]+"
+        title="Letters, numbers, underscores and periods only."
+        placeholder="Choose a username"
+      />
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="phone">Phone / contact number</label>
+      <input
+        class="input"
+        id="phone"
+        name="phone"
+        type="tel"
+        autocomplete="tel"
+        minlength="7"
+        maxlength="30"
+        placeholder="09XXXXXXXXX"
+        data-seller-required
+      />
+      <p class="hint field-hint">
+        Required for sellers. Optional for buyers and partners.
+      </p>
     </div>
 
     <div class="field">
       <label class="field-label" for="new-password">Password</label>
-      <input class="input" id="new-password" name="password" type="password" value="secondserve" autocomplete="new-password" required minlength="8" aria-describedby="password-rule" />
-      <p class="hint field-hint" id="password-rule">At least 8 characters.</p>
+      <input
+        class="input"
+        id="new-password"
+        name="password"
+        type="password"
+        autocomplete="new-password"
+        required
+        minlength="8"
+        aria-describedby="password-rule"
+      />
+      <p class="hint field-hint" id="password-rule">
+        At least 8 characters.
+      </p>
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="confirm-password">
+        Confirm password
+      </label>
+      <input
+        class="input"
+        id="confirm-password"
+        name="confirmPassword"
+        type="password"
+        autocomplete="new-password"
+        required
+        minlength="8"
+      />
     </div>
 
     <div class="field">
       <span class="field-label" id="account-type-label">
         Account type
-        <Tip about="Account type" text="Buyers reserve discounted food. Sellers list their shop’s surplus. Partners are LGUs, agencies, charities and shelters that buy or claim unsold surplus. An administrator approves every seller and partner." />
+        <Tip
+          about="Account type"
+          text="Buyers reserve discounted food. Sellers list surplus. Partners are organizations that buy or claim unsold surplus. Sellers and partners need admin approval."
+        />
       </span>
-      <div class="segmented" role="radiogroup" aria-labelledby="account-type-label">
-        <button class="segment" type="button" role="radio" data-role="buyer" aria-checked="false" tabindex="-1">
+
+      <div
+        class="segmented"
+        role="radiogroup"
+        aria-labelledby="account-type-label"
+      >
+        <button
+          class="segment"
+          type="button"
+          role="radio"
+          data-role="buyer"
+          aria-checked="false"
+          tabindex="-1"
+        >
           Buyer
         </button>
-        <button class="segment" type="button" role="radio" data-role="seller" aria-checked="true" tabindex="0">
+        <button
+          class="segment"
+          type="button"
+          role="radio"
+          data-role="seller"
+          aria-checked="true"
+          tabindex="0"
+        >
           Seller
         </button>
-        <button class="segment" type="button" role="radio" data-role="partner" aria-checked="false" tabindex="-1">
+        <button
+          class="segment"
+          type="button"
+          role="radio"
+          data-role="partner"
+          aria-checked="false"
+          tabindex="-1"
+        >
           Partner
         </button>
       </div>
-      <input type="hidden" name="role" value="seller" data-role-input />
+
+      <input
+        type="hidden"
+        name="role"
+        value="seller"
+        data-role-input
+      />
     </div>
 
-    <div class="field" data-shop-field>
-      <label class="field-label" for="shop">
-        Shop / business name
-        <Tip about="Shop name" text="Buyers see this on every listing. You can add a logo and description later from your profile." />
-      </label>
-      <input class="input" id="shop" name="shop" value="Mang Ben's Bakery" required />
-    </div>
+    <fieldset class="field role-fields" data-seller-field>
+      <legend class="sr-only">Business details</legend>
 
-    <fieldset class="field partner-fields" data-partner-field hidden>
+      <div class="field">
+        <label class="field-label" for="shop">
+          Shop / business name
+          <Tip
+            about="Shop name"
+            text="Buyers see this name on your listings."
+          />
+        </label>
+        <input
+          class="input"
+          id="shop"
+          name="businessName"
+          required
+          minlength="2"
+          maxlength="120"
+        />
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="business-type">
+          Business type
+        </label>
+        <input
+          class="input"
+          id="business-type"
+          name="businessType"
+          placeholder="Bakery, cafe, grocery, etc."
+          required
+          minlength="2"
+          maxlength="50"
+        />
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="business-address">
+          Business address
+        </label>
+        <input
+          class="input"
+          id="business-address"
+          name="businessAddress"
+          autocomplete="street-address"
+          required
+          minlength="5"
+          maxlength="255"
+        />
+      </div>
+    </fieldset>
+
+    <fieldset
+      class="field role-fields"
+      data-partner-field
+      hidden
+    >
       <legend class="sr-only">Organization details</legend>
+
       <div class="field">
         <label class="field-label" for="org-name">
           Organization name
-          <Tip about="Organization" text="Shops see this on every order you place. An administrator checks it before approving the account." />
+          <Tip
+            about="Organization"
+            text="An administrator reviews your organization before approval."
+          />
         </label>
-        <input class="input" id="org-name" name="organizationName" data-partner-required />
+        <input
+          class="input"
+          id="org-name"
+          name="organizationName"
+          minlength="2"
+          maxlength="160"
+        />
       </div>
+
       <div class="field">
-        <label class="field-label" for="org-type">Organization type</label>
-        <select class="input" id="org-type" name="organizationType">
-          {organizationTypes.map(([value, label]) => <option value={value}>{label}</option>)}
+        <label class="field-label" for="org-type">
+          Organization type
+        </label>
+        <select
+          class="input"
+          id="org-type"
+          name="organizationType"
+        >
+          {
+            organizationTypes.map(([value, label]) => (
+              <option value={value}>{label}</option>
+            ))
+          }
         </select>
       </div>
+
       <div class="field">
-        <label class="field-label" for="org-contact">Contact person</label>
-        <input class="input" id="org-contact" name="contactPerson" autocomplete="name" data-partner-required />
+        <label class="field-label" for="org-contact">
+          Contact person
+        </label>
+        <input
+          class="input"
+          id="org-contact"
+          name="contactPerson"
+          autocomplete="name"
+          minlength="2"
+          maxlength="120"
+        />
       </div>
+
       <div class="field">
-        <label class="field-label" for="org-address">Address</label>
-        <input class="input" id="org-address" name="address" autocomplete="street-address" data-partner-required />
+        <label class="field-label" for="org-address">
+          Organization address
+        </label>
+        <input
+          class="input"
+          id="org-address"
+          name="address"
+          minlength="5"
+          maxlength="255"
+        />
       </div>
     </fieldset>
 
     <p class="notice notice-info" data-approval-notice>
-      <span><strong>Pending approval.</strong> Your account is pending admin approval. You can sign in once approved.</span>
+      <span>
+        <strong>Pending approval.</strong>
+        Seller and Partner accounts need administrator approval.
+      </span>
     </p>
 
-    <button class="btn btn-primary btn-lg btn-block" type="submit">Create account</button>
-    <a class="btn btn-block back" href="/login">Back to login</a>
+    <p
+      class="form-status"
+      role="status"
+      aria-live="polite"
+      data-register-status
+      hidden
+    ></p>
+
+    <button
+      class="btn btn-primary btn-lg btn-block"
+      type="submit"
+    >
+      Create account
+    </button>
+
+    <a class="btn btn-block back" href="/login">
+      Back to login
+    </a>
   </form>
 </AuthLayout>
 
 <script>
-  import { initDemoForms } from '../scripts/demo-forms';
+  import { supabase } from '../api/supabase';
+  import { liveValidate, validate } from '../scripts/validate';
 
-  initDemoForms();
+  type SignupRole = 'buyer' | 'seller' | 'partner';
 
-  const shopField = document.querySelector<HTMLElement>('[data-shop-field]');
-  const shopInput = shopField?.querySelector<HTMLInputElement>('input');
-  const partnerField = document.querySelector<HTMLElement>('[data-partner-field]');
-  const partnerInputs = Array.from(document.querySelectorAll<HTMLInputElement>('[data-partner-required]'));
-  const roleInput = document.querySelector<HTMLInputElement>('[data-role-input]');
-  const approvalNotice = document.querySelector<HTMLElement>('[data-approval-notice]');
-  const options = Array.from(document.querySelectorAll<HTMLButtonElement>('.segment'));
+  interface SignupProfile {
+    role: SignupRole;
+    username: string;
+    fullName: string;
+    phone: string | null;
+    seller?: {
+      businessName: string;
+      businessType: string;
+      businessAddress: string;
+      contactPhone: string;
+    };
+    partner?: {
+      organizationName: string;
+      organizationType: string;
+      contactPerson: string;
+      address: string;
+    };
+  }
 
-  const choose = (option: HTMLButtonElement, moveFocus = false) => {
-    options.forEach((other) => {
-      const checked = other === option;
-      other.setAttribute('aria-checked', String(checked));
-      other.tabIndex = checked ? 0 : -1;
+  const form = document.querySelector<HTMLFormElement>('.register');
+
+  if (form) {
+    liveValidate(form);
+
+    const sellerField = form.querySelector<HTMLElement>(
+      '[data-seller-field]'
+    );
+
+    const partnerField = form.querySelector<HTMLElement>(
+      '[data-partner-field]'
+    );
+
+    const roleInput = form.querySelector<HTMLInputElement>(
+      '[data-role-input]'
+    );
+
+    const approvalNotice = form.querySelector<HTMLElement>(
+      '[data-approval-notice]'
+    );
+
+    const status = form.querySelector<HTMLElement>(
+      '[data-register-status]'
+    )!;
+
+    const submit = form.querySelector<HTMLButtonElement>(
+      'button[type="submit"]'
+    )!;
+
+    const options = Array.from(
+      form.querySelectorAll<HTMLButtonElement>('.segment')
+    );
+
+    const value = (selector: string): string =>
+      form.querySelector<HTMLInputElement | HTMLSelectElement>(
+        selector
+      )?.value.trim() ?? '';
+
+    const choose = (
+      option: HTMLButtonElement,
+      moveFocus = false
+    ) => {
+      options.forEach((other) => {
+        const checked = other === option;
+        other.setAttribute('aria-checked', String(checked));
+        other.tabIndex = checked ? 0 : -1;
+      });
+
+      if (moveFocus) option.focus();
+
+      const role = option.dataset.role ?? 'buyer';
+      const isSeller = role === 'seller';
+      const isPartner = role === 'partner';
+
+      if (roleInput) roleInput.value = role;
+
+      if (sellerField) sellerField.hidden = !isSeller;
+      if (partnerField) partnerField.hidden = !isPartner;
+
+      sellerField
+        ?.querySelectorAll<HTMLInputElement>('input')
+        .forEach((field) => {
+          field.required = isSeller;
+        });
+
+      partnerField
+        ?.querySelectorAll<HTMLInputElement>('input')
+        .forEach((field) => {
+          field.required = isPartner;
+        });
+
+      const phone = form.querySelector<HTMLInputElement>('#phone');
+      if (phone) phone.required = isSeller;
+
+      if (approvalNotice) {
+        approvalNotice.hidden = role === 'buyer';
+      }
+    };
+
+    options.forEach((option, index) => {
+      option.addEventListener('click', () => choose(option));
+
+      option.addEventListener('keydown', (event) => {
+        const moves: Record<string, number> = {
+          ArrowRight: 1,
+          ArrowDown: 1,
+          ArrowLeft: -1,
+          ArrowUp: -1,
+        };
+
+        const step = moves[event.key];
+
+        if (!step) return;
+
+        event.preventDefault();
+
+        choose(
+          options[(index + step + options.length) % options.length]!,
+          true
+        );
+      });
     });
-    if (moveFocus) option.focus();
 
-    const role = option.dataset.role ?? 'buyer';
-    const isSeller = role === 'seller';
-    const isPartner = role === 'partner';
-    if (roleInput) roleInput.value = role;
-    if (shopField) shopField.hidden = !isSeller;
-    if (shopInput) shopInput.required = isSeller;
-    if (partnerField) partnerField.hidden = !isPartner;
-    partnerInputs.forEach((input) => (input.required = isPartner));
-    // Buyers are active straight away; sellers and partners wait for an administrator.
-    if (approvalNotice) approvalNotice.hidden = role === 'buyer';
-  };
+    const initial = options.find(
+      (option) => option.getAttribute('aria-checked') === 'true'
+    );
 
-  options.forEach((option, index) => {
-    option.addEventListener('click', () => choose(option));
-    // Radio-group keys: arrows move and select, as in a native radio set.
-    option.addEventListener('keydown', (event) => {
-      const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
-      if (!step) return;
+    if (initial) choose(initial);
+
+    // Backend profile endpoint.
+    async function createBackendProfile(
+      token: string,
+      profile: SignupProfile
+    ) {
+      const rawBase = import.meta.env.PUBLIC_API_BASE_URL
+        ?.replace(/\/+$/, '');
+
+      if (!rawBase) {
+        throw new Error('Backend API URL is not configured.');
+      }
+
+      const apiBase = rawBase.endsWith('/api')
+        ? rawBase
+        : `${rawBase}/api`;
+
+      const response = await fetch(`${apiBase}/me/profile`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(profile),
+      });
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => null);
+
+        throw new Error(
+          typeof result?.detail === 'string'
+            ? result.detail
+            : `Profile setup failed (${response.status}).`
+        );
+      }
+    }
+
+    form.addEventListener('submit', async (event) => {
       event.preventDefault();
-      choose(options[(index + step + options.length) % options.length]!, true);
+
+      if (!validate(form)) return;
+
+      const password = (
+        form.querySelector<HTMLInputElement>('#new-password')!
+      ).value;
+
+      const confirmPassword = (
+        form.querySelector<HTMLInputElement>('#confirm-password')!
+      ).value;
+
+      if (password !== confirmPassword) {
+        status.hidden = false;
+        status.textContent = 'Your passwords do not match.';
+        status.dataset.state = 'error';
+        return;
+      }
+
+      const role = (roleInput?.value ?? 'buyer') as SignupRole;
+
+      const profile: SignupProfile = {
+        role,
+        username: value('#new-username'),
+        fullName: value('#full-name'),
+        phone: value('#phone') || null,
+      };
+
+      if (role === 'seller') {
+        profile.seller = {
+          businessName: value('#shop'),
+          businessType: value('#business-type'),
+          businessAddress: value('#business-address'),
+          contactPhone: value('#phone'),
+        };
+      }
+
+      if (role === 'partner') {
+        profile.partner = {
+          organizationName: value('#org-name'),
+          organizationType: value('#org-type'),
+          contactPerson: value('#org-contact'),
+          address: value('#org-address'),
+        };
+      }
+
+      submit.disabled = true;
+      status.hidden = false;
+      status.dataset.state = 'info';
+      status.textContent = 'Creating your account...';
+
+      let authCreated = false;
+
+      try {
+        const { data, error } = await supabase.auth.signUp({
+          email: value('#email'),
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/login`,
+            data: {
+              secondserveProfile: profile,
+            },
+          },
+        });
+
+        if (error) throw error;
+
+        if (!data.user) {
+          throw new Error('Supabase could not create your account.');
+        }
+
+        authCreated = true;
+
+        // If email confirmation is disabled, a session may
+        // already exist, so we can create the profile now.
+        if (data.session) {
+          await createBackendProfile(
+            data.session.access_token,
+            profile
+          );
+
+          status.dataset.state = 'success';
+          status.textContent =
+            role === 'buyer'
+              ? 'Account created! You can now sign in.'
+              : 'Account created! Please wait for admin approval.';
+        } else {
+          // Supabase requires email verification first.
+          // We saved profile details in auth user metadata.
+          // Login will finish profile creation next.
+          status.dataset.state = 'success';
+          status.textContent =
+            'Check your email for a confirmation link. After verifying, sign in to finish your account setup.';
+        }
+      } catch (error) {
+        status.dataset.state = 'error';
+
+        const message =
+          error instanceof Error
+            ? error.message
+            : 'Registration failed.';
+
+        status.textContent = authCreated
+          ? `Your Supabase account was created, but your profile is not finished: ${message}`
+          : message;
+      } finally {
+        submit.disabled = false;
+      }
     });
-  });
+  }
 </script>
 
 <style>
@@ -147,20 +614,20 @@ const organizationTypes = Object.entries(organizationTypeLabel) as [Organization
     margin-bottom: 24px;
   }
 
-
   .notice {
     margin-top: 16px;
   }
 
-  .partner-fields {
+  .role-fields {
     display: grid;
     gap: 16px;
     border: 0;
     margin: 0;
     padding: 0;
+    min-width: 0;
   }
 
-  .partner-fields[hidden] {
+  .role-fields[hidden] {
     display: none;
   }
 
@@ -170,5 +637,21 @@ const organizationTypes = Object.entries(organizationTypeLabel) as [Organization
 
   .back {
     margin-top: 12px;
+  }
+
+  .form-status {
+    margin-top: 16px;
+    font-size: var(--fs-sm);
+    line-height: 1.5;
+    color: var(--muted);
+  }
+
+  .form-status[data-state="error"] {
+    color: var(--brick-text);
+  }
+
+  .form-status[data-state="success"] {
+    color: var(--text);
+    font-weight: 600;
   }
 </style>
