@@ -64,6 +64,9 @@ async def create_profile(request: Request, data: ProfileCreate, claims: TokenUse
         else AccountStatus.active,
     )
     db.add(user)
+    # Insert the user now: the audit row below points at it, and SQLAlchemy only
+    # orders inserts by relationships, which AuditLog doesn't have.
+    await db.flush()
     if role == Role.seller and data.seller:
         db.add(SellerProfile(user_id=user.id, **data.seller.model_dump()))
     elif role == Role.partner and data.partner:
