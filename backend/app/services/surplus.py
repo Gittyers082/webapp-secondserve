@@ -80,7 +80,7 @@ async def notify_partners(db: AsyncSession, listing: Listing) -> int:
             type="surplus.donation" if donation else "surplus.offer",
             title=title,
             body=body,
-            link="/partner/surplus",
+            link="/partner",  # the Surplus Board page
         )
         count += 1
     return count
