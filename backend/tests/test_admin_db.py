@@ -12,7 +12,7 @@ from decimal import Decimal
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.core.deps import get_current_user
@@ -24,6 +24,7 @@ from app.models import (
     FoodCategory,
     Listing,
     ListingStatus,
+    Notification,
     Role,
     SellerProfile,
     User,
@@ -182,3 +183,18 @@ async def test_stats_count_rescued_food(sessions):
     assert Decimal(numbers["revenue"]) == 100 and Decimal(numbers["commission"]) == Decimal("7")
     assert Decimal(numbers["customerSavings"]) == 100
     assert numbers["averageDiscountPercent"] == 50
+
+
+async def test_approval_message_fits_the_role(sessions):
+    admin = await make_user(sessions, "ana", Role.admin)
+    partner = await make_user(sessions, "pat", Role.partner, status=AccountStatus.pending)
+
+    async with api(sessions, admin) as client:
+        decided = await client.post(
+            f"/api/admin/approvals/{partner.id}", json={"decision": "approved"}
+        )
+    assert decided.status_code == 200 and decided.json()["status"] == "active"
+
+    async with sessions() as db:
+        note = await db.scalar(select(Notification).where(Notification.user_id == partner.id))
+    assert "Surplus Board" in note.body
