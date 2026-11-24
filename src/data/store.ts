@@ -1,5 +1,5 @@
 /**
- * Seed data for the SecondServe frontend.
+ * Seed data for the Hapag frontend.
  *
  * Every figure here matches the wireframes so the screens read as one
  * continuous story: Mang Ben's lists ube cheese pandesal, maria_c reserves
@@ -885,7 +885,7 @@ export const buyerNotifications: AppNotification[] = [
     id: 'n-b4',
     kind: 'account',
     title: 'Account approved',
-    body: 'An administrator approved your buyer account. Welcome to SecondServe.',
+    body: 'An administrator approved your buyer account. Welcome to Hapag.',
     time: 'Nov 1',
     read: true,
   },
@@ -1076,7 +1076,7 @@ export const faq: FaqEntry[] = [
   {
     question: 'Why do I mark food as distributed?',
     answer:
-      'So the shop and SecondServe know the food reached the people you serve. It also counts toward the food rescued in our reports.',
+      'So the shop and Hapag know the food reached the people you serve. It also counts toward the food rescued in our reports.',
     roles: ['partner'],
   },
   {

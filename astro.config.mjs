@@ -1,6 +1,6 @@
 import { defineConfig } from 'astro/config';
 
 export default defineConfig({
-  site: 'https://secondserve.local',
+  site: 'https://hapag.local',
   devToolbar: { enabled: false },
 });

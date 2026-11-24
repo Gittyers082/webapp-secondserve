@@ -7,7 +7,7 @@ interface Props {
   description?: string;
 }
 
-const { title, description = 'Good products deserve a second chance.' } = Astro.props;
+const { title, description = 'A place at the table for everyone.' } = Astro.props;
 ---
 
 <!doctype html>
@@ -20,12 +20,12 @@ const { title, description = 'Good products deserve a second chance.' } = Astro.
       (function () {
         var theme = 'dark';
         try {
-          if (localStorage.getItem('secondserve-theme') === 'light') theme = 'light';
+          if (localStorage.getItem('hapag-theme') === 'light') theme = 'light';
         } catch (error) {}
         document.documentElement.dataset.theme = theme;
       })();
     </script>
-    <title>SecondServe &mdash; {title}</title>
+    <title>Hapag &mdash; {title}</title>
     <meta name="description" content={description} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -33,18 +33,19 @@ const { title, description = 'Good products deserve a second chance.' } = Astro.
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap"
     />
-    <link rel="icon" type="image/png" href="/brand/secondserve-mark.png" />
-    <link rel="apple-touch-icon" href="/brand/secondserve-mark.png" />
-    <meta property="og:title" content={`SecondServe — ${title}`} />
+    <link rel="icon" type="image/svg+xml" href="/brand/hapag-mark.svg" />
+    <link rel="icon" type="image/png" href="/brand/hapag-mark.png" />
+    <link rel="apple-touch-icon" href="/brand/hapag-mark.png" />
+    <meta property="og:title" content={`Hapag — ${title}`} />
     <meta property="og:description" content={description} />
-    <meta property="og:image" content="/brand/secondserve-logo.png" />
+    <meta property="og:image" content="/brand/hapag-logo.png" />
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to main content</a>
     <div data-app-root>
       <div class="window-chrome" aria-hidden="true">
         <span class="lights"><i></i><i></i><i></i></span>
-        <span class="window-title">SecondServe &mdash; {title}</span>
+        <span class="window-title">Hapag &mdash; {title}</span>
       </div>
       <slot />
     </div>

@@ -18,22 +18,19 @@ const { size = 26, variant = 'lockup', class: className } = Astro.props;
   variant === 'full' ? (
     <img
       class:list={['logo-full', className]}
-      src="/brand/secondserve-logo.png"
+      src="/brand/hapag-logo.png"
       width="640"
       height="640"
       style={`width:${size * 7}px`}
-      alt="SecondServe"
+      alt="Hapag"
     />
   ) : (
     <span class:list={['logo', className]} style={`--logo-size:${size}px`}>
-      <img class="logo-mark" src="/brand/secondserve-mark.png" width="512" height="512" alt="" />
+      <img class="logo-mark" src="/brand/hapag-mark.png" width="512" height="512" alt="" />
       {variant === 'lockup' && (
-        <span class="logo-word">
-          <em>second</em>
-          <strong>serve</strong>
-        </span>
+        <span class="logo-word">hapag</span>
       )}
-      <span class="sr-only">SecondServe</span>
+      <span class="sr-only">Hapag</span>
     </span>
   )
 }
@@ -53,23 +50,12 @@ const { size = 26, variant = 'lockup', class: className } = Astro.props;
 
   .logo-word {
     font-family: var(--display);
-    font-size: var(--logo-size);
+    font-size: calc(var(--logo-size) * 1.2);
     line-height: 1;
     letter-spacing: -0.01em;
     color: var(--text);
   }
 
-  .logo-word em {
-    font-style: italic;
-    font-weight: 400;
-  }
-
-  .logo-word strong {
-    font-weight: 700;
-    font-family: var(--sans);
-    font-size: 0.92em;
-    letter-spacing: -0.02em;
-  }
 
   .logo-full {
     height: auto;

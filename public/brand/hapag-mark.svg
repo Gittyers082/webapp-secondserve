@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Hapag">
+  <rect width="512" height="512" rx="116" fill="#c13d1f"/>
+  <!-- A fork, then the table's own plate, seen from above -->
+  <g fill="#f6efe3">
+    <rect x="44" y="164" width="12" height="74" rx="6"/>
+    <rect x="66" y="164" width="12" height="74" rx="6"/>
+    <rect x="88" y="164" width="12" height="74" rx="6"/>
+    <path d="M44 226h56v14a22 22 0 0 1-17 21v91a11 11 0 0 1-22 0v-91a22 22 0 0 1-17-21z"/>
+  </g>
+  <circle cx="238" cy="256" r="112" fill="#f6efe3"/>
+  <circle cx="238" cy="256" r="80" fill="none" stroke="#c13d1f" stroke-opacity="0.22" stroke-width="8"/>
+  <!-- The extra place, set beside it for someone else -->
+  <circle cx="414" cy="256" r="56" fill="#e4ee4c"/>
+  <circle cx="414" cy="256" r="36" fill="none" stroke="#17150f" stroke-opacity="0.2" stroke-width="6"/>
+</svg>

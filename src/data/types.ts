@@ -1,5 +1,5 @@
 /**
- * SecondServe domain model.
+ * Hapag domain model.
  *
  * Mirrors the entity diagram in the wireframes: users own listings,
  * listings produce orders, and both sides of an order can see it.
@@ -62,7 +62,7 @@ export interface User {
   organizationName?: string;
 }
 
-/** What a partner organization tells SecondServe about itself. */
+/** What a partner organization tells Hapag about itself. */
 export interface PartnerProfile {
   organizationName: string;
   organizationType: OrganizationType;

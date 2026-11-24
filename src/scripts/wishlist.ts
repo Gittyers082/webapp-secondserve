@@ -7,7 +7,7 @@
  */
 import { announce } from './announce';
 
-const KEY = 'secondserve-wishlist';
+const KEY = 'hapag-wishlist';
 export const COMPARE_LIMIT = 3;
 
 let fallback: string[] = [];

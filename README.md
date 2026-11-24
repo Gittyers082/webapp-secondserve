@@ -1,10 +1,12 @@
-# SecondServe
+# Hapag
 
-> Good products deserve a second chance.
+> A place at the table for everyone.
 
-Desktop-app frontend for SecondServe, a surplus-food marketplace. Shops list food
-that is nearing expiry at a discount; buyers find it, reserve it, and collect it in
-person. Built from the desktop wireframes with [Astro](https://astro.build) and
+Frontend for Hapag (Tagalog for the dining table), formerly SecondServe. Any food
+place can join: restaurants, carinderias, bakeries, cafes, groceries and caterers.
+They list surplus food at a discount; buyers find it, reserve it, and collect it or
+have it delivered; food that does not sell goes to partner charities and agencies as
+donations. Built from the desktop wireframes with [Astro](https://astro.build) and
 TypeScript.
 
 This repository holds the **frontend only**. Every screen runs on typed seed data in
@@ -12,7 +14,7 @@ This repository holds the **frontend only**. Every screen runs on typed seed dat
 
 ## Monorepo layout and team docs
 
-This repo now holds both halves of SecondServe:
+This repo now holds both halves of Hapag:
 
 | Folder | What | Deploys to |
 | --- | --- | --- |
@@ -100,8 +102,9 @@ docs/
   api-contract.md          The API the frontend is built against, for the backend team
   requirements-coverage.md How each NFR-USER-U requirement and PERS-3 is met
 public/
-  brand/        secondserve-logo.png (full square lockup),
-                secondserve-mark.png (tray-and-hand tile, rounded)
+  brand/        hapag-mark.svg (the tile: a plate with an extra place set beside it),
+                hapag-mark.png (512 px, favicon and app icon),
+                hapag-logo.png (full square lockup with the tagline)
   photos/       Food photographs, one per listing type, with CREDITS.md
 src/
   components/   Logo, Icon, Sidebar, ThemeToggle, FoodArt (listing photo), ListingCard,
