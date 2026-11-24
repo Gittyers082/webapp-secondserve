@@ -74,6 +74,14 @@ async def pending_approvals(db: DB, admin: Admin) -> list[User]:
     return list((await db.scalars(stmt)).all())
 
 
+# What an approved account can do next, by role.
+_WELCOME = {
+    Role.seller: "You can now list your surplus food.",
+    Role.partner: "You can now buy and claim food on the Surplus Board.",
+    Role.buyer: "You can now reserve discounted food.",
+}
+
+
 @router.post("/approvals/{user_id}", response_model=UserOut)
 async def decide(
     user_id: uuid.UUID, data: DecisionIn, request: Request, db: DB, admin: Admin
@@ -98,7 +106,7 @@ async def decide(
         user_id=user.id,
         type=f"account.{data.decision.value}",
         title="Your account was approved" if approved else "Your account was not approved",
-        body="You can now start listing items."
+        body=_WELCOME.get(user.role, "You can now sign in.")
         if approved
         else (data.reason or "Contact support."),
         email_to=user.email,
