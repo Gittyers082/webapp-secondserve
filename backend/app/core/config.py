@@ -32,6 +32,11 @@ class Settings(BaseSettings):
     commission_rate: float = Field(default=0.07, ge=0, le=0.5)
     # Unsold listings this close to expiry move to the partner Surplus Board (FR-SYS-14).
     surplus_window_hours: int = Field(default=6, ge=1, le=48)
+    # A partner order that isn't collected within this many hours goes back on sale.
+    claim_hold_hours: int = Field(default=4, ge=1, le=72)
+    # Which partner types may BUY partner offers (FR-USER-P-5). Every approved partner can
+    # claim donations. Add charity,shelter to let every partner buy.
+    partner_buyer_types: str = "lgu,government-agency"
     # FR-BUS-3 / NFR-BUS-MV-1: discounts should land in this range.
     min_discount_percent: int = 15
     max_discount_percent: int = 90
@@ -39,6 +44,10 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @property
+    def partner_buyer_type_list(self) -> list[str]:
+        return [t.strip() for t in self.partner_buyer_types.split(",") if t.strip()]
 
     @property
     def jwks_url(self) -> str:

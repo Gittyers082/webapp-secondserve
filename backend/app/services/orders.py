@@ -197,11 +197,13 @@ async def _reserve(
     )
 
     seller = await db.get(User, listing.seller_id)
-    how = (
-        f"It will be delivered to {order.delivery_address}. "
-        if delivering
-        else "Pick it up at the shop. "
-    )
+    if delivering:
+        how = f"It will be delivered to {order.delivery_address}. "
+    elif order_type != OrderType.sale:
+        hold = get_settings().claim_hold_hours
+        how = f"Collect it within {hold} hours or it goes back on the Surplus Board. "
+    else:
+        how = "Pick it up at the shop. "
     notify(
         db,
         user_id=buyer.id,
@@ -452,15 +454,8 @@ async def mark_distributed(db: AsyncSession, partner: User, order_id: uuid.UUID)
     return await get_order_or_404(db, order.id)
 
 
-async def cancel_order(db: AsyncSession, buyer: User, order_id: uuid.UUID) -> tuple[Order, Listing]:
-    """Buyer cancels a reservation and the quantity goes back on the listing."""
-    order = _own_order_or_404(await _lock_order(db, order_id), buyer_id=buyer.id)
-    if order.status != OrderStatus.reserved:
-        raise HTTPException(
-            status.HTTP_409_CONFLICT,
-            "Only reservations that haven't been prepared can be cancelled.",
-        )
-
+async def _cancel_and_restock(db: AsyncSession, order: Order) -> Listing:
+    """Cancel a locked order, refund its payment and put the quantity back on the listing."""
     listing = (await lock_listings(db, [order.listing_id]))[order.listing_id]
     listing.quantity_available += order.quantity
     # A seller may have restocked while this was reserved; keep available <= original.
@@ -480,6 +475,75 @@ async def cancel_order(db: AsyncSession, buyer: User, order_id: uuid.UUID) -> tu
         payment.status = PaymentStatus.refunded
     elif payment is not None and payment.status == PaymentStatus.pending:
         payment.status = PaymentStatus.failed
+    return listing
+
+
+async def release_claim(db: AsyncSession, order_id: uuid.UUID) -> Listing | None:
+    """Give an uncollected partner order's stock back (used by the scheduled job).
+
+    Returns the listing, or None if the order was collected or cancelled in the meantime.
+    """
+    order = await _lock_order(db, order_id)
+    if (
+        order is None
+        or order.order_type == OrderType.sale
+        or order.status not in (OrderStatus.reserved, OrderStatus.ready)
+        or order.fulfillment_type != FulfillmentType.pickup
+    ):
+        return None
+
+    listing = await _cancel_and_restock(db, order)
+    hold = get_settings().claim_hold_hours
+    partner = await db.get(User, order.buyer_id)
+    name = (
+        partner.partner_profile.organization_name
+        if partner and partner.partner_profile
+        else "A partner"
+    )
+    notify(
+        db,
+        user_id=order.buyer_id,
+        type="order.released",
+        title="Order released",
+        body=(
+            f"{order.quantity} × {listing.name} wasn't collected within {hold} hours, "
+            "so it went back on the Surplus Board."
+        ),
+        link=_orders_page(order.order_type),
+    )
+    notify(
+        db,
+        user_id=order.seller_id,
+        type="order.released",
+        title="Stock returned",
+        body=(
+            f"{name} didn't collect {order.quantity} × {listing.name}. "
+            "It's back on the Surplus Board."
+        ),
+        link=f"/seller/manage?listing={listing.id}",
+    )
+    audit.record(
+        db,
+        actor_id=None,
+        action="order.release",
+        entity_type="order",
+        entity_id=order.id,
+        details={"listing_id": str(listing.id), "quantity": order.quantity},
+    )
+    await db.commit()
+    return listing
+
+
+async def cancel_order(db: AsyncSession, buyer: User, order_id: uuid.UUID) -> tuple[Order, Listing]:
+    """Buyer cancels a reservation and the quantity goes back on the listing."""
+    order = _own_order_or_404(await _lock_order(db, order_id), buyer_id=buyer.id)
+    if order.status != OrderStatus.reserved:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Only reservations that haven't been prepared can be cancelled.",
+        )
+
+    listing = await _cancel_and_restock(db, order)
 
     seller = await db.get(User, order.seller_id)
     if seller is not None:

@@ -26,6 +26,7 @@ from app.routers import (
     notifications,
     orders,
     partners,
+    seller,
     ws,
 )
 
@@ -78,7 +79,18 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    for module in (health, me, listings, orders, partners, notifications, admin, internal, ws):
+    for module in (
+        health,
+        me,
+        listings,
+        orders,
+        partners,
+        seller,
+        notifications,
+        admin,
+        internal,
+        ws,
+    ):
         app.include_router(module.router)
 
     return app
