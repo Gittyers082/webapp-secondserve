@@ -1,7 +1,7 @@
 # Frontend requirements coverage
 
 How the frontend meets the user-facing non-functional requirements in
-the SecondServe IT 313 document (NFR-USER-U-1 to U-10 and NFR-USER-PERS-3).
+the IT 313 document (written under the old name, SecondServe) (NFR-USER-U-1 to U-10 and NFR-USER-PERS-3).
 The table numbers changed in v13, so requirements are referred to by ID only. "Partly" means the frontend side is done and the rest
 depends on the backend or on testing that can't be done in a browser
 emulator.

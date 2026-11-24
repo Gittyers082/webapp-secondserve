@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SecondServe — design tokens and base styles
+   Hapag — design tokens and base styles
 
    Frosted glass over a slow wash of the brand's colours. Surfaces are
    translucent and blur what sits behind them; they are told apart by tone,
@@ -121,7 +121,6 @@
   --app-max: 2200px;
   --sidebar-compact: 84px;
   --rail: 344px;
-  --chrome-h: 40px;
 
   /* Motion */
   --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);

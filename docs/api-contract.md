@@ -1,4 +1,4 @@
-# SecondServe API contract (proposal)
+# Hapag API contract (proposal)
 
 This is the API the frontend is built against. It is a proposal for the backend
 team to confirm or change early, so neither side waits on the other. The same

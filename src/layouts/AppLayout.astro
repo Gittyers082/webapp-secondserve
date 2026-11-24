@@ -51,7 +51,7 @@ const showHighlight = Boolean(highlight && subtitle?.includes(highlight));
       >
         <Icon name="menu" />
       </button>
-      <a class="bar-brand" href={nav[0]!.href} aria-label="SecondServe home"><Logo size={20} /></a>
+      <a class="bar-brand" href={nav[0]!.href} aria-label="Hapag home"><Logo size={20} /></a>
       <a
         class="bar-btn"
         href={notificationsHref[role]}
@@ -115,7 +115,7 @@ const showHighlight = Boolean(highlight && subtitle?.includes(highlight));
     align-items: start;
     width: 100%;
     max-width: var(--app-max);
-    min-height: calc(100vh - var(--chrome-h));
+    min-height: 100vh;
     margin: 0 auto;
   }
 
@@ -162,7 +162,7 @@ const showHighlight = Boolean(highlight && subtitle?.includes(highlight));
   .rail {
     position: sticky;
     top: 0;
-    max-height: calc(100vh - var(--chrome-h));
+    max-height: 100vh;
     overflow-y: auto;
     padding: var(--sp-8) var(--pad) var(--sp-8) 0;
   }
@@ -260,13 +260,6 @@ const showHighlight = Boolean(highlight && subtitle?.includes(highlight));
       max-height: none;
       overflow: visible;
       padding: 0 var(--sp-6) var(--sp-16);
-    }
-  }
-
-  /* The narrowest phones keep the mark and drop the wordmark. */
-  @media (max-width: 379px) {
-    .bar-brand :global(.logo-word) {
-      display: none;
     }
   }
 

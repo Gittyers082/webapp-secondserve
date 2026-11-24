@@ -389,7 +389,7 @@ function partnerOrderFromSeed(
 export function errorMessage(error: unknown): string {
   const apiError = error as Partial<ApiError>;
   if (apiError?.status === 0 || error instanceof TypeError) {
-    return "Could not reach the SecondServe server. Check that this computer is online, then try again.";
+    return "Could not reach the Hapag server. Check that this computer is online, then try again.";
   }
   switch (apiError?.status) {
     case 401:

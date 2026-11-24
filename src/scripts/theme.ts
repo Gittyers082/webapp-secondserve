@@ -9,7 +9,7 @@ import { announce } from './announce';
 
 export type Theme = 'dark' | 'light';
 
-const STORAGE_KEY = 'secondserve-theme';
+const STORAGE_KEY = 'hapag-theme';
 
 export function currentTheme(): Theme {
   return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
