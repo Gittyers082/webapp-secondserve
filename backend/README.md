@@ -89,6 +89,23 @@ Sellers start as `pending` and can't list anything until an admin approves them
   `out-for-delivery`, then `delivered`, which finishes the order (status `delivered`).
 - Partners confirm hand-out with `POST /api/partners/orders/{id}/distributed` once the
   order is picked up or delivered.
+- **Who may buy:** only partner types in `PARTNER_BUYER_TYPES` (default `lgu,government-agency`)
+  can buy partner offers (`/buy` answers 403 otherwise). Every approved partner can claim
+  donations. Add `charity,shelter` to the setting to let every partner buy.
+- **New surplus notices:** when a seller offers a listing, or the escalation job moves it,
+  approved partners get an in-app notice (donations: everyone, paid offers: partners who may
+  buy). Open buyer pages are told to drop the listing.
+- **Held claims:** a partner pickup order not collected within `CLAIM_HOLD_HOURS` (default 4)
+  is cancelled and its stock goes back on the Surplus Board.
+
+## Seller pages and receipts
+
+- `GET /api/seller/reviews`: the seller's reviews (newest first, `limit`/`offset`) with
+  `sellerAverage`, `sellerReviewCount` and `distribution` (stars 1 to 5).
+- `GET /api/seller/sales?days=30`: completed orders in the last `days` days (Philippine
+  time): `orders`, `itemsSold`, `donatedItems`, `revenue`, `commission`, `netRevenue`,
+  `discountImpact`, `pendingOrders` and a `daily` series with zero days filled in.
+- `GET /api/orders/{id}/receipt`: printable HTML receipt for the buyer, partner, seller or admin.
 
 ## Folder layout
 
@@ -162,8 +179,10 @@ Celery needs a separate worker process. Until that's running, keep
 
 ### Scheduled jobs without a worker
 
-The jobs live in `app/services/jobs.py` (today: expiring listings and warning
-sellers 3 hours ahead). On the free plan they run through
+The jobs live in `app/services/jobs.py`: expiring listings and warning sellers 3 hours
+ahead, moving unsold food within `SURPLUS_WINDOW_HOURS` of expiry to the Surplus Board
+(`escalate-surplus`), and releasing uncollected partner orders (`release-claims`).
+On the free plan they run through
 `POST /api/internal/run-jobs`, which the **Scheduled jobs** GitHub Action
 (`.github/workflows/jobs.yml`) calls every 15 minutes:
 

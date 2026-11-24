@@ -25,6 +25,7 @@ from app.services import audit
 from app.services import orders as order_service
 from app.services.listings import ensure_eligible, get_listing_or_404, lock_listings
 from app.services.search import listing_query, sort_clauses
+from app.services.surplus import announce_left_marketplace, ensure_can_buy, notify_partners
 
 router = APIRouter(tags=["partners"])
 
@@ -93,9 +94,10 @@ async def buy_surplus(
 ) -> OrderOut:
     """A partner buys a partner offer at its partner price (UC-14, FR-USER-P-5).
 
-    TODO(Role 3): decide with the team whether only LGU and government-agency partners
-    may buy (FR-USER-P-5), and check `partner.partner_profile.organization_type` if so.
+    Only the partner types in PARTNER_BUYER_TYPES may buy (LGUs and government agencies
+    by default). Charities and shelters can still claim donations.
     """
+    ensure_can_buy(partner)
     order, listing = await order_service.place_partner_order(
         db, partner, listing_id, data, OrderType.partner_purchase
     )
@@ -113,7 +115,8 @@ async def claim_donation(
 ) -> OrderOut:
     """A partner claims a free donation (UC-15, FR-USER-P-6).
 
-    TODO(Role 1): release claims that aren't collected in time (a Celery job).
+    Pickup claims must be collected within CLAIM_HOLD_HOURS, or the scheduled job
+    cancels them and puts the stock back (services/jobs.py, release_uncollected_claims).
     """
     order, listing = await order_service.place_partner_order(
         db, partner, listing_id, data, OrderType.donation
@@ -141,8 +144,7 @@ async def offer_to_partners(
 
     The listing leaves the marketplace for good: its price becomes the partner price
     (0 for a donation). Reservations already made keep the price they were made at.
-
-    TODO(Role 1): notify partners about new surplus (the notification helper).
+    Approved partners are notified, and open buyer pages drop the listing.
     """
     # Lock it so a buyer reserving at the old price can't slip in during the switch.
     listing = (await lock_listings(db, [listing_id])).get(listing_id)
@@ -183,5 +185,7 @@ async def offer_to_partners(
         details={"price": str(price)},
         request=request,
     )
+    await notify_partners(db, listing)
     await db.commit()
+    await announce_left_marketplace(listing)
     return ListingOut.from_model(await get_listing_or_404(db, listing.id))

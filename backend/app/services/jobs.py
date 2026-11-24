@@ -16,9 +16,23 @@ from typing import Any
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Listing, ListingStatus, Notification
+from app.core.config import get_settings
+from app.models import (
+    FulfillmentType,
+    Listing,
+    ListingChannel,
+    ListingStatus,
+    Notification,
+    Order,
+    OrderStatus,
+    OrderType,
+)
 from app.realtime.stock import stock
+from app.services import audit
+from app.services import orders as order_service
+from app.services.listings import lock_listings
 from app.services.notifications import notify
+from app.services.surplus import announce_left_marketplace, notify_partners
 
 # Sellers hear about a listing this long before it expires (FR-USER-S-10c).
 EXPIRY_WARNING = timedelta(hours=3)
@@ -91,10 +105,99 @@ async def expire_listings(db: AsyncSession) -> dict[str, Any]:
     return {"expired": len(expired), "warned": warned}
 
 
+async def escalate_surplus(db: AsyncSession) -> dict[str, Any]:
+    """Move unsold food close to expiry to the partner Surplus Board (FR-SYS-14, FR-SYS-15).
+
+    Listings within SURPLUS_WINDOW_HOURS of expiry that still have stock become partner
+    offers at their current price (the seller can still lower it or make it a donation).
+    """
+    now = datetime.now(timezone.utc)
+    due = (
+        await db.scalars(
+            select(Listing.id).where(
+                Listing.status == ListingStatus.active,
+                Listing.channel == ListingChannel.marketplace,
+                Listing.quantity_available > 0,
+                Listing.expires_at > now,
+                Listing.expires_at <= now + timedelta(hours=get_settings().surplus_window_hours),
+            )
+        )
+    ).all()
+
+    moved: list[Listing] = []
+    partners_told = 0
+    if due:
+        # Lock first, then look again: a buyer may have taken the last one meanwhile.
+        for listing in (await lock_listings(db, list(due))).values():
+            if (
+                listing.status != ListingStatus.active
+                or listing.channel != ListingChannel.marketplace
+                or listing.quantity_available <= 0
+                or listing.expires_at <= now
+            ):
+                continue
+            listing.channel = ListingChannel.partner_offer
+            listing.surplus_at = now
+            notify(
+                db,
+                user_id=listing.seller_id,
+                type="listing.surplus",
+                title="Moved to the Surplus Board",
+                body=(
+                    f"{listing.name} is close to expiry, so it's now offered to partners. "
+                    "You can lower the price or make it a donation."
+                ),
+                link=_manage_link(listing.id),
+            )
+            partners_told += await notify_partners(db, listing)
+            audit.record(
+                db,
+                actor_id=None,
+                action="listing.escalate",
+                entity_type="listing",
+                entity_id=listing.id,
+            )
+            moved.append(listing)
+
+    await db.commit()
+    for listing in moved:
+        await announce_left_marketplace(listing)
+    return {"escalated": len(moved), "partnersNotified": partners_told}
+
+
+async def release_uncollected_claims(db: AsyncSession) -> dict[str, Any]:
+    """Give stock back when a partner never collects (FR-USER-P-6).
+
+    Pickup orders from partners (claims and purchases) still waiting after CLAIM_HOLD_HOURS
+    are cancelled and their quantity goes back on the listing.
+    """
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=get_settings().claim_hold_hours)
+    stale = (
+        await db.scalars(
+            select(Order.id).where(
+                Order.order_type != OrderType.sale,
+                Order.fulfillment_type == FulfillmentType.pickup,
+                Order.status.in_((OrderStatus.reserved, OrderStatus.ready)),
+                Order.created_at <= cutoff,
+            )
+        )
+    ).all()
+
+    released = []
+    for order_id in stale:
+        listing = await order_service.release_claim(db, order_id)  # commits each one
+        if listing is not None:
+            released.append(listing)
+    for listing in released:
+        await stock.publish(str(listing.id), listing.quantity_available, listing.status.value)
+    return {"released": len(released)}
+
+
 # Every job the runner calls, in order.
-# TODO(Role 3): add escalate_surplus and releasing uncollected claims here.
 JOBS: dict[str, Callable[[AsyncSession], Awaitable[dict[str, Any]]]] = {
     "expire-listings": expire_listings,
+    "escalate-surplus": escalate_surplus,
+    "release-claims": release_uncollected_claims,
 }
 
 

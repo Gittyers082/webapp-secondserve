@@ -32,5 +32,9 @@ celery_app.conf.update(
             "task": "app.workers.tasks.escalate_surplus",
             "schedule": crontab(minute="*/15"),
         },
+        "release-claims": {
+            "task": "app.workers.tasks.release_uncollected_claims",
+            "schedule": crontab(minute="*/15"),
+        },
     },
 )
